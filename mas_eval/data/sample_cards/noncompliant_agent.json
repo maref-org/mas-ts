@@ -1,0 +1,43 @@
+{
+  "card_version": "1.1",
+  "agent_id": "urn:agent:demo:research:risky-agent-01",
+  "name": "Risky Research Agent",
+  "description": "Agent with cross-border compliance violations",
+  "version": "1.0.0",
+  "compliance": {
+    "data_residency": "CN",
+    "data_classification": "confidential",
+    "cross_border": false,
+    "model_backend_location": "US",
+    "audit_trail_required": true
+  },
+  "model_backend": {
+    "provider": "openai",
+    "model": "gpt-4o",
+    "deployment": "cloud",
+    "endpoint": "https://api.openai.com/v1"
+  },
+  "capabilities": [
+    {
+      "skill_id": "web_search",
+      "description": "Search the web",
+      "input_schema": {"type": "object", "properties": {"query": {"type": "string"}}},
+      "output_schema": {"type": "object", "properties": {"results": {"type": "array"}}},
+      "examples": ["query: 'test'"],
+      "rate_limit": "10/min"
+    }
+  ],
+  "endpoints": {
+    "a2a": "https://agent.example.com/a2a"
+  },
+  "authentication": {
+    "type": "APIKey",
+    "scopes": ["search:read"]
+  },
+  "dependencies": ["web_search"],
+  "orchestration_hints": {
+    "preferred_role": "worker",
+    "parallel_safe": false,
+    "stateful": true
+  }
+}

@@ -1,0 +1,125 @@
+{
+  "trace_id": "17d190df-e1db-4273-9e57-df926bd9cbfe",
+  "standard_version": "MAS-TS-001-v2.1",
+  "run_mode": "fast-screen",
+  "task_description": "calculate sum of 1+2+3+4+5",
+  "task_type": "deterministic",
+  "matched_tool": "calculate",
+  "cost_usd": 0.0,
+  "events": [
+    {
+      "trace_id": "17d190df-e1db-4273-9e57-df926bd9cbfe",
+      "standard_version": "MAS-TS-001-v2.1",
+      "run_mode": "fast-screen",
+      "timestamp": "2026-05-10T06:33:45.000Z",
+      "event_type": "task_start",
+      "sequence": 1,
+      "task": {
+        "task_id": "mock-task-17d190df",
+        "description": "calculate sum of 1+2+3+4+5",
+        "complexity": "simple",
+        "mock_classification": "deterministic"
+      },
+      "agent": {
+        "agent_id": "urn:agent:mock:default:mock-agent",
+        "role": "worker",
+        "card_version": "1.1",
+        "data_residency": "LOCAL",
+        "model_backend": "mock-llm"
+      },
+      "action": {
+        "type": "task_received"
+      },
+      "state_delta": {},
+      "orchestration": {
+        "routing_decision": "auto",
+        "routing_reason": "mock_dispatch"
+      },
+      "error": null,
+      "recovery": null
+    },
+    {
+      "trace_id": "17d190df-e1db-4273-9e57-df926bd9cbfe",
+      "standard_version": "MAS-TS-001-v2.1",
+      "run_mode": "fast-screen",
+      "timestamp": "2026-05-10T06:33:45.000Z",
+      "event_type": "agent_action",
+      "sequence": 2,
+      "task": {
+        "task_id": "mock-task-17d190df",
+        "description": "calculate sum of 1+2+3+4+5",
+        "complexity": "simple",
+        "mock_classification": "deterministic"
+      },
+      "agent": {
+        "agent_id": "urn:agent:mock:default:mock-agent",
+        "role": "worker",
+        "card_version": "1.1",
+        "data_residency": "LOCAL",
+        "model_backend": "mock-llm"
+      },
+      "action": {
+        "type": "tool_call",
+        "tool_id": "calculate",
+        "input": {
+          "expression": "mock_expression_value"
+        },
+        "output": {
+          "result": 42.0,
+          "precision": "float64"
+        },
+        "latency_ms": 10,
+        "token_usage": {
+          "input": 0,
+          "output": 0
+        },
+        "cost_usd": 0.0
+      },
+      "state_delta": {
+        "memory_read": [],
+        "memory_write": {},
+        "shared_state_touch": false
+      },
+      "orchestration": {
+        "routing_decision": "auto",
+        "routing_reason": "capability_match:calculate",
+        "chat_storm_detected": false
+      },
+      "error": null,
+      "recovery": null
+    },
+    {
+      "trace_id": "17d190df-e1db-4273-9e57-df926bd9cbfe",
+      "standard_version": "MAS-TS-001-v2.1",
+      "run_mode": "fast-screen",
+      "timestamp": "2026-05-10T06:33:45.000Z",
+      "event_type": "task_complete",
+      "sequence": 3,
+      "task": {
+        "task_id": "mock-task-17d190df",
+        "description": "calculate sum of 1+2+3+4+5",
+        "complexity": "simple",
+        "mock_classification": "deterministic"
+      },
+      "agent": {
+        "agent_id": "urn:agent:mock:default:mock-agent",
+        "role": "worker",
+        "card_version": "1.1",
+        "data_residency": "LOCAL",
+        "model_backend": "mock-llm"
+      },
+      "action": {
+        "type": "task_complete",
+        "result": "success"
+      },
+      "state_delta": {},
+      "orchestration": {
+        "routing_decision": null,
+        "routing_reason": null,
+        "chat_storm_detected": false
+      },
+      "error": null,
+      "recovery": null
+    }
+  ]
+}

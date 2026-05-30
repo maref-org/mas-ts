@@ -1,0 +1,88 @@
+[
+  {
+    "trace_id": "golden-001",
+    "standard_version": "MAS-TS-001-v2.1",
+    "run_mode": "full-run",
+    "timestamp": "2026-05-09T10:00:00.000Z",
+    "event_type": "task_start",
+    "sequence": 1,
+    "task": {
+      "task_id": "tau-bench-airline-034",
+      "complexity": "simple",
+      "expected_agents": ["research-assistant"],
+      "expected_tools": ["web_search"]
+    },
+    "agent": {
+      "agent_id": "urn:agent:demo:research:research-assistant-01",
+      "role": "worker",
+      "card_version": "1.1",
+      "data_residency": "CN",
+      "model_backend": "deepseek-chat-v3"
+    },
+    "action": {"type": "task_received"},
+    "state_delta": {},
+    "orchestration": {"routing_decision": "auto", "routing_reason": "mock_dispatch"},
+    "error": null,
+    "recovery": null
+  },
+  {
+    "trace_id": "golden-001",
+    "standard_version": "MAS-TS-001-v2.1",
+    "run_mode": "full-run",
+    "timestamp": "2026-05-09T10:00:01.000Z",
+    "event_type": "agent_action",
+    "sequence": 2,
+    "task": {
+      "task_id": "tau-bench-airline-034",
+      "complexity": "simple"
+    },
+    "agent": {
+      "agent_id": "urn:agent:demo:research:research-assistant-01",
+      "role": "worker",
+      "card_version": "1.1",
+      "data_residency": "CN",
+      "model_backend": "deepseek-chat-v3"
+    },
+    "action": {
+      "type": "tool_call",
+      "tool_id": "web_search",
+      "input": {"query": "latest AI regulations EU 2026"},
+      "output": {"results": [{"title": "EU AI Act 2026", "url": "https://example.com", "snippet": "New regulations"}]},
+      "latency_ms": 1200,
+      "token_usage": {"input": 150, "output": 800},
+      "cost_usd": 0.0005
+    },
+    "state_delta": {"memory_read": [], "memory_write": {"search_result": "stored"}, "shared_state_touch": false},
+    "orchestration": {
+      "routing_decision": "auto",
+      "routing_reason": "capability_match:web_search",
+      "chat_storm_detected": false
+    },
+    "error": null,
+    "recovery": null
+  },
+  {
+    "trace_id": "golden-001",
+    "standard_version": "MAS-TS-001-v2.1",
+    "run_mode": "full-run",
+    "timestamp": "2026-05-09T10:00:03.000Z",
+    "event_type": "task_complete",
+    "sequence": 3,
+    "task": {
+      "task_id": "tau-bench-airline-034",
+      "complexity": "simple"
+    },
+    "agent": {
+      "agent_id": "urn:agent:demo:research:research-assistant-01",
+      "role": "worker",
+      "card_version": "1.1",
+      "data_residency": "CN",
+      "model_backend": "deepseek-chat-v3"
+    },
+    "action": {"type": "task_complete", "result": "success"},
+    "state_delta": {},
+    "orchestration": {"routing_decision": null, "routing_reason": null, "chat_storm_detected": false},
+    "error": null,
+    "recovery": null
+  }
+]

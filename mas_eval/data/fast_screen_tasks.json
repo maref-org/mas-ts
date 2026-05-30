@@ -1,0 +1,16 @@
+{
+  "tasks": [
+    {"description": "query order status for order #12345", "category": "deterministic"},
+    {"description": "read file contents of /data/report.csv", "category": "deterministic"},
+    {"description": "calculate sum of 1+2+3+4+5", "category": "deterministic"},
+    {"description": "get user profile for user_id=42", "category": "deterministic"},
+    {"description": "route to correct department for complaint", "category": "semi_deterministic"},
+    {"description": "select appropriate tool for data extraction", "category": "semi_deterministic"},
+    {"description": "classify ticket priority as high/medium/low", "category": "semi_deterministic"},
+    {"description": "search_flight from CAN to SHA", "category": "deterministic"},
+    {"description": "book_ticket flight CZ3101 for passenger Zhang San", "category": "deterministic"},
+    {"description": "web_search for latest AI regulations", "category": "deterministic"},
+    {"description": "generate marketing copy for product launch", "category": "non_deterministic"},
+    {"description": "summarize long document about climate change", "category": "non_deterministic"}
+  ]
+}

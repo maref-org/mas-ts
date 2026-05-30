@@ -1,0 +1,34 @@
+# MAS-TS-001 Endpoint Region Database
+# Maps API domains and CIDR ranges to geographic regions.
+# Add new endpoints here instead of modifying code.
+
+regions:
+  US:
+    - api.openai.com
+    - api.anthropic.com
+    - api.groq.com
+    - api.together.xyz
+    - api.openrouter.ai
+    - api.gemini.google.com
+    - api.mistral.ai
+    - .azure.com
+    - .aws.amazon.com
+
+  CN:
+    - api.siliconflow.cn
+    - dashscope.aliyuncs.com
+    - qianwen.aliyun.com
+    - api.baichuan-ai.com
+    - open.bigmodel.cn
+    - api.deepseek.com
+    - api.minimax.chat
+    - api.moonshot.cn
+    - api.stepfun.com
+    - api.lingyiwanwu.com
+    - api.01.ai
+    - api.zhipuai.vip
+
+  LOCAL:
+    - localhost
+    - 127.0.0.1
+    - 0.0.0.0

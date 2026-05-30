@@ -1,0 +1,54 @@
+{
+  "card_version": "1.1",
+  "agent_id": "urn:agent:demo:research:research-assistant-01",
+  "name": "Research Assistant",
+  "description": "Performs web research and synthesizes reports",
+  "version": "2.1.0",
+  "compliance": {
+    "data_residency": "CN",
+    "data_classification": "internal",
+    "cross_border": false,
+    "model_backend_location": "CN",
+    "audit_trail_required": true
+  },
+  "model_backend": {
+    "provider": "deepseek",
+    "model": "deepseek-chat-v3",
+    "deployment": "local",
+    "endpoint": "http://api.deepseek.com/v1"
+  },
+  "capabilities": [
+    {
+      "skill_id": "web_search",
+      "description": "Search the web using DuckDuckGo",
+      "input_schema": {"type": "object", "properties": {"query": {"type": "string"}}},
+      "output_schema": {"type": "object", "properties": {"results": {"type": "array"}}},
+      "examples": ["query: 'latest AI regulations EU 2026'"],
+      "rate_limit": "10/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "pdf_parser",
+      "description": "Parse PDF documents and extract text",
+      "input_schema": {"type": "object", "properties": {"file_path": {"type": "string"}}},
+      "output_schema": {"type": "object", "properties": {"text": {"type": "string"}, "pages": {"type": "integer"}}},
+      "examples": ["file_path: '/data/report.pdf'"],
+      "rate_limit": "5/min",
+      "business_rule_version": "2026-04-15"
+    }
+  ],
+  "endpoints": {
+    "a2a": "https://agent.example.com/a2a",
+    "mcp": "https://agent.example.com/mcp/sse"
+  },
+  "authentication": {
+    "type": "OAuth2",
+    "scopes": ["research:read", "report:write"]
+  },
+  "dependencies": ["web_search", "pdf_parser"],
+  "orchestration_hints": {
+    "preferred_role": "worker",
+    "parallel_safe": true,
+    "stateful": false
+  }
+}

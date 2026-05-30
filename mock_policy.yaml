@@ -1,0 +1,55 @@
+# Mock LLM Policy Configuration
+# Place this file in your project root and reference it from mas-eval-harness
+
+mock_policy:
+  version: "2.1"
+
+  deterministic_tasks:
+    description: "Tasks with clear intent and single correct tool"
+    examples:
+      - "query order status"
+      - "read file contents"
+      - "calculate sum"
+      - "get user profile"
+    patterns:
+      - "query_order|get_status|read_file|calculate|get_profile"
+    mock_type: "rule-based"
+    allowed: true
+    max_mock_latency_ms: 50
+
+  semi_deterministic_tasks:
+    description: "Tasks requiring routing or classification with limited options"
+    examples:
+      - "route to correct department"
+      - "select appropriate tool"
+      - "classify ticket priority"
+    patterns:
+      - "route_to|select_tool|classify|choose"
+    mock_type: "heuristic"
+    allowed: true
+    calibration_required: "weekly"
+    max_mock_latency_ms: 100
+
+  non_deterministic_tasks:
+    description: "Tasks requiring creativity, reasoning, or open-domain generation"
+    examples:
+      - "generate marketing copy"
+      - "summarize long document"
+      - "reason about ethics"
+      - "creative writing"
+    patterns:
+      - "generate|creative|summarize|reason|write|compose|draft"
+    mock_type: "none"
+    fallback: "real_llm_mini"
+    allowed: false
+    fallback_model: "qwen2.5-14b-instruct"
+    fallback_endpoint: "http://localhost:8000/v1/chat/completions"
+
+  calibration_schedule:
+    golden_trajectory_count: 50
+    drift_threshold_percent: 10
+    auto_update_mock_rules: false  # Set to true only after QA approval
+
+  cost_tracking:
+    mock_cost_per_call: 0.0
+    fallback_cost_per_1k_tokens: 0.002

@@ -1,0 +1,223 @@
+{
+  "card_version": "1.1",
+  "agent_id": "urn:agent:anthropic:claude-code:claude-code-1-0",
+  "name": "Claude Code",
+  "description": "Anthropic's agentic coding CLI tool. Supports multi-agent orchestration, MCP protocol, file-based memory, remote bridge control, and 30+ built-in tools for software engineering tasks.",
+  "version": "1.0.0",
+  "compliance": {
+    "data_residency": "US",
+    "data_classification": "confidential",
+    "cross_border": true,
+    "model_backend_location": "US",
+    "audit_trail_required": true
+  },
+  "model_backend": {
+    "provider": "anthropic",
+    "model": "claude-sonnet-4-20250514",
+    "deployment": "cloud",
+    "endpoint": "https://api.anthropic.com/v1/messages"
+  },
+  "capabilities": [
+    {
+      "skill_id": "bash",
+      "description": "Execute shell commands with sandboxing and timeout controls",
+      "input_schema": {"type": "object", "properties": {"command": {"type": "string"}, "timeout": {"type": "integer"}}},
+      "output_schema": {"type": "object", "properties": {"stdout": {"type": "string"}, "stderr": {"type": "string"}, "exit_code": {"type": "integer"}}},
+      "examples": ["command: 'npm test'", "command: 'git status'"],
+      "rate_limit": "60/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "file_read",
+      "description": "Read file contents from local filesystem",
+      "input_schema": {"type": "object", "properties": {"path": {"type": "string"}, "offset": {"type": "integer"}, "limit": {"type": "integer"}}},
+      "output_schema": {"type": "object", "properties": {"content": {"type": "string"}, "lines": {"type": "integer"}}},
+      "examples": ["path: '/src/main.ts'", "path: '/README.md'"],
+      "rate_limit": "120/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "file_edit",
+      "description": "Edit existing files using search/replace blocks",
+      "input_schema": {"type": "object", "properties": {"path": {"type": "string"}, "old_str": {"type": "string"}, "new_str": {"type": "string"}}},
+      "output_schema": {"type": "object", "properties": {"success": {"type": "boolean"}, "diff": {"type": "string"}}},
+      "examples": ["path: '/src/app.ts', old_str: 'foo()', new_str: 'bar()'"],
+      "rate_limit": "60/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "file_write",
+      "description": "Write new files or overwrite existing ones",
+      "input_schema": {"type": "object", "properties": {"path": {"type": "string"}, "content": {"type": "string"}}},
+      "output_schema": {"type": "object", "properties": {"success": {"type": "boolean"}, "bytes_written": {"type": "integer"}}},
+      "examples": ["path: '/src/new_module.ts', content: 'export const x = 1'"],
+      "rate_limit": "60/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "glob",
+      "description": "Fast file pattern matching using glob patterns",
+      "input_schema": {"type": "object", "properties": {"pattern": {"type": "string"}, "path": {"type": "string"}}},
+      "output_schema": {"type": "object", "properties": {"files": {"type": "array", "items": {"type": "string"}}}},
+      "examples": ["pattern: '**/*.ts'", "pattern: 'src/**/*.test.ts'"],
+      "rate_limit": "120/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "grep",
+      "description": "Search file contents using ripgrep with regex support",
+      "input_schema": {"type": "object", "properties": {"pattern": {"type": "string"}, "path": {"type": "string"}, "glob": {"type": "string"}}},
+      "output_schema": {"type": "object", "properties": {"matches": {"type": "array"}, "count": {"type": "integer"}}},
+      "examples": ["pattern: 'function\\s+\\w+'", "pattern: 'TODO'", "pattern: 'import.*from'"],
+      "rate_limit": "120/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "web_search",
+      "description": "Search the internet for real-time information",
+      "input_schema": {"type": "object", "properties": {"query": {"type": "string"}, "num_results": {"type": "integer"}}},
+      "output_schema": {"type": "object", "properties": {"results": {"type": "array"}}},
+      "examples": ["query: 'TypeScript 5.8 new features'"],
+      "rate_limit": "10/min",
+      "business_rule_version": "2026-04-15"
+    },
+    {
+      "skill_id": "web_fetch",
+      "description": "Fetch and convert web page content to markdown",
+      "input_schema": {"type": "object", "properties": {"url": {"type": "string"}}},
+      "output_schema": {"type": "object", "properties": {"content": {"type": "string"}, "status_code": {"type": "integer"}}},
+      "examples": ["url: 'https://docs.python.org/3/'"],
+      "rate_limit": "10/min",
+      "business_rule_version": "2026-04-15"
+    },
+    {
+      "skill_id": "agent_tool",
+      "description": "Launch sub-agents for parallel or nested task execution",
+      "input_schema": {"type": "object", "properties": {"task": {"type": "string"}, "subagent_type": {"type": "string"}}},
+      "output_schema": {"type": "object", "properties": {"result": {"type": "string"}, "status": {"type": "string"}}},
+      "examples": ["task: 'search for auth patterns', subagent_type: 'search'", "task: 'implement feature X', subagent_type: 'general_purpose_task'"],
+      "rate_limit": "5/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "mcp_tool",
+      "description": "Call tools via Model Context Protocol with multiple transport types",
+      "input_schema": {"type": "object", "properties": {"server": {"type": "string"}, "tool": {"type": "string"}, "input": {"type": "object"}}},
+      "output_schema": {"type": "object", "properties": {"result": {"type": "object"}, "is_error": {"type": "boolean"}}},
+      "examples": ["server: 'github', tool: 'create_issue', input: {title: 'Bug'}"],
+      "rate_limit": "30/min",
+      "business_rule_version": "2026-04-15"
+    },
+    {
+      "skill_id": "todo_write",
+      "description": "Create and manage structured task lists for tracking progress",
+      "input_schema": {"type": "object", "properties": {"todos": {"type": "array"}}},
+      "output_schema": {"type": "object", "properties": {"success": {"type": "boolean"}}},
+      "examples": ["todos: [{content: 'Fix bug', status: 'in_progress'}]"],
+      "rate_limit": "30/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "plan_mode",
+      "description": "Enter/exit plan mode for read-only analysis before implementation",
+      "input_schema": {"type": "object", "properties": {"action": {"type": "string", "enum": ["enter", "exit"]}}},
+      "output_schema": {"type": "object", "properties": {"mode": {"type": "string"}}},
+      "examples": ["action: 'enter'", "action: 'exit'"],
+      "rate_limit": "10/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "task_management",
+      "description": "Create, update, list, and get persistent tasks with lifecycle management",
+      "input_schema": {"type": "object", "properties": {"action": {"type": "string"}, "task_id": {"type": "string"}, "payload": {"type": "object"}}},
+      "output_schema": {"type": "object", "properties": {"task": {"type": "object"}, "success": {"type": "boolean"}}},
+      "examples": ["action: 'create', payload: {title: 'Implement auth'}"],
+      "rate_limit": "30/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "worktree",
+      "description": "Create isolated git worktree sessions for parallel development",
+      "input_schema": {"type": "object", "properties": {"action": {"type": "string", "enum": ["enter", "exit"]}, "branch": {"type": "string"}}},
+      "output_schema": {"type": "object", "properties": {"worktree_path": {"type": "string"}, "success": {"type": "boolean"}}},
+      "examples": ["action: 'enter', branch: 'feature/auth'"],
+      "rate_limit": "5/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "notebook_edit",
+      "description": "Edit Jupyter notebook cells",
+      "input_schema": {"type": "object", "properties": {"path": {"type": "string"}, "cell_number": {"type": "integer"}, "content": {"type": "string"}}},
+      "output_schema": {"type": "object", "properties": {"success": {"type": "boolean"}}},
+      "examples": ["path: '/analysis.ipynb', cell_number: 3"],
+      "rate_limit": "30/min",
+      "business_rule_version": "2026-04-15"
+    },
+    {
+      "skill_id": "lsp",
+      "description": "Language Server Protocol integration for code intelligence",
+      "input_schema": {"type": "object", "properties": {"action": {"type": "string"}, "file": {"type": "string"}}},
+      "output_schema": {"type": "object", "properties": {"diagnostics": {"type": "array"}, "definitions": {"type": "array"}}},
+      "examples": ["action: 'diagnostics', file: '/src/app.ts'"],
+      "rate_limit": "30/min",
+      "business_rule_version": "2026-04-15"
+    },
+    {
+      "skill_id": "cron",
+      "description": "Create and manage cron-based scheduled recurring tasks",
+      "input_schema": {"type": "object", "properties": {"action": {"type": "string"}, "cron_expression": {"type": "string"}, "message": {"type": "string"}}},
+      "output_schema": {"type": "object", "properties": {"task_id": {"type": "string"}, "success": {"type": "boolean"}}},
+      "examples": ["action: 'create', cron_expression: '0 8 * * *'"],
+      "rate_limit": "5/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "memory",
+      "description": "File-based typed memory system with MEMORY.md entrypoint and topic files",
+      "input_schema": {"type": "object", "properties": {"action": {"type": "string", "enum": ["read", "write", "search"]}, "topic": {"type": "string"}, "type": {"type": "string"}}},
+      "output_schema": {"type": "object", "properties": {"content": {"type": "string"}, "entries": {"type": "array"}}},
+      "examples": ["action: 'read', topic: 'project'", "action: 'write', type: 'feedback'"],
+      "rate_limit": "60/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "bridge",
+      "description": "Remote control bridge for multi-session management with JWT auth",
+      "input_schema": {"type": "object", "properties": {"action": {"type": "string"}, "session_id": {"type": "string"}, "config": {"type": "object"}}},
+      "output_schema": {"type": "object", "properties": {"session": {"type": "object"}, "success": {"type": "boolean"}}},
+      "examples": ["action: 'create_session', config: {mode: 'worktree'}"],
+      "rate_limit": "10/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "skill_invoke",
+      "description": "Invoke bundled skills (batch, debug, loop, stuck, verify)",
+      "input_schema": {"type": "object", "properties": {"skill_name": {"type": "string"}, "context": {"type": "object"}}},
+      "output_schema": {"type": "object", "properties": {"result": {"type": "string"}, "success": {"type": "boolean"}}},
+      "examples": ["skill_name: 'debug'", "skill_name: 'verify'"],
+      "rate_limit": "10/min",
+      "business_rule_version": "2026-05-01"
+    }
+  ],
+  "endpoints": {
+    "a2a": "https://api.anthropic.com/v1/agents",
+    "mcp": "https://api.anthropic.com/v1/mcp"
+  },
+  "authentication": {
+    "type": "APIKey",
+    "scopes": ["code:read", "code:write", "bash:execute", "web:search", "agent:spawn"]
+  },
+  "dependencies": [
+    "anthropic-api",
+    "git",
+    "nodejs",
+    "typescript",
+    "ripgrep",
+    "mcp-protocol"
+  ],
+  "orchestration_hints": {
+    "preferred_role": "supervisor",
+    "parallel_safe": true,
+    "stateful": true
+  }
+}

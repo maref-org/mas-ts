@@ -1,0 +1,126 @@
+{
+  "trace_id": "60991551-5573-435b-a87e-efa3385da4dd",
+  "standard_version": "MAS-TS-001-v2.1",
+  "run_mode": "fast-screen",
+  "task_description": "classify ticket priority as high/medium/low",
+  "task_type": "semi_deterministic",
+  "matched_tool": "classify",
+  "cost_usd": 0.0,
+  "events": [
+    {
+      "trace_id": "60991551-5573-435b-a87e-efa3385da4dd",
+      "standard_version": "MAS-TS-001-v2.1",
+      "run_mode": "fast-screen",
+      "timestamp": "2026-05-10T06:33:45.000Z",
+      "event_type": "task_start",
+      "sequence": 1,
+      "task": {
+        "task_id": "mock-task-60991551",
+        "description": "classify ticket priority as high/medium/low",
+        "complexity": "medium",
+        "mock_classification": "semi_deterministic"
+      },
+      "agent": {
+        "agent_id": "urn:agent:mock:default:mock-agent",
+        "role": "worker",
+        "card_version": "1.1",
+        "data_residency": "LOCAL",
+        "model_backend": "mock-llm"
+      },
+      "action": {
+        "type": "task_received"
+      },
+      "state_delta": {},
+      "orchestration": {
+        "routing_decision": "auto",
+        "routing_reason": "mock_dispatch"
+      },
+      "error": null,
+      "recovery": null
+    },
+    {
+      "trace_id": "60991551-5573-435b-a87e-efa3385da4dd",
+      "standard_version": "MAS-TS-001-v2.1",
+      "run_mode": "fast-screen",
+      "timestamp": "2026-05-10T06:33:45.000Z",
+      "event_type": "agent_action",
+      "sequence": 2,
+      "task": {
+        "task_id": "mock-task-60991551",
+        "description": "classify ticket priority as high/medium/low",
+        "complexity": "medium",
+        "mock_classification": "semi_deterministic"
+      },
+      "agent": {
+        "agent_id": "urn:agent:mock:default:mock-agent",
+        "role": "worker",
+        "card_version": "1.1",
+        "data_residency": "LOCAL",
+        "model_backend": "mock-llm"
+      },
+      "action": {
+        "type": "tool_call",
+        "tool_id": "classify",
+        "input": {
+          "text": "mock_text_value",
+          "categories": "mock_categories_value"
+        },
+        "output": {
+          "category": "category_1",
+          "confidence": 0.92
+        },
+        "latency_ms": 10,
+        "token_usage": {
+          "input": 0,
+          "output": 0
+        },
+        "cost_usd": 0.0
+      },
+      "state_delta": {
+        "memory_read": [],
+        "memory_write": {},
+        "shared_state_touch": false
+      },
+      "orchestration": {
+        "routing_decision": "auto",
+        "routing_reason": "capability_match:classify",
+        "chat_storm_detected": false
+      },
+      "error": null,
+      "recovery": null
+    },
+    {
+      "trace_id": "60991551-5573-435b-a87e-efa3385da4dd",
+      "standard_version": "MAS-TS-001-v2.1",
+      "run_mode": "fast-screen",
+      "timestamp": "2026-05-10T06:33:45.000Z",
+      "event_type": "task_complete",
+      "sequence": 3,
+      "task": {
+        "task_id": "mock-task-60991551",
+        "description": "classify ticket priority as high/medium/low",
+        "complexity": "medium",
+        "mock_classification": "semi_deterministic"
+      },
+      "agent": {
+        "agent_id": "urn:agent:mock:default:mock-agent",
+        "role": "worker",
+        "card_version": "1.1",
+        "data_residency": "LOCAL",
+        "model_backend": "mock-llm"
+      },
+      "action": {
+        "type": "task_complete",
+        "result": "success"
+      },
+      "state_delta": {},
+      "orchestration": {
+        "routing_decision": null,
+        "routing_reason": null,
+        "chat_storm_detected": false
+      },
+      "error": null,
+      "recovery": null
+    }
+  ]
+}

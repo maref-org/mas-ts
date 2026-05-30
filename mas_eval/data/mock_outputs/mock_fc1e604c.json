@@ -1,0 +1,74 @@
+{
+  "trace_id": "fc1e604c-77d1-4034-9076-859cdfe82faa",
+  "standard_version": "MAS-TS-001-v2.1",
+  "run_mode": "fast-screen",
+  "task_description": "query order status for order #12345",
+  "task_type": "deterministic",
+  "matched_tool": null,
+  "cost_usd": 0.0,
+  "events": [
+    {
+      "trace_id": "fc1e604c-77d1-4034-9076-859cdfe82faa",
+      "standard_version": "MAS-TS-001-v2.1",
+      "run_mode": "fast-screen",
+      "timestamp": "2026-05-10T06:33:45.000Z",
+      "event_type": "task_start",
+      "sequence": 1,
+      "task": {
+        "task_id": "mock-task-fc1e604c",
+        "description": "query order status for order #12345",
+        "complexity": "simple",
+        "mock_classification": "deterministic"
+      },
+      "agent": {
+        "agent_id": "urn:agent:mock:default:mock-agent",
+        "role": "worker",
+        "card_version": "1.1",
+        "data_residency": "LOCAL",
+        "model_backend": "mock-llm"
+      },
+      "action": {
+        "type": "task_received"
+      },
+      "state_delta": {},
+      "orchestration": {
+        "routing_decision": "auto",
+        "routing_reason": "mock_dispatch"
+      },
+      "error": null,
+      "recovery": null
+    },
+    {
+      "trace_id": "fc1e604c-77d1-4034-9076-859cdfe82faa",
+      "standard_version": "MAS-TS-001-v2.1",
+      "run_mode": "fast-screen",
+      "timestamp": "2026-05-10T06:33:45.000Z",
+      "event_type": "agent_action",
+      "sequence": 2,
+      "task": {
+        "task_id": "mock-task-fc1e604c",
+        "description": "query order status for order #12345",
+        "complexity": "simple",
+        "mock_classification": "deterministic"
+      },
+      "agent": {
+        "agent_id": "urn:agent:mock:default:mock-agent",
+        "role": "worker",
+        "card_version": "1.1",
+        "data_residency": "LOCAL",
+        "model_backend": "mock-llm"
+      },
+      "action": {
+        "type": "need_clarification",
+        "reason": "Unknown task pattern, no matching mock rule for: query order status for order #12345"
+      },
+      "state_delta": {},
+      "orchestration": {
+        "routing_decision": "fallback",
+        "routing_reason": "unknown_task"
+      },
+      "error": null,
+      "recovery": null
+    }
+  ]
+}

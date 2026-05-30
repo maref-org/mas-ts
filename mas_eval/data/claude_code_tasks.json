@@ -1,0 +1,161 @@
+{
+  "standard": "MAS-TS-001",
+  "version": "v2.1",
+  "target_agent": "claude-code",
+  "task_categories": {
+    "deterministic": [
+      {
+        "id": "cc-det-001",
+        "description": "Read file /src/main.ts and show its contents",
+        "expected_tools": ["file_read"],
+        "expected_outcome": "File contents displayed",
+        "complexity": "simple"
+      },
+      {
+        "id": "cc-det-002",
+        "description": "Search for all TypeScript files in the project using glob pattern **/*.ts",
+        "expected_tools": ["glob"],
+        "expected_outcome": "List of .ts file paths",
+        "complexity": "simple"
+      },
+      {
+        "id": "cc-det-003",
+        "description": "Grep for all function definitions in src/ directory",
+        "expected_tools": ["grep"],
+        "expected_outcome": "List of function definitions with line numbers",
+        "complexity": "simple"
+      },
+      {
+        "id": "cc-det-004",
+        "description": "Run npm test and report results",
+        "expected_tools": ["bash"],
+        "expected_outcome": "Test results with pass/fail summary",
+        "complexity": "simple"
+      },
+      {
+        "id": "cc-det-005",
+        "description": "Write a new file /src/utils/helper.ts with a basic utility function",
+        "expected_tools": ["file_write"],
+        "expected_outcome": "File created with correct content",
+        "complexity": "simple"
+      },
+      {
+        "id": "cc-det-006",
+        "description": "Edit file /src/app.ts to replace deprecated API call with new one",
+        "expected_tools": ["file_edit"],
+        "expected_outcome": "File modified with correct replacement",
+        "complexity": "simple"
+      }
+    ],
+    "semi_deterministic": [
+      {
+        "id": "cc-semi-001",
+        "description": "Find and fix the TypeScript type error in src/config.ts",
+        "expected_tools": ["grep", "file_read", "file_edit"],
+        "expected_outcome": "Type error identified and fixed",
+        "complexity": "medium"
+      },
+      {
+        "id": "cc-semi-002",
+        "description": "Search the web for the latest React 19 features and summarize",
+        "expected_tools": ["web_search", "web_fetch"],
+        "expected_outcome": "Summary of React 19 features",
+        "complexity": "medium"
+      },
+      {
+        "id": "cc-semi-003",
+        "description": "Create a todo list for implementing user authentication feature",
+        "expected_tools": ["todo_write"],
+        "expected_outcome": "Structured task list created",
+        "complexity": "medium"
+      },
+      {
+        "id": "cc-semi-004",
+        "description": "Use MCP to create a GitHub issue for the bug found in login flow",
+        "expected_tools": ["mcp_tool"],
+        "expected_outcome": "GitHub issue created with proper description",
+        "complexity": "medium"
+      },
+      {
+        "id": "cc-semi-005",
+        "description": "Enter plan mode, analyze the codebase architecture, then exit plan mode",
+        "expected_tools": ["plan_mode", "glob", "grep", "file_read"],
+        "expected_outcome": "Architecture analysis document produced",
+        "complexity": "medium"
+      }
+    ],
+    "non_deterministic": [
+      {
+        "id": "cc-nondet-001",
+        "description": "Refactor the authentication module to use JWT tokens instead of sessions",
+        "expected_tools": ["file_read", "file_edit", "file_write", "bash"],
+        "expected_outcome": "Complete refactoring with tests passing",
+        "complexity": "high"
+      },
+      {
+        "id": "cc-nondet-002",
+        "description": "Implement a new REST API endpoint for user profile management",
+        "expected_tools": ["file_write", "file_edit", "bash", "grep"],
+        "expected_outcome": "New endpoint implemented with proper error handling",
+        "complexity": "high"
+      },
+      {
+        "id": "cc-nondet-003",
+        "description": "Debug why the application crashes on startup after recent changes",
+        "expected_tools": ["bash", "file_read", "grep", "skill_invoke"],
+        "expected_outcome": "Root cause identified and fix applied",
+        "complexity": "high"
+      }
+    ],
+    "multi_agent": [
+      {
+        "id": "cc-mas-001",
+        "description": "Spawn a search sub-agent to find all authentication-related code, then implement fixes",
+        "expected_tools": ["agent_tool", "file_read", "file_edit"],
+        "expected_outcome": "Search agent returns findings, main agent applies fixes",
+        "complexity": "high",
+        "mas_dimension": "agent_spawn"
+      },
+      {
+        "id": "cc-mas-002",
+        "description": "Create a worktree session to implement feature branch, then merge back",
+        "expected_tools": ["worktree", "bash", "file_write"],
+        "expected_outcome": "Feature implemented in isolated worktree and merged",
+        "complexity": "high",
+        "mas_dimension": "session_isolation"
+      },
+      {
+        "id": "cc-mas-003",
+        "description": "Use coordinator mode to delegate tasks: one agent for frontend, one for backend",
+        "expected_tools": ["agent_tool", "todo_write"],
+        "expected_outcome": "Tasks delegated and results aggregated",
+        "complexity": "high",
+        "mas_dimension": "coordination"
+      },
+      {
+        "id": "cc-mas-004",
+        "description": "Set up a cron job to run tests every morning at 8am",
+        "expected_tools": ["cron"],
+        "expected_outcome": "Cron task created with correct schedule",
+        "complexity": "medium",
+        "mas_dimension": "scheduling"
+      },
+      {
+        "id": "cc-mas-005",
+        "description": "Use memory system to save project context and retrieve it in a later session",
+        "expected_tools": ["memory"],
+        "expected_outcome": "Context persisted and retrievable across sessions",
+        "complexity": "medium",
+        "mas_dimension": "state_persistence"
+      },
+      {
+        "id": "cc-mas-006",
+        "description": "Use bridge to create a remote session and execute a long-running task",
+        "expected_tools": ["bridge"],
+        "expected_outcome": "Remote session created and task completed",
+        "complexity": "high",
+        "mas_dimension": "remote_control"
+      }
+    ]
+  }
+}

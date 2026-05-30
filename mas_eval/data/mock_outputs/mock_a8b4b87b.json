@@ -1,0 +1,74 @@
+{
+  "trace_id": "a8b4b87b-72b4-492e-993f-66b9fc0371e6",
+  "standard_version": "MAS-TS-001-v2.1",
+  "run_mode": "fast-screen",
+  "task_description": "summarize long document about climate change",
+  "task_type": "non_deterministic",
+  "matched_tool": null,
+  "cost_usd": 0.0,
+  "events": [
+    {
+      "trace_id": "a8b4b87b-72b4-492e-993f-66b9fc0371e6",
+      "standard_version": "MAS-TS-001-v2.1",
+      "run_mode": "fast-screen",
+      "timestamp": "2026-05-10T06:33:45.000Z",
+      "event_type": "task_start",
+      "sequence": 1,
+      "task": {
+        "task_id": "mock-task-a8b4b87b",
+        "description": "summarize long document about climate change",
+        "complexity": "medium",
+        "mock_classification": "non_deterministic"
+      },
+      "agent": {
+        "agent_id": "urn:agent:mock:default:mock-agent",
+        "role": "worker",
+        "card_version": "1.1",
+        "data_residency": "LOCAL",
+        "model_backend": "mock-llm"
+      },
+      "action": {
+        "type": "task_received"
+      },
+      "state_delta": {},
+      "orchestration": {
+        "routing_decision": "auto",
+        "routing_reason": "mock_dispatch"
+      },
+      "error": null,
+      "recovery": null
+    },
+    {
+      "trace_id": "a8b4b87b-72b4-492e-993f-66b9fc0371e6",
+      "standard_version": "MAS-TS-001-v2.1",
+      "run_mode": "fast-screen",
+      "timestamp": "2026-05-10T06:33:45.000Z",
+      "event_type": "agent_action",
+      "sequence": 2,
+      "task": {
+        "task_id": "mock-task-a8b4b87b",
+        "description": "summarize long document about climate change",
+        "complexity": "medium",
+        "mock_classification": "non_deterministic"
+      },
+      "agent": {
+        "agent_id": "urn:agent:mock:default:mock-agent",
+        "role": "worker",
+        "card_version": "1.1",
+        "data_residency": "LOCAL",
+        "model_backend": "mock-llm"
+      },
+      "action": {
+        "type": "need_clarification",
+        "reason": "Non-deterministic task requires real LLM, skipped in Fast-Screen mode"
+      },
+      "state_delta": {},
+      "orchestration": {
+        "routing_decision": "fallback",
+        "routing_reason": "non_deterministic_task"
+      },
+      "error": null,
+      "recovery": null
+    }
+  ]
+}
