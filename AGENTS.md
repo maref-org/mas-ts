@@ -1,5 +1,9 @@
 # AGENTS.md — AI Agent Context for MAS-TS-001
 
+> **上位法**: 本文件受 [Athena 系统宪法 v1.4](athena/constitution/v1.4) 约束。冲突时以宪法为准。
+> **同步方向**: A → B 单向（宪法第二条）。本仓库是 Track B 发布源，由上游开发仓库经叙事转化后同步。
+> **泄密预防**: 本仓库不得包含 T3/T2 级内容（宪法第十一条反向检查）。
+
 ## Project Overview
 
 MAS-TS-001 Evaluation Harness evaluates multi-agent systems across 5 domains

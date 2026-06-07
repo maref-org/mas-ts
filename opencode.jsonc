@@ -1,0 +1,20 @@
+{
+  // OpenCode — Athena 系统宪法 v1.4-p1 约束
+  // 上位法: Athena 系统宪法
+  // 冲突时以宪法为准
+
+  "constitution_ref": "CLAUDE.md",
+
+  "security_redlines": {
+    "title": "宪法第四-A条 — 仓库远程隔离",
+    "rules": [
+      "git remote -v 必须仅显示授权远程",
+      "禁止添加非授权 remote（pre-commit hook 自动移除）",
+      "禁止 git push 到非授权远程",
+      "禁止 gh CLI 推送到非授权 remote",
+      "禁止绕过 pre-push hook（--no-verify）"
+    ]
+  },
+
+  "constitution_supremacy": true
+}
