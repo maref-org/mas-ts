@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 frankiehot-tech
+# SPDX-License-Identifier: Apache-2.0
 """End-to-end integration tests for MAS-TS-001 v3.0 pipeline.
 
 Tests the full flow: Agent Card → D1-D5 domain evaluation → L0/L3 harness → report.

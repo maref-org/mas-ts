@@ -26,3 +26,7 @@ pytest tests/ -v --cov=.
 
 1. All tests pass: `pytest tests/ -v`
 2. No syntax errors: `python -c "import ast; ast.parse(open('your_file.py').read())"`
+
+## License
+
+By contributing to this project, you agree that your contributions will be licensed under the Apache License, Version 2.0.

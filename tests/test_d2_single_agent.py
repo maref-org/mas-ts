@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 frankiehot-tech
+# SPDX-License-Identifier: Apache-2.0
 """Tests for D2: Single-Agent Capability (MAS-TS-001 v3.0)"""
 
 import sys

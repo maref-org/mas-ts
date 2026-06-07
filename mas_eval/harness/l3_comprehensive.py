@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 frankiehot-tech
+# SPDX-License-Identifier: Apache-2.0
 """L3 Comprehensive Evaluation for MAS-TS-001 v3.0.
 
 Covers D1-D5 fully. ~8 hours.

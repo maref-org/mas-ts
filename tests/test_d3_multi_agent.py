@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 frankiehot-tech
+# SPDX-License-Identifier: Apache-2.0
 """Tests for D3: Multi-Agent Collaboration (MAS-TS-001 v3.0)"""
 
 import json

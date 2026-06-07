@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 frankiehot-tech
+# SPDX-License-Identifier: Apache-2.0
 """
 MAS-TS-001 Full-Run Evaluation Pipeline (Layer 1-5)
 Usage:
@@ -40,6 +42,18 @@ logger = logging.getLogger(__name__)
 SCHEMA_DIR = Path(__file__).parent / "mas_eval" / "schemas"
 DEFAULT_SCHEMA = SCHEMA_DIR / "agent_card_v1.1.json"
 
+
+def select_schema(card, default_schema_path=None):
+    """Select schema based on card_version."""
+    schema_dir = Path(__file__).parent / "mas_eval" / "schemas"
+    card_version = card.get("card_version", "1.1")
+    candidate = schema_dir / f"agent_card_v{card_version}.json"
+    if candidate.exists():
+        return str(candidate)
+    if default_schema_path and Path(default_schema_path).exists():
+        return default_schema_path
+    return str(DEFAULT_SCHEMA)
+
 MODEL_QUALITY_DB = {
     "claude-sonnet-4": {"tier": "premium", "reasoning": 0.92, "coding": 0.95, "multilingual": 0.90},
     "claude-opus-4": {"tier": "premium", "reasoning": 0.96, "coding": 0.93, "multilingual": 0.92},
@@ -48,6 +62,7 @@ MODEL_QUALITY_DB = {
     "gpt-4-turbo": {"tier": "premium", "reasoning": 0.88, "coding": 0.89, "multilingual": 0.86},
     "deepseek-chat-v3": {"tier": "value", "reasoning": 0.85, "coding": 0.90, "multilingual": 0.82},
     "qwen-max": {"tier": "value", "reasoning": 0.83, "coding": 0.84, "multilingual": 0.88},
+    "moonshot-v1-128k": {"tier": "value", "reasoning": 0.80, "coding": 0.82, "multilingual": 0.85},
 }
 
 DEPLOYMENT_LATENCY = {
@@ -64,6 +79,7 @@ CONTEXT_WINDOWS = {
     "gpt-4-turbo": 128000,
     "deepseek-chat-v3": 64000,
     "qwen-max": 32000,
+    "moonshot-v1-128k": 128000,
 }
 
 TOOL_COMPLEXITY_WEIGHTS = {
@@ -925,6 +941,9 @@ def print_report(report):
 def main():
     parser = argparse.ArgumentParser(description="MAS-TS-001 Full-Run Evaluation Pipeline (Layer 1-5)")
     parser.add_argument("--version", action="version", version=f"mas-eval-harness {VERSION}")
+    parser.add_argument("--engine", default="v3", choices=["v3"], help="Engine version (default: v3)")
+    parser.add_argument("--level", default="all", choices=["all", "L1", "L2", "L3", "L4", "L5"],
+                        help="Evaluation level (default: all)")
     parser.add_argument("--card", required=True, help="Agent Card JSON path")
     parser.add_argument("--tasks", help="Task definitions JSON path")
     parser.add_argument("--schema", default=str(DEFAULT_SCHEMA), help="Agent Card JSON Schema path")
@@ -937,45 +956,56 @@ def main():
     card = load_card(args.card)
     tasks = load_tasks(args.tasks)
 
+    schema_path = args.schema if args.schema != str(DEFAULT_SCHEMA) else select_schema(card, args.schema)
+    logger.info("Selected schema: %s", schema_path)
+
     logger.info("Full-Run Evaluation starting for: %s", card.get('name', 'unknown'))
     logger.info("Agent ID: %s", card.get('agent_id', 'unknown'))
 
     layers = []
 
-    logger.info("[Layer 1/5] Running Static Audit...")
-    t0 = time.perf_counter()
-    layer1 = run_layer1_static_audit(card, args.schema)
-    layer1["duration_ms"] = int((time.perf_counter() - t0) * 1000)
-    layers.append(layer1)
-    logger.info("  -> Score: %s Grade: %s (%sms)", layer1['score'], layer1['grade'], layer1['duration_ms'])
+    level_map = {"L1": 1, "L2": 2, "L3": 3, "L4": 4, "L5": 5, "all": None}
+    target_level = level_map.get(args.level)
 
-    logger.info("[Layer 2/5] Running Inference Metrics...")
-    t0 = time.perf_counter()
-    layer2 = run_layer2_inference_metrics(card)
-    layer2["duration_ms"] = int((time.perf_counter() - t0) * 1000)
-    layers.append(layer2)
-    logger.info("  -> Score: %s Grade: %s (%sms)", layer2['score'], layer2['grade'], layer2['duration_ms'])
+    if target_level is None or target_level == 1:
+        logger.info("[Layer 1/5] Running Static Audit...")
+        t0 = time.perf_counter()
+        layer1 = run_layer1_static_audit(card, schema_path)
+        layer1["duration_ms"] = int((time.perf_counter() - t0) * 1000)
+        layers.append(layer1)
+        logger.info("  -> Score: %s Grade: %s (%sms)", layer1['score'], layer1['grade'], layer1['duration_ms'])
 
-    logger.info("[Layer 3/5] Running Action Metrics...")
-    t0 = time.perf_counter()
-    layer3 = run_layer3_action_metrics(card, tasks)
-    layer3["duration_ms"] = int((time.perf_counter() - t0) * 1000)
-    layers.append(layer3)
-    logger.info("  -> Score: %s Grade: %s (%sms)", layer3['score'], layer3['grade'], layer3['duration_ms'])
+    if target_level is None or target_level == 2:
+        logger.info("[Layer 2/5] Running Inference Metrics...")
+        t0 = time.perf_counter()
+        layer2 = run_layer2_inference_metrics(card)
+        layer2["duration_ms"] = int((time.perf_counter() - t0) * 1000)
+        layers.append(layer2)
+        logger.info("  -> Score: %s Grade: %s (%sms)", layer2['score'], layer2['grade'], layer2['duration_ms'])
 
-    logger.info("[Layer 4/5] Running E2E Metrics...")
-    t0 = time.perf_counter()
-    layer4 = run_layer4_e2e_metrics(card, tasks)
-    layer4["duration_ms"] = int((time.perf_counter() - t0) * 1000)
-    layers.append(layer4)
-    logger.info("  -> Score: %s Grade: %s (%sms)", layer4['score'], layer4['grade'], layer4['duration_ms'])
+    if target_level is None or target_level == 3:
+        logger.info("[Layer 3/5] Running Action Metrics...")
+        t0 = time.perf_counter()
+        layer3 = run_layer3_action_metrics(card, tasks)
+        layer3["duration_ms"] = int((time.perf_counter() - t0) * 1000)
+        layers.append(layer3)
+        logger.info("  -> Score: %s Grade: %s (%sms)", layer3['score'], layer3['grade'], layer3['duration_ms'])
 
-    logger.info("[Layer 5/5] Running MAS Dimension...")
-    t0 = time.perf_counter()
-    layer5 = run_layer5_mas_dimension(card, tasks)
-    layer5["duration_ms"] = int((time.perf_counter() - t0) * 1000)
-    layers.append(layer5)
-    logger.info("  -> Score: %s Grade: %s (%sms)", layer5['score'], layer5['grade'], layer5['duration_ms'])
+    if target_level is None or target_level == 4:
+        logger.info("[Layer 4/5] Running E2E Metrics...")
+        t0 = time.perf_counter()
+        layer4 = run_layer4_e2e_metrics(card, tasks)
+        layer4["duration_ms"] = int((time.perf_counter() - t0) * 1000)
+        layers.append(layer4)
+        logger.info("  -> Score: %s Grade: %s (%sms)", layer4['score'], layer4['grade'], layer4['duration_ms'])
+
+    if target_level is None or target_level == 5:
+        logger.info("[Layer 5/5] Running MAS Dimension...")
+        t0 = time.perf_counter()
+        layer5 = run_layer5_mas_dimension(card, tasks)
+        layer5["duration_ms"] = int((time.perf_counter() - t0) * 1000)
+        layers.append(layer5)
+        logger.info("  -> Score: %s Grade: %s (%sms)", layer5['score'], layer5['grade'], layer5['duration_ms'])
 
     report = generate_report(card, layers, tasks, args.source_dir)
 

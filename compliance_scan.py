@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 frankiehot-tech
+# SPDX-License-Identifier: Apache-2.0
 """
 Compliance Auto-Guard - Static Agent Card Scanner (v2.0)
 Usage:

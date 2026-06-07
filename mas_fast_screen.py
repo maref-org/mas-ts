@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 frankiehot-tech
+# SPDX-License-Identifier: Apache-2.0
 """
 MAS-TS-001 Fast-Screen Runner
 Usage:
@@ -202,7 +204,9 @@ def print_summary(report):
 def main():
     parser = argparse.ArgumentParser(description="MAS-TS-001 Fast-Screen Runner")
     parser.add_argument("--version", action="version", version=f"mas-eval-harness {VERSION}")
-    parser.add_argument("--cards-dir", required=True, help="Directory containing Agent Card JSONs")
+    parser.add_argument("--engine", default="v3", choices=["v3"], help="Engine version (default: v3)")
+    parser.add_argument("--card", help="Single Agent Card JSON path (alternative to --cards-dir)")
+    parser.add_argument("--cards-dir", help="Directory containing Agent Card JSONs")
     parser.add_argument("--task-file", help="Task descriptions JSON for Mock LLM test")
     parser.add_argument("--policy", default="mock_policy.yaml", help="Mock policy YAML path")
     parser.add_argument("--schema", default=str(Path(__file__).parent / "mas_eval" / "schemas" / "agent_card_v1.1.json"),
@@ -214,6 +218,16 @@ def main():
     parser.add_argument("--timeout", type=int, default=300, help="Total pipeline timeout in seconds")
     argcomplete.autocomplete(parser)
     args = parser.parse_args()
+
+    if not args.cards_dir and not args.card:
+        parser.error("one of --cards-dir or --card is required")
+
+    cards_dir = args.cards_dir
+    if args.card:
+        card_path = Path(args.card)
+        if not card_path.exists():
+            parser.error(f"card file not found: {args.card}")
+        cards_dir = str(card_path.parent)
 
     started_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
     pipeline_start = time.perf_counter()
@@ -227,7 +241,7 @@ def main():
         console=console,
     ) as progress:
         task1 = progress.add_task("[cyan]Layer 1: Compliance Scan...", total=None)
-        stage1 = run_compliance_scan(args.cards_dir, args.schema, block=False)
+        stage1 = run_compliance_scan(cards_dir, args.schema, block=False)
         stages.append(stage1)
         progress.update(task1, description=f"[{'green' if stage1['status']=='PASS' else 'red'}]{stage1['status']} ({stage1['duration_ms']}ms)")
 

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 frankiehot-tech
+# SPDX-License-Identifier: Apache-2.0
 """
 Hardware Anchor Coefficient Generator
 Usage: python generate_anchor.py --output report.json --runs 5
@@ -17,6 +19,8 @@ from pathlib import Path
 
 import numpy as np
 import argcomplete
+import tenacity
+import requests
 
 sys.path.insert(0, str(Path(__file__).parent.resolve()))
 from mas_eval import __version__ as VERSION
@@ -61,6 +65,24 @@ def benchmark_gemm():
     return float(np.mean(gflops_list))
 
 
+def _llm_request(endpoint: str, headers: dict, payload: dict) -> dict:
+    """Make LLM API request with automatic retry on transient errors."""
+    @tenacity.retry(
+        retry=tenacity.retry_if_exception_type(
+            (requests.exceptions.RequestException, tenacity.TryAgain)
+        ),
+        stop=tenacity.stop_after_attempt(3),
+        wait=tenacity.wait_exponential(multiplier=1, min=1, max=10),
+        reraise=True,
+    )
+    def _request():
+        resp = requests.post(endpoint, json=payload, headers=headers, timeout=120)
+        resp.raise_for_status()
+        return resp.json()
+
+    return _request()
+
+
 def benchmark_llm():
     """Run LLM inference benchmark using reference model (Qwen2.5-7B)."""
     try:
@@ -92,9 +114,7 @@ def benchmark_llm():
     for _ in range(5):
         start = time.perf_counter()
         try:
-            resp = requests.post(ENDPOINT, json=payload, headers=headers, timeout=120)
-            resp.raise_for_status()
-            data = resp.json()
+            data = _llm_request(ENDPOINT, headers, payload)
 
             usage = data.get("usage", {})
             completion_tokens = usage.get("completion_tokens", 64)

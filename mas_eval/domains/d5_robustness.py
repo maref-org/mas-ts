@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 frankiehot-tech
+# SPDX-License-Identifier: Apache-2.0
 """
 MAS-TS-001 v3.0 — D5: Evolution & Robustness
 
@@ -329,14 +331,31 @@ CHAOS_WEIGHTS = {
 }
 
 
-def _score_chaos(ce):
+def _score_chaos(ce, card=None):
     findings = []
     score = 0.0
+
+    base_success_rate = 0.85
+    if card:
+        capabilities = card.get("capabilities", [])
+        tool_count = len(capabilities)
+        base_success_rate = min(0.95, 0.60 + tool_count * 0.03)
+
+        constitution = card.get("constitution", {})
+        health = constitution.get("health_state", "")
+        if health.upper() in ("HEALTHY",):
+            base_success_rate += 0.05
+        if constitution.get("heartbeat_interval_seconds", 999) <= 30:
+            base_success_rate += 0.05
+        base_success_rate = min(base_success_rate, 0.95)
+
+    infra_threshold = 1.0 - base_success_rate
+    llm_threshold = 1.0 - (base_success_rate - 0.05)
 
     for fault in INFRA_FAULTS:
         for scenario in range(3):
             ce.inject(fault, scenario)
-            success = ce.rng.random() > 0.15
+            success = ce.rng.random() > infra_threshold
             ce.record_healing(fault, success, recovery_time=ce.rng.uniform(1, 25))
             if not success:
                 ce.fault_history[-1]["healed"] = False
@@ -348,7 +367,7 @@ def _score_chaos(ce):
     for fault in LLM_FAULTS:
         for scenario in range(3):
             ce.inject(fault, scenario)
-            success = ce.rng.random() > 0.20
+            success = ce.rng.random() > llm_threshold
             ce.record_healing(fault, success, recovery_time=ce.rng.uniform(1, 35))
             if not success:
                 ce.fault_history[-1]["healed"] = False
@@ -695,11 +714,11 @@ def _score_convergence(cv=None):
     return round(score, 1), findings
 
 
-def run_d5_part1(ce=None, dd=None):
+def run_d5_part1(ce=None, dd=None, card=None):
     ce = ce or ChaosEngine(seed=42)
     dd = dd or DriftDetector()
 
-    chaos_score, chaos_findings = _score_chaos(ce)
+    chaos_score, chaos_findings = _score_chaos(ce, card)
     drift_score, drift_findings = _score_drift(dd)
 
     all_findings = chaos_findings + drift_findings
@@ -747,8 +766,8 @@ def run_d5_part2(ra=None, cv=None):
     }
 
 
-def run_d5(ce=None, dd=None):
-    p1 = run_d5_part1(ce, dd)
+def run_d5(ce=None, dd=None, card=None):
+    p1 = run_d5_part1(ce, dd, card)
     p2 = run_d5_part2()
 
     d5_score = (

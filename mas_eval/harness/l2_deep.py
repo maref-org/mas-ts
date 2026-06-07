@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 frankiehot-tech
+# SPDX-License-Identifier: Apache-2.0
 """L2 Deep Evaluation for MAS-TS-001 v3.0.
 
 Covers D1-D4 fully. ~2 hours with real LLM subset.

@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 frankiehot-tech
+# SPDX-License-Identifier: Apache-2.0
 """L4 Evolution Evaluation for MAS-TS-001 v3.0.
 
 Full D5 lifecycle: chaos engineering → drift detection → reflection loop → convergence cycles.

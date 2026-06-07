@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 frankiehot-tech
+# SPDX-License-Identifier: Apache-2.0
 """L0 Fast-Screen CI Gate for MAS-TS-001 v3.0.
 
 5 stages, <5 minutes, zero LLM token cost.

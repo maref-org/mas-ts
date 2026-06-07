@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 frankiehot-tech
+# SPDX-License-Identifier: Apache-2.0
 """Tests for MAS-TS-001 Absolute Scoring Model."""
 
 import pytest
