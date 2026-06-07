@@ -1,0 +1,221 @@
+{
+  "card_version": "1.1",
+  "agent_id": "urn:agent:openclaw:athena:athena-0-7-0",
+  "name": "OpenClaw Athena",
+  "description": "OpenClaw's multi-agent platform with governance, cognitive DNA, MAREF compliance, and autonomous research capabilities. Supports multi-agent swarm coordination, state machine governance, PII firewall, and cost budget management.",
+  "version": "0.7.0",
+  "compliance": {
+    "data_residency": "CN",
+    "data_classification": "confidential",
+    "cross_border": true,
+    "model_backend_location": "CN",
+    "audit_trail_required": true
+  },
+  "model_backend": {
+    "provider": "deepseek+ollama",
+    "model": "deepseek-v4-flash",
+    "deployment": "hybrid",
+    "endpoint": "https://api.deepseek.com/v1"
+  },
+  "capabilities": [
+    {
+      "skill_id": "bash",
+      "description": "Execute shell commands via Arsenal sandbox (JavaScript/Python)",
+      "input_schema": {"type": "object", "properties": {"command": {"type": "string"}, "language": {"type": "string"}}},
+      "output_schema": {"type": "object", "properties": {"stdout": {"type": "string"}, "stderr": {"type": "string"}, "exit_code": {"type": "integer"}}},
+      "examples": ["command: 'python3 script.py'", "language: 'python'"],
+      "rate_limit": "30/min",
+      "business_rule_version": "2026-05-16"
+    },
+    {
+      "skill_id": "file_read",
+      "description": "Read file contents from local filesystem",
+      "input_schema": {"type": "object", "properties": {"path": {"type": "string"}, "offset": {"type": "integer"}, "limit": {"type": "integer"}}},
+      "output_schema": {"type": "object", "properties": {"content": {"type": "string"}, "lines": {"type": "integer"}}},
+      "examples": ["path: '/wiki/INDEX.md'"],
+      "rate_limit": "60/min",
+      "business_rule_version": "2026-05-16"
+    },
+    {
+      "skill_id": "file_edit",
+      "description": "Edit existing files using search/replace blocks",
+      "input_schema": {"type": "object", "properties": {"path": {"type": "string"}, "old_str": {"type": "string"}, "new_str": {"type": "string"}}},
+      "output_schema": {"type": "object", "properties": {"success": {"type": "boolean"}, "diff": {"type": "string"}}},
+      "examples": ["path: '/config/settings.yaml'"],
+      "rate_limit": "30/min",
+      "business_rule_version": "2026-05-16"
+    },
+    {
+      "skill_id": "file_write",
+      "description": "Write new files to filesystem",
+      "input_schema": {"type": "object", "properties": {"path": {"type": "string"}, "content": {"type": "string"}}},
+      "output_schema": {"type": "object", "properties": {"success": {"type": "boolean"}, "bytes_written": {"type": "integer"}}},
+      "examples": ["path: '/reports/daily.md'"],
+      "rate_limit": "30/min",
+      "business_rule_version": "2026-05-16"
+    },
+    {
+      "skill_id": "glob",
+      "description": "Search filesystem using glob patterns",
+      "input_schema": {"type": "object", "properties": {"pattern": {"type": "string"}}},
+      "output_schema": {"type": "object", "properties": {"matches": {"type": "array", "items": {"type": "string"}}}},
+      "examples": ["pattern: '**/*.py'"],
+      "rate_limit": "60/min",
+      "business_rule_version": "2026-05-16"
+    },
+    {
+      "skill_id": "grep",
+      "description": "Search file contents using regex patterns",
+      "input_schema": {"type": "object", "properties": {"pattern": {"type": "string"}, "path": {"type": "string"}}},
+      "output_schema": {"type": "object", "properties": {"matches": {"type": "array"}}},
+      "examples": ["pattern: 'def main\\('"],
+      "rate_limit": "60/min",
+      "business_rule_version": "2026-05-16"
+    },
+    {
+      "skill_id": "web_search",
+      "description": "Search the web for information",
+      "input_schema": {"type": "object", "properties": {"query": {"type": "string"}}},
+      "output_schema": {"type": "object", "properties": {"results": {"type": "array"}}},
+      "examples": ["query: 'Python best practices'"],
+      "rate_limit": "20/min",
+      "business_rule_version": "2026-05-16"
+    },
+    {
+      "skill_id": "web_fetch",
+      "description": "Fetch web content from URLs",
+      "input_schema": {"type": "object", "properties": {"url": {"type": "string"}}},
+      "output_schema": {"type": "object", "properties": {"content": {"type": "string"}}},
+      "examples": ["url: 'https://example.com/docs'"],
+      "rate_limit": "20/min",
+      "business_rule_version": "2026-05-16"
+    },
+    {
+      "skill_id": "agent_tool",
+      "description": "Spawn and manage sub-agents for multi-agent coordination",
+      "input_schema": {"type": "object", "properties": {"agent_type": {"type": "string"}, "task": {"type": "string"}}},
+      "output_schema": {"type": "object", "properties": {"agent_id": {"type": "string"}, "status": {"type": "string"}}},
+      "examples": ["agent_type: 'researcher', task: 'Analyze KB'"],
+      "rate_limit": "10/min",
+      "business_rule_version": "2026-05-16"
+    },
+    {
+      "skill_id": "mcp_tool",
+      "description": "Invoke MCP (Model Context Protocol) tools",
+      "input_schema": {"type": "object", "properties": {"tool_name": {"type": "string"}, "parameters": {"type": "object"}}},
+      "output_schema": {"type": "object", "properties": {"result": {"type": "object"}}},
+      "examples": ["tool_name: 'filesystem'"],
+      "rate_limit": "30/min",
+      "business_rule_version": "2026-05-16"
+    },
+    {
+      "skill_id": "todo_write",
+      "description": "Task management and tracking",
+      "input_schema": {"type": "object", "properties": {"action": {"type": "string"}, "task_id": {"type": "string"}}},
+      "output_schema": {"type": "object", "properties": {"success": {"type": "boolean"}}},
+      "examples": ["action: 'add'"],
+      "rate_limit": "60/min",
+      "business_rule_version": "2026-05-16"
+    },
+    {
+      "skill_id": "memory",
+      "description": "Persistent memory storage and retrieval across sessions",
+      "input_schema": {"type": "object", "properties": {"action": {"type": "string"}, "key": {"type": "string"}, "value": {"type": "string"}}},
+      "output_schema": {"type": "object", "properties": {"result": {"type": "string"}}},
+      "examples": ["action: 'save', key: 'user_preferences'"],
+      "rate_limit": "30/min",
+      "business_rule_version": "2026-05-16"
+    },
+    {
+      "skill_id": "task_management",
+      "description": "Task orchestration, queue management, and execution tracking",
+      "input_schema": {"type": "object", "properties": {"task_id": {"type": "string"}, "action": {"type": "string"}}},
+      "output_schema": {"type": "object", "properties": {"status": {"type": "string"}}},
+      "examples": ["action: 'start'"],
+      "rate_limit": "30/min",
+      "business_rule_version": "2026-05-16"
+    },
+    {
+      "skill_id": "kb_explorer",
+      "description": "Knowledge base browser and search capabilities",
+      "input_schema": {"type": "object", "properties": {"action": {"type": "string"}, "query": {"type": "string"}}},
+      "output_schema": {"type": "object", "properties": {"results": {"type": "array"}}},
+      "examples": ["action: 'search', query: 'governance'"],
+      "rate_limit": "30/min",
+      "business_rule_version": "2026-05-16"
+    },
+    {
+      "skill_id": "worktree",
+      "description": "Git worktree management for isolated development sessions",
+      "input_schema": {"type": "object", "properties": {"action": {"type": "string"}, "branch": {"type": "string"}}},
+      "output_schema": {"type": "object", "properties": {"path": {"type": "string"}}},
+      "examples": ["action: 'create', branch: 'feature-x'"],
+      "rate_limit": "10/min",
+      "business_rule_version": "2026-05-16"
+    },
+    {
+      "skill_id": "cron",
+      "description": "Cron-based recurring task scheduling",
+      "input_schema": {"type": "object", "properties": {"schedule": {"type": "string"}, "task": {"type": "string"}}},
+      "output_schema": {"type": "object", "properties": {"job_id": {"type": "string"}}},
+      "examples": ["schedule: '0 9 * * *'"],
+      "rate_limit": "5/min",
+      "business_rule_version": "2026-05-16"
+    },
+    {
+      "skill_id": "bridge",
+      "description": "Remote bridge control for multi-session management",
+      "input_schema": {"type": "object", "properties": {"session_id": {"type": "string"}, "command": {"type": "string"}}},
+      "output_schema": {"type": "object", "properties": {"result": {"type": "string"}}},
+      "examples": ["session_id: 'session-1'"],
+      "rate_limit": "10/min",
+      "business_rule_version": "2026-05-16"
+    },
+    {
+      "skill_id": "maref_governance",
+      "description": "MAREF governance layer: Explore→Analyze→Plan→Execute→Audit",
+      "input_schema": {"type": "object", "properties": {"phase": {"type": "string"}, "context": {"type": "object"}}},
+      "output_schema": {"type": "object", "properties": {"state": {"type": "string"}, "findings": {"type": "array"}}},
+      "examples": ["phase: 'analyze'"],
+      "rate_limit": "10/min",
+      "business_rule_version": "2026-05-16"
+    },
+    {
+      "skill_id": "pii_firewall",
+      "description": "PII detection and routing to local model for sensitive content",
+      "input_schema": {"type": "object", "properties": {"content": {"type": "string"}}},
+      "output_schema": {"type": "object", "properties": {"pii_detected": {"type": "boolean"}, "routed": {"type": "boolean"}}},
+      "examples": ["content: 'user data'"],
+      "rate_limit": "60/min",
+      "business_rule_version": "2026-05-16"
+    },
+    {
+      "skill_id": "cost_budget",
+      "description": "API cost tracking and budget circuit breaker",
+      "input_schema": {"type": "object", "properties": {"action": {"type": "string"}}},
+      "output_schema": {"type": "object", "properties": {"current_cost": {"type": "number"}, "budget_remaining": {"type": "number"}}},
+      "examples": ["action: 'check'"],
+      "rate_limit": "60/min",
+      "business_rule_version": "2026-05-16"
+    }
+  ],
+  "dependencies": [
+    "deepseek-api",
+    "ollama-local",
+    "postgres-kb",
+    "redis-cache"
+  ],
+  "authentication": {
+    "type": "APIKey",
+    "description": "API key authentication for external integrations"
+  },
+  "orchestration_hints": {
+    "preferred_role": "supervisor",
+    "parallel_safe": true,
+    "stateful": true
+  },
+  "message_format": {
+    "protocol": "MCP",
+    "transport": "stdio+http"
+  }
+}

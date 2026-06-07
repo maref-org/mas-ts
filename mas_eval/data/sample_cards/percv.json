@@ -1,0 +1,556 @@
+{
+  "card_version": "1.2",
+  "agent_id": "urn:agent:percv:research:percv-0-8-0",
+  "name": "PERCV",
+  "description": "Perceive-Extract-Reduce-Conclude-Validate Autonomous Industry Research System with multi-model verification, ratchet loops, and autonomous pipeline orchestration",
+  "version": "0.8.0",
+  "compliance": {
+    "data_residency": "CN",
+    "data_classification": "public",
+    "cross_border": false,
+    "model_backend_location": "CN",
+    "audit_trail_required": false
+  },
+  "model_backend": {
+    "provider": "multi-provider",
+    "model": "siliconflow/bailian/deepseek/ollama/openai",
+    "deployment": "cloud",
+    "endpoint": "https://api.siliconflow.cn/v1/chat/completions"
+  },
+  "capabilities": [
+    {
+      "skill_id": "bash",
+      "description": "Execute shell commands via subprocess with timeout controls",
+      "input_schema": {"type": "object", "properties": {"command": {"type": "string"}, "timeout": {"type": "integer"}}},
+      "output_schema": {"type": "object", "properties": {"stdout": {"type": "string"}, "stderr": {"type": "string"}, "exit_code": {"type": "integer"}}},
+      "examples": ["command: 'uv run pytest'", "command: 'percv research topic'"],
+      "rate_limit": "60/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "file_read",
+      "description": "Read file contents from local filesystem",
+      "input_schema": {"type": "object", "properties": {"path": {"type": "string"}}},
+      "output_schema": {"type": "object", "properties": {"content": {"type": "string"}}},
+      "examples": ["path: '/src/percv/pipeline.py'", "path: '/README.md'"],
+      "rate_limit": "120/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "file_write",
+      "description": "Write new files or overwrite existing ones",
+      "input_schema": {"type": "object", "properties": {"path": {"type": "string"}, "content": {"type": "string"}}},
+      "output_schema": {"type": "object", "properties": {"success": {"type": "boolean"}}},
+      "examples": ["path: '/vault/research.md'", "path: '/reports/analysis.md'"],
+      "rate_limit": "60/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "file_edit",
+      "description": "Edit existing files using search/replace blocks",
+      "input_schema": {"type": "object", "properties": {"path": {"type": "string"}, "old_str": {"type": "string"}, "new_str": {"type": "string"}}},
+      "output_schema": {"type": "object", "properties": {"success": {"type": "boolean"}}},
+      "examples": ["path: '/src/percv/scout.py', old_str: 'old', new_str: 'new'"],
+      "rate_limit": "60/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "glob",
+      "description": "Fast file pattern matching using glob patterns",
+      "input_schema": {"type": "object", "properties": {"pattern": {"type": "string"}}},
+      "output_schema": {"type": "object", "properties": {"files": {"type": "array"}}},
+      "examples": ["pattern: '**/*.py'", "pattern: 'tests/**/*.py'"],
+      "rate_limit": "120/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "grep",
+      "description": "Search file contents using ripgrep with regex support",
+      "input_schema": {"type": "object", "properties": {"pattern": {"type": "string"}}},
+      "output_schema": {"type": "object", "properties": {"matches": {"type": "array"}}},
+      "examples": ["pattern: 'class.*Agent'", "pattern: 'def research'"],
+      "rate_limit": "120/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "web_search",
+      "description": "Search the internet for research signals and information",
+      "input_schema": {"type": "object", "properties": {"query": {"type": "string"}}},
+      "output_schema": {"type": "object", "properties": {"results": {"type": "array"}}},
+      "examples": ["query: 'AI trends 2026'"],
+      "rate_limit": "30/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "web_fetch",
+      "description": "Fetch and convert web page content to markdown for research",
+      "input_schema": {"type": "object", "properties": {"url": {"type": "string"}}},
+      "output_schema": {"type": "object", "properties": {"content": {"type": "string"}}},
+      "examples": ["url: 'https://arxiv.org/abs/2026.12345'"],
+      "rate_limit": "30/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "scout",
+      "description": "Harvest signals from configured or exploratory sources",
+      "input_schema": {"type": "object", "properties": {"topic": {"type": "string"}, "sources": {"type": "array"}}},
+      "output_schema": {"type": "object", "properties": {"signals": {"type": "array"}}},
+      "examples": ["topic: 'quantum computing'"],
+      "rate_limit": "10/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "distill",
+      "description": "Extract KDP cards via double-blind LLM extraction",
+      "input_schema": {"type": "object", "properties": {"signals": {"type": "array"}}},
+      "output_schema": {"type": "object", "properties": {"kdp_cards": {"type": "array"}}},
+      "examples": ["signals: [signal1, signal2]"],
+      "rate_limit": "10/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "project",
+      "description": "Generate forecasts from KDP cards",
+      "input_schema": {"type": "object", "properties": {"kdp_cards": {"type": "array"}}},
+      "output_schema": {"type": "object", "properties": {"forecasts": {"type": "array"}}},
+      "examples": ["kdp_cards: [kdp1, kdp2]"],
+      "rate_limit": "10/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "validate",
+      "description": "Validate expired forecasts against real outcomes",
+      "input_schema": {"type": "object", "properties": {"forecast_id": {"type": "string"}}},
+      "output_schema": {"type": "object", "properties": {"validation_result": {"type": "object"}}},
+      "examples": ["forecast_id: 'fc-001'"],
+      "rate_limit": "10/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "archive",
+      "description": "Archive validated forecasts into the pattern library",
+      "input_schema": {"type": "object", "properties": {"validated_forecasts": {"type": "array"}}},
+      "output_schema": {"type": "object", "properties": {"archived_count": {"type": "integer"}}},
+      "examples": ["validated_forecasts: [vf1, vf2]"],
+      "rate_limit": "10/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "pattern",
+      "description": "Generate/update pattern cards from archived forecasts",
+      "input_schema": {"type": "object", "properties": {"archived_data": {"type": "array"}}},
+      "output_schema": {"type": "object", "properties": {"pattern_cards": {"type": "array"}}},
+      "examples": ["archived_data: [ad1, ad2]"],
+      "rate_limit": "10/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "verify",
+      "description": "Cross-pipeline fact verification with multi-model consensus",
+      "input_schema": {"type": "object", "properties": {"claims": {"type": "array"}}},
+      "output_schema": {"type": "object", "properties": {"verification_results": {"type": "array"}}},
+      "examples": ["claims: [claim1, claim2]"],
+      "rate_limit": "10/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "ratchet_loop",
+      "description": "Run git-versioned ratchet loop for self-improvement",
+      "input_schema": {"type": "object", "properties": {"program": {"type": "string"}, "auto": {"type": "boolean"}}},
+      "output_schema": {"type": "object", "properties": {"iterations": {"type": "integer"}, "improvements": {"type": "array"}}},
+      "examples": ["program: 'research_optimization.md'"],
+      "rate_limit": "5/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "gateway",
+      "description": "Multi-provider LLM routing with auto-failover and cost tracking",
+      "input_schema": {"type": "object", "properties": {"provider": {"type": "string"}, "model": {"type": "string"}}},
+      "output_schema": {"type": "object", "properties": {"response": {"type": "object"}, "cost_usd": {"type": "number"}}},
+      "examples": ["provider: 'siliconflow'", "provider: 'bailian'"],
+      "rate_limit": "60/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "cost_tracker",
+      "description": "Track and report LLM API costs by model and month",
+      "input_schema": {"type": "object", "properties": {"period": {"type": "string"}}},
+      "output_schema": {"type": "object", "properties": {"total_cost": {"type": "number"}, "breakdown": {"type": "object"}}},
+      "examples": ["period: '2026-05'"],
+      "rate_limit": "10/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "test_runner",
+      "description": "Execute pytest test suites with coverage reporting",
+      "input_schema": {"type": "object", "properties": {"test_path": {"type": "string"}, "coverage": {"type": "boolean"}}},
+      "output_schema": {"type": "object", "properties": {"passed": {"type": "integer"}, "failed": {"type": "integer"}}},
+      "examples": ["test_path: 'tests/'", "test_path: 'tests/' --cov"],
+      "rate_limit": "10/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "synthesize",
+      "description": "Cross-study synthesis and analysis across multiple research tasks",
+      "input_schema": {"type": "object", "properties": {"studies": {"type": "array"}}},
+      "output_schema": {"type": "object", "properties": {"synthesis": {"type": "string"}}},
+      "examples": ["studies: [study1, study2, study3]"],
+      "rate_limit": "5/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "todo_write",
+      "description": "Create and manage structured task lists for tracking research progress",
+      "input_schema": {"type": "object", "properties": {"todos": {"type": "array"}}},
+      "output_schema": {"type": "object", "properties": {"success": {"type": "boolean"}}},
+      "examples": ["todos: [{content: 'Harvest signals', status: 'in_progress'}]"],
+      "rate_limit": "30/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "docker_build",
+      "description": "Build and manage Docker containers for PERCV deployment",
+      "input_schema": {"type": "object", "properties": {"action": {"type": "string"}}},
+      "output_schema": {"type": "object", "properties": {"image_id": {"type": "string"}, "success": {"type": "boolean"}}},
+      "examples": ["action: 'build', tag: 'percv:latest'"],
+      "rate_limit": "5/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "agent_tool",
+      "description": "Spawn and manage sub-agent instances for parallel research tasks. Supports scout, distiller, projector, validator agent types with isolated execution contexts",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "agent_type": {"type": "string", "enum": ["scout", "distiller", "projector", "validator", "reporter"]},
+          "task": {"type": "string"},
+          "config": {"type": "object"},
+          "timeout_seconds": {"type": "integer", "default": 300}
+        },
+        "required": ["agent_type", "task"]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "agent_id": {"type": "string"},
+          "status": {"type": "string", "enum": ["running", "completed", "failed"]},
+          "result": {"type": "object"},
+          "duration_ms": {"type": "integer"}
+        }
+      },
+      "examples": [
+        "agent_type: 'scout', task: 'research AI trends in 2026'",
+        "agent_type: 'distiller', task: 'extract KDPs from signals'"
+      ],
+      "rate_limit": "10/min",
+      "business_rule_version": "2026-05-31"
+    },
+    {
+      "skill_id": "scheduler",
+      "description": "Schedule recurring and one-time research tasks with cron-like functionality",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "task_type": {"type": "string"},
+          "payload": {"type": "object"},
+          "interval_seconds": {"type": "integer"},
+          "run_at": {"type": "string", "format": "date-time"}
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "task_id": {"type": "string"},
+          "scheduled_at": {"type": "string"}
+        }
+      },
+      "examples": [
+        "task_type: 'research', payload: {topic: 'AI trends'}, interval_seconds: 86400"
+      ],
+      "rate_limit": "5/min",
+      "business_rule_version": "2026-05-31"
+    },
+    {
+      "skill_id": "remote_bridge",
+      "description": "Remote bridge control interface for external systems to interact with PERCV. Supports HTTP/SSE transport with APIKey authentication",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {"type": "string", "enum": ["connect", "execute", "disconnect", "status"]},
+          "bridge_id": {"type": "string"},
+          "command": {"type": "string"},
+          "params": {"type": "object"}
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "bridge_id": {"type": "string"},
+          "status": {"type": "string"},
+          "result": {"type": "object"}
+        }
+      },
+      "examples": [
+        "action: 'execute', command: 'research', params: {topic: 'AI trends'}"
+      ],
+      "rate_limit": "10/min",
+      "business_rule_version": "2026-05-31"
+    },
+    {
+      "skill_id": "context_management",
+      "description": "Manage LLM context window with support for up to 128K tokens. Includes context compression, sliding window, and priority-based truncation",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {"type": "string", "enum": ["compress", "truncate", "summarize"]},
+          "target_tokens": {"type": "integer"},
+          "priority_sections": {"type": "array"}
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "original_tokens": {"type": "integer"},
+          "compressed_tokens": {"type": "integer"},
+          "compression_ratio": {"type": "number"}
+        }
+      },
+      "examples": [
+        "action: 'compress', target_tokens: 32000"
+      ],
+      "rate_limit": "30/min",
+      "business_rule_version": "2026-05-31"
+    },
+    {
+      "skill_id": "code_execution",
+      "description": "Execute Python code in isolated sandbox with timeout and resource limits",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "code": {"type": "string"},
+          "language": {"type": "string", "default": "python"},
+          "timeout_seconds": {"type": "integer", "default": 30},
+          "libraries": {"type": "array", "items": {"type": "string"}}
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "stdout": {"type": "string"},
+          "stderr": {"type": "string"},
+          "exit_code": {"type": "integer"},
+          "execution_time_ms": {"type": "integer"}
+        }
+      },
+      "examples": [
+        "code: 'print(1+1)', timeout_seconds: 10"
+      ],
+      "rate_limit": "20/min",
+      "business_rule_version": "2026-05-31"
+    },
+    {
+      "skill_id": "memory_management",
+      "description": "Cross-session memory with vector search capability. Supports storing, retrieving, and searching research findings",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {"type": "string", "enum": ["store", "retrieve", "search", "delete"]},
+          "key": {"type": "string"},
+          "value": {"type": "string"},
+          "query": {"type": "string"},
+          "top_k": {"type": "integer", "default": 5}
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "results": {"type": "array"},
+          "count": {"type": "integer"}
+        }
+      },
+      "examples": [
+        "action: 'store', key: 'ai-trends-2026', value: '...'",
+        "action: 'search', query: 'AI governance frameworks', top_k: 5"
+      ],
+      "rate_limit": "30/min",
+      "business_rule_version": "2026-05-31"
+    },
+    {
+      "skill_id": "memory",
+      "description": "Cross-session memory persistence with SQLite backend. Supports key-value storage, namespace isolation, and TTL-based expiration",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {"type": "string", "enum": ["get", "set", "delete", "list"]},
+          "key": {"type": "string"},
+          "value": {"type": "string"},
+          "namespace": {"type": "string", "default": "default"},
+          "ttl_seconds": {"type": "integer"}
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "value": {"type": "string"},
+          "count": {"type": "integer"},
+          "success": {"type": "boolean"}
+        }
+      },
+      "examples": [
+        "action: 'set', key: 'research-001', value: '...'",
+        "action: 'get', key: 'research-001'"
+      ],
+      "rate_limit": "60/min",
+      "business_rule_version": "2026-05-31"
+    },
+    {
+      "skill_id": "task_management",
+      "description": "Task queue management with priority scheduling, retry support, and status tracking",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {"type": "string", "enum": ["create", "update", "list", "cancel", "status"]},
+          "task_id": {"type": "string"},
+          "task_type": {"type": "string"},
+          "payload": {"type": "object"},
+          "priority": {"type": "integer", "default": 0}
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "task_id": {"type": "string"},
+          "status": {"type": "string", "enum": ["pending", "running", "completed", "failed"]},
+          "tasks": {"type": "array"}
+        }
+      },
+      "examples": [
+        "action: 'create', task_type: 'research', payload: {topic: 'AI trends'}"
+      ],
+      "rate_limit": "30/min",
+      "business_rule_version": "2026-05-31"
+    },
+    {
+      "skill_id": "cron",
+      "description": "Cron-like scheduling for recurring research tasks. Supports interval-based and at-time scheduling with persistence",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {"type": "string", "enum": ["schedule", "unschedule", "list"]},
+          "schedule_id": {"type": "string"},
+          "interval_seconds": {"type": "integer"},
+          "task_type": {"type": "string"},
+          "payload": {"type": "object"}
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "schedule_id": {"type": "string"},
+          "next_run": {"type": "string"},
+          "schedules": {"type": "array"}
+        }
+      },
+      "examples": [
+        "action: 'schedule', interval_seconds: 86400, task_type: 'research'"
+      ],
+      "rate_limit": "10/min",
+      "business_rule_version": "2026-05-31"
+    },
+    {
+      "skill_id": "bridge",
+      "description": "Remote bridge control interface for multi-session management. Supports external systems to connect, execute commands, and disconnect via HTTP/SSE transport",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {"type": "string", "enum": ["connect", "execute", "disconnect", "status"]},
+          "bridge_id": {"type": "string"},
+          "command": {"type": "string"},
+          "params": {"type": "object"},
+          "transport": {"type": "string", "enum": ["http", "sse"], "default": "http"}
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "bridge_id": {"type": "string"},
+          "status": {"type": "string"},
+          "result": {"type": "object"}
+        }
+      },
+      "examples": [
+        "action: 'execute', command: 'research', params: {topic: 'AI trends'}"
+      ],
+      "rate_limit": "20/min",
+      "business_rule_version": "2026-05-31"
+    },
+    {
+      "skill_id": "worktree",
+      "description": "MAS-TS-001 standard tool — create and manage git worktree-based isolated execution environments for sub-agent session isolation",
+      "input_schema": {"type": "object", "properties": {"worktree_path": {"type": "string"}, "repo_path": {"type": "string"}, "branch": {"type": "string"}}, "required": ["worktree_path", "repo_path"]},
+      "output_schema": {"type": "object", "properties": {"success": {"type": "boolean"}, "path": {"type": "string"}}},
+      "examples": ["worktree_path: '/tmp/percv-wt-001', repo_path: '/percv'", "worktree_path: '/tmp/percv-wt-002', repo_path: '/percv', branch: 'feature'"],
+      "rate_limit": "20/min",
+      "business_rule_version": "2026-05-31"
+    },
+    {
+      "skill_id": "mcp_tool",
+      "description": "MAS-TS-001 standard tool — MCP (Model Context Protocol) interface for inter-agent communication and remote tool invocation via JSON-RPC 2.0",
+      "input_schema": {"type": "object", "properties": {"server": {"type": "string"}, "tool": {"type": "string"}, "input": {"type": "object"}}, "required": ["server", "tool"]},
+      "output_schema": {"type": "object", "properties": {"result": {"type": "object"}, "is_error": {"type": "boolean"}}},
+      "examples": ["server: 'a2a-gateway', tool: 'remote_agent.invoke'", "server: 'coordinator', tool: 'task_delegate'"],
+      "rate_limit": "30/min",
+      "business_rule_version": "2026-05-31"
+    }
+  ],
+  "endpoints": {
+    "api": "http://localhost:8000/api/v1",
+    "dashboard": "http://localhost:8000/dashboard",
+    "a2a": "http://localhost:8000/a2a/v1",
+    "mcp": "http://localhost:8000/mcp"
+  },
+  "authentication": {
+    "type": "APIKey",
+    "scopes": ["research:read", "research:write", "verify:read", "cost:read", "pipeline:execute"]
+  },
+  "dependencies": [
+    "python>=3.10",
+    "click",
+    "pyyaml",
+    "httpx",
+    "gitpython",
+    "rich",
+    "fastapi",
+    "uvicorn"
+  ],
+  "orchestration_hints": {
+    "preferred_role": "planner",
+    "parallel_safe": true,
+    "stateful": true
+  },
+  "constitution": {
+    "envelope": {
+      "message_id": "550e8400-e29b-41d4-a716-446655440000",
+      "correlation_id": "trace-percv-001",
+      "timestamp": "2026-05-31T00:00:00Z",
+      "sender": "urn:agent:percv:research:percv-0-8-0",
+      "protocol": "json-rpc-2.0"
+    },
+    "health_state": "HEALTHY",
+    "heartbeat_interval_seconds": 30,
+    "stale_node_timeout_seconds": 120,
+    "message_format": {
+      "version": "1.2",
+      "supported_transports": ["stdio", "sse", "http"],
+      "max_payload_bytes": 10485760
+    }
+  },
+  "coordination": {
+    "mode": "hierarchical",
+    "agent_types": ["scout", "distiller", "projector", "validator", "archivist", "reporter"],
+    "communication_protocol": "internal-api",
+    "conflict_resolution": "supervisor-override",
+    "supports_parallel": true,
+    "max_parallel_agents": 5
+  }
+}
