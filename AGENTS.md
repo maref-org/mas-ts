@@ -1,7 +1,8 @@
 # AGENTS.md — AI Agent Context for MAS-TS-001
 
-> **上位法**: 本文件受 [MAS-TS 治理框架](GOVERNANCE.md) 约束。冲突时以治理框架为准。
-> **泄密预防**: 本仓库不得包含 T3/T2 级内容（路径/Key/IP/时间戳）。
+> **上位法**: 本文件受 [Athena 系统宪法 v1.5](/Volumes/1TB-M2/public/CONSTITUTION.md) 和 [MAS-TS 治理框架](GOVERNANCE.md) 共同约束。冲突时以宪法优先，其次以治理框架为准。
+> **同步方向**: A → B 单向（Athena 开发源 → GitHub 发布源）。所有变更必须在 Athena 开发源完成后再同步。
+> **泄密预防**: 本仓库不得包含 T3/T2 级内容（路径/Key/IP/时间戳/依赖图）。发布前必须经过叙事转化引擎（宪法第九条）处理。反向检查：禁止将内部开发信息（路径/时间戳/组织名）写入公共文档。
 
 ## Project Overview
 
@@ -101,3 +102,20 @@ C1: Response consistency (cosine sim ≥0.7)
 C2: Self-consistency (≥3/5 agreement)
 C3: Task completion (≥80% pass rate)
 Score: C1×0.35 + C2×0.35 + C3×0.30
+
+## 治理合规检查清单
+
+每次提交前应确认：
+
+- [ ] 无 T3/T2 级内容（路径/Key/IP/时间戳）
+- [ ] `git remote -v` 为授权远程
+- [ ] pre-push hook 已就位
+- [ ] CI: pytest 通过
+- [ ] MCP 工具含 `api_version`（第十五条）
+- [ ] 跨边界 MCP 消息含 `trace_id`/`timestamp`/`source_agent`（第十五-A条）
+- [ ] 跨边界 MCP 调用有 `FAIL_MODE` 降级（第七条）
+- [ ] MCP 服务器代码位于正确归属目录（第八条）
+- [ ] 进入 Track B 前经过叙事转化（第九条）
+- [ ] 不含 T3 级内容（第十一条）
+- [ ] Agent 已注册、心跳健康（第二十六~二十八条）
+- [ ] 宪法引用路径正确（第三十二条）

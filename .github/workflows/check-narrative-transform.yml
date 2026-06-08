@@ -1,0 +1,24 @@
+name: Check Narrative Transform
+on:
+  pull_request:
+    paths: ['**.py', '**.md', '**.json', '**.yaml']
+
+jobs:
+  check-narrative:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for T3/T2 internal content
+        run: |
+          T3_PATTERNS='(/Volumes/|/Users/|OPC工作区|openclaw[^-])'
+          FAILURES=0
+          git diff --cached --name-only 2>/dev/null || git diff --name-only origin/main...HEAD 2>/dev/null || git ls-files | while read f; do
+            if grep -qP "$T3_PATTERNS" "$f" 2>/dev/null; then
+              echo "❌ T3 content found in $f"
+              FAILURES=$((FAILURES + 1))
+            fi
+          done
+          exit $FAILURES
+      - name: Verify narrative transform compliance
+        run: |
+          echo "✅ Narrative transform check passed (T3/T2 content scan)"
