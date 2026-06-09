@@ -1,8 +1,90 @@
-__pycache__/
-*.pyc
-*.pyo
-.venv/
-.pytest_cache/
-*.db
+# macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.coverage.*
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Environment variables
+.env
+.env.local
+*.env
+!*.example.env
+!*.example.*.env
+
+# Credentials and secrets
+*.key
+*.pem
+*.secret
+credentials/
+*.token
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+
+# Reports
 reports/
+
+# IDE workspace metadata
+.trae/
+
+# Node
+node_modules/
+
+# Internal planning files
+findings.md
+progress.md
+task_plan.md
+
+# Trae AI config (local only)
+.trae/
