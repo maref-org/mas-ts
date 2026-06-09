@@ -8,19 +8,19 @@ Usage: python generate_anchor.py --output report.json --runs 5
 Runs standardized benchmarks (GEMM + LLM inference) and generates
 a normalization coefficient relative to the official Docker-CPU baseline.
 """
-import time
-import json
 import argparse
+import json
+import logging
+import os
 import subprocess
 import sys
-import os
-import logging
+import time
 from pathlib import Path
 
-import numpy as np
 import argcomplete
-import tenacity
+import numpy as np
 import requests
+import tenacity
 
 sys.path.insert(0, str(Path(__file__).parent.resolve()))
 from mas_eval import __version__ as VERSION
@@ -54,7 +54,7 @@ def benchmark_gemm():
         times = []
         for _ in range(3):
             start = time.perf_counter()
-            C = A @ B
+            A @ B
             end = time.perf_counter()
             times.append(end - start)
 
@@ -85,12 +85,6 @@ def _llm_request(endpoint: str, headers: dict, payload: dict) -> dict:
 
 def benchmark_llm():
     """Run LLM inference benchmark using reference model (Qwen2.5-7B)."""
-    try:
-        import requests
-    except ImportError:
-        logger.error("'requests' library not found. Install: pip install requests")
-        sys.exit(1)
-
     ENDPOINT = os.getenv("ANCHOR_LLM_ENDPOINT", "http://localhost:8000/v1/chat/completions")
     MODEL = os.getenv("ANCHOR_LLM_MODEL", "qwen2.5-7b-instruct")
 

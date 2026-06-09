@@ -15,16 +15,14 @@ Implements the complete 5-layer evaluation per MAS-TS-001 v2.1:
   Layer 4: E2E Metrics (task coverage, capability completeness, dependency analysis)
   Layer 5: MAS Dimension (agent spawn, session isolation, coordination, state, scheduling)
 """
-import json
-import sys
 import argparse
-import time
-import subprocess
-import os
-import re
+import json
 import logging
-from pathlib import Path
+import re
+import sys
+import time
 from datetime import datetime, timezone
+from pathlib import Path
 from urllib.parse import urlparse
 
 import argcomplete
@@ -688,7 +686,7 @@ def run_layer5_mas_dimension(card, tasks=None):
         required = set(dim_spec["required_tools"])
         available = required & declared_tools
         coverage = len(available) / len(required) if required else 1.0
-        weight = dim_spec["weight"]
+        dim_spec["weight"]
 
         dim_score = coverage * 100
 
@@ -809,7 +807,7 @@ def grade_to_emoji(grade):
 
 def compute_overall_score(layers):
     weights = {1: 0.15, 2: 0.20, 3: 0.25, 4: 0.25, 5: 0.15}
-    total = sum(l["score"] * weights[l["layer"]] for l in layers)
+    total = sum(layer["score"] * weights[layer["layer"]] for layer in layers)
     return round(total, 1)
 
 
@@ -817,10 +815,22 @@ def generate_report(card, layers, tasks=None, source_dir=None):
     overall = compute_overall_score(layers)
     overall_grade = score_to_grade(overall)
 
-    critical_count = sum(len([f for f in l["findings"] if f["severity"] == "CRITICAL"]) for l in layers)
-    high_count = sum(len([f for f in l["findings"] if f["severity"] == "HIGH"]) for l in layers)
-    warning_count = sum(len([f for f in l["findings"] if f["severity"] == "WARNING"]) for l in layers)
-    info_count = sum(len([f for f in l["findings"] if f["severity"] == "INFO"]) for l in layers)
+    critical_count = sum(
+        len([f for f in layer["findings"] if f["severity"] == "CRITICAL"])
+        for layer in layers
+    )
+    high_count = sum(
+        len([f for f in layer["findings"] if f["severity"] == "HIGH"])
+        for layer in layers
+    )
+    warning_count = sum(
+        len([f for f in layer["findings"] if f["severity"] == "WARNING"])
+        for layer in layers
+    )
+    info_count = sum(
+        len([f for f in layer["findings"] if f["severity"] == "INFO"])
+        for layer in layers
+    )
 
     report = {
         "standard": "MAS-TS-001",
