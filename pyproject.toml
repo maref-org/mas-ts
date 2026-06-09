@@ -8,8 +8,44 @@ version = "0.1.0"
 description = "MAS-TS-001 Fast-Screen Evaluation Harness"
 requires-python = ">=3.11"
 license = {text = "Apache-2.0"}
+dependencies = [
+    "argcomplete>=3.0",
+    "jsonschema>=4.20",
+    "numpy>=1.24",
+    "pyyaml>=6.0",
+    "requests>=2.31",
+    "rich>=13.0",
+    "tenacity>=8.0",
+]
+[project.optional-dependencies]
+ml = ["scipy>=1.10"]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.15",
+    "mypy>=1.0",
+    "types-requests",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["mas_eval*"]
 
 [tool.mas-eval]
 fast_screen_timeout_minutes = 5
 report_dir = "reports"
 trace_dir = "/var/log/mas-eval/traces"
+
+[tool.ruff]
+lint.select = ["E", "F", "I"]
+lint.ignore = ["E501"]
+
+[tool.mypy]
+ignore_missing_imports = true
+
+[tool.coverage.run]
+source = ["mas_eval"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 80
