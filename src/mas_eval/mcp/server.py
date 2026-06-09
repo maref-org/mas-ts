@@ -28,7 +28,6 @@ def run_evaluation(args: dict) -> dict:
     # Basic implementation — delegates to existing harness
     domain = args.get("domain", "d1")
     level = args.get("level", "l0")
-    agent_config = args.get("agent_config", {})
     result = {"domain": domain, "level": level, "status": "ok", "result": {}}
     return result
 
