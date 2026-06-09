@@ -29,6 +29,6 @@ regions:
     - api.zhipuai.vip
 
   LOCAL:
-    - localhost
-    - 127.0.0.1
-    - 0.0.0.0
+    - {{LOCALHOST}}
+    - {{LOOPBACK_IP}}
+    - {{BIND_ALL}}
