@@ -44,23 +44,60 @@ logger = logging.getLogger(__name__)
 # --- State Machine ---
 
 STATE_NAMES = [
-    "INIT", "OBSERVE", "ANALYZE", "EVALUATE", "DECIDE",
-    "ACT", "VERIFY", "STABILIZE", "REPORT", "HALT",
+    "INIT",
+    "OBSERVE",
+    "ANALYZE",
+    "EVALUATE",
+    "DECIDE",
+    "ACT",
+    "VERIFY",
+    "STABILIZE",
+    "REPORT",
+    "HALT",
 ]
 
-GRAY_CODES = [0b0000, 0b0001, 0b0011, 0b0010, 0b0110,
-              0b0111, 0b0101, 0b0100, 0b1100, 0b1101]
+GRAY_CODES = [
+    0b0000,
+    0b0001,
+    0b0011,
+    0b0010,
+    0b0110,
+    0b0111,
+    0b0101,
+    0b0100,
+    0b1100,
+    0b1101,
+]
 
 STATE_GRAY = dict(zip(STATE_NAMES, GRAY_CODES))
 GRAY_STATE = dict(zip(GRAY_CODES, STATE_NAMES))
 
 
 STATE_ENTROPY = {
-    "INIT": 0, "OBSERVE": 1, "ANALYZE": 2, "EVALUATE": 3, "DECIDE": 4,
-    "ACT": 3, "VERIFY": 2, "STABILIZE": 1, "REPORT": 1, "HALT": 0,
+    "INIT": 0,
+    "OBSERVE": 1,
+    "ANALYZE": 2,
+    "EVALUATE": 3,
+    "DECIDE": 4,
+    "ACT": 3,
+    "VERIFY": 2,
+    "STABILIZE": 1,
+    "REPORT": 1,
+    "HALT": 0,
 }
 
-PRIMARY_PATH = ["INIT", "OBSERVE", "ANALYZE", "EVALUATE", "DECIDE", "ACT", "VERIFY", "STABILIZE", "REPORT", "HALT"]
+PRIMARY_PATH = [
+    "INIT",
+    "OBSERVE",
+    "ANALYZE",
+    "EVALUATE",
+    "DECIDE",
+    "ACT",
+    "VERIFY",
+    "STABILIZE",
+    "REPORT",
+    "HALT",
+]
 
 
 def _is_power_of_two(n):
@@ -76,16 +113,16 @@ class StateMachine:
     @staticmethod
     def _build_default_transitions():
         return {
-            "INIT":      ["OBSERVE", "HALT"],
-            "OBSERVE":   ["INIT", "ANALYZE", "HALT"],
-            "ANALYZE":   ["OBSERVE", "EVALUATE", "HALT"],
-            "EVALUATE":  ["ANALYZE", "DECIDE", "HALT"],
-            "DECIDE":    ["EVALUATE", "ACT", "HALT"],
-            "ACT":       ["DECIDE", "VERIFY", "STABILIZE", "HALT"],
-            "VERIFY":    ["ACT", "STABILIZE", "REPORT", "HALT"],
+            "INIT": ["OBSERVE", "HALT"],
+            "OBSERVE": ["INIT", "ANALYZE", "HALT"],
+            "ANALYZE": ["OBSERVE", "EVALUATE", "HALT"],
+            "EVALUATE": ["ANALYZE", "DECIDE", "HALT"],
+            "DECIDE": ["EVALUATE", "ACT", "HALT"],
+            "ACT": ["DECIDE", "VERIFY", "STABILIZE", "HALT"],
+            "VERIFY": ["ACT", "STABILIZE", "REPORT", "HALT"],
             "STABILIZE": ["VERIFY", "REPORT", "OBSERVE", "HALT"],
-            "REPORT":    ["STABILIZE", "HALT", "INIT"],
-            "HALT":      [],
+            "REPORT": ["STABILIZE", "HALT", "INIT"],
+            "HALT": [],
         }
 
     def transition(self, target):
@@ -160,10 +197,14 @@ class StateMachine:
             neighbor_entropy = STATE_ENTROPY.get(neighbor, 0)
             if i < peak_index:
                 if neighbor_entropy <= current_entropy:
-                    violations.append((state, neighbor, current_entropy, neighbor_entropy))
+                    violations.append(
+                        (state, neighbor, current_entropy, neighbor_entropy)
+                    )
             else:
                 if neighbor_entropy > current_entropy and neighbor not in ("REPORT",):
-                    violations.append((state, neighbor, current_entropy, neighbor_entropy))
+                    violations.append(
+                        (state, neighbor, current_entropy, neighbor_entropy)
+                    )
         return violations
 
     def snapshot(self):
@@ -199,7 +240,10 @@ class CircuitBreaker:
     def record_failure(self):
         self.consecutive_failures += 1
         self.last_failure_time = time.time()
-        if self.consecutive_failures >= self.failure_threshold and self.state != CircuitBreakerState.OPEN:
+        if (
+            self.consecutive_failures >= self.failure_threshold
+            and self.state != CircuitBreakerState.OPEN
+        ):
             self._change_state(CircuitBreakerState.OPEN)
             return True
         return False
@@ -264,8 +308,8 @@ class OscillationDetector:
         cycle_found = None
         for cycle_len in range(2, self.window_size + 2):
             for offset in range(len(self.history) - cycle_len * 2 + 1):
-                chunk = self.history[offset:offset + cycle_len]
-                next_chunk = self.history[offset + cycle_len:offset + cycle_len * 2]
+                chunk = self.history[offset : offset + cycle_len]
+                next_chunk = self.history[offset + cycle_len : offset + cycle_len * 2]
                 if chunk == next_chunk:
                     if len(self.history) >= offset + cycle_len * 2:
                         cycle_found = cycle_len
@@ -318,7 +362,9 @@ class AuditTrail:
             "_prev_hash": self.last_hash.hex(),
             "entry": entry,
         }
-        entry_bytes = json.dumps(record, sort_keys=True, ensure_ascii=False).encode("utf-8")
+        entry_bytes = json.dumps(record, sort_keys=True, ensure_ascii=False).encode(
+            "utf-8"
+        )
         entry_hash = self._compute_hash(entry_bytes, self.last_hash)
         record["_hash"] = entry_hash.hex()
         self.last_hash = entry_hash
@@ -332,11 +378,20 @@ class AuditTrail:
             stored_hash = bytes.fromhex(entry.get("_hash", ""))
             stored_prev_hash = entry.get("_prev_hash", "")
             if stored_prev_hash != prev_hash.hex():
-                errors.append({"index": i, "error": "hash_chain_broken", "expected_prev": prev_hash.hex(), "got_prev": stored_prev_hash})
+                errors.append(
+                    {
+                        "index": i,
+                        "error": "hash_chain_broken",
+                        "expected_prev": prev_hash.hex(),
+                        "got_prev": stored_prev_hash,
+                    }
+                )
                 return errors
             entry_copy = dict(entry)
             entry_copy.pop("_hash", None)
-            entry_bytes = json.dumps(entry_copy, sort_keys=True, ensure_ascii=False).encode("utf-8")
+            entry_bytes = json.dumps(
+                entry_copy, sort_keys=True, ensure_ascii=False
+            ).encode("utf-8")
             computed = self._compute_hash(entry_bytes, prev_hash)
             if computed != stored_hash:
                 errors.append({"index": i, "error": "hash_mismatch"})
@@ -370,42 +425,108 @@ def _score_state_machine(sm):
     reachable_count, reachable_states = sm.bfs_all_states_reachable()
     if reachable_count == 10:
         score += 20
-        findings.append({"severity": "INFO", "category": "sm_reachability", "detail": "All 10/10 states reachable from INIT"})
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "sm_reachability",
+                "detail": "All 10/10 states reachable from INIT",
+            }
+        )
     else:
-        findings.append({"severity": "HIGH", "category": "sm_reachability", "detail": f"Only {reachable_count}/10 states reachable from INIT"})
+        findings.append(
+            {
+                "severity": "HIGH",
+                "category": "sm_reachability",
+                "detail": f"Only {reachable_count}/10 states reachable from INIT",
+            }
+        )
 
     violations = sm.verify_single_bit_transitions()
     if not violations:
         score += 20
-        findings.append({"severity": "INFO", "category": "sm_gray_code", "detail": "All transitions use single-bit Gray-code flips"})
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "sm_gray_code",
+                "detail": "All transitions use single-bit Gray-code flips",
+            }
+        )
     else:
-        findings.append({"severity": "HIGH", "category": "sm_gray_code", "detail": f"{len(violations)} transitions violate single-bit Gray-code rule"})
+        findings.append(
+            {
+                "severity": "HIGH",
+                "category": "sm_gray_code",
+                "detail": f"{len(violations)} transitions violate single-bit Gray-code rule",
+            }
+        )
 
     if sm.verify_halt_absorbing():
         score += 15
-        findings.append({"severity": "INFO", "category": "sm_halt", "detail": "HALT is absorbing (no outgoing transitions)"})
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "sm_halt",
+                "detail": "HALT is absorbing (no outgoing transitions)",
+            }
+        )
     else:
-        findings.append({"severity": "HIGH", "category": "sm_halt", "detail": "HALT state has outgoing transitions"})
+        findings.append(
+            {
+                "severity": "HIGH",
+                "category": "sm_halt",
+                "detail": "HALT state has outgoing transitions",
+            }
+        )
 
     entropy_violations = sm.verify_entropy_monotonicity()
     if not entropy_violations:
         score += 15
-        findings.append({"severity": "INFO", "category": "sm_entropy", "detail": "Entropy follows 0→4→0 hump monotonically"})
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "sm_entropy",
+                "detail": "Entropy follows 0→4→0 hump monotonically",
+            }
+        )
     else:
-        findings.append({"severity": "WARNING", "category": "sm_entropy", "detail": f"{len(entropy_violations)} entropy monotonicity violations"})
+        findings.append(
+            {
+                "severity": "WARNING",
+                "category": "sm_entropy",
+                "detail": f"{len(entropy_violations)} entropy monotonicity violations",
+            }
+        )
 
     snap = sm.snapshot()
     sm2 = StateMachine()
     sm2.restore(snap)
     if sm2.current == sm.current and sm2.history == sm.history:
         score += 15
-        findings.append({"severity": "INFO", "category": "sm_snapshot", "detail": "Snapshot/restore works correctly"})
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "sm_snapshot",
+                "detail": "Snapshot/restore works correctly",
+            }
+        )
     else:
-        findings.append({"severity": "WARNING", "category": "sm_snapshot", "detail": "Snapshot/restore failed"})
+        findings.append(
+            {
+                "severity": "WARNING",
+                "category": "sm_snapshot",
+                "detail": "Snapshot/restore failed",
+            }
+        )
 
     if sm.can_reach_halt():
         score += 15
-        findings.append({"severity": "INFO", "category": "sm_halt_reachable", "detail": "HALT reachable from current state"})
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "sm_halt_reachable",
+                "detail": "HALT reachable from current state",
+            }
+        )
 
     return round(score, 1), findings
 
@@ -419,15 +540,33 @@ def _score_circuit_breaker(cb):
         cb.record_failure()
     if cb.state == CircuitBreakerState.OPEN:
         score += 25
-        findings.append({"severity": "INFO", "category": "cb_open", "detail": "3-consecutive failure → OPEN state correct"})
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "cb_open",
+                "detail": "3-consecutive failure → OPEN state correct",
+            }
+        )
     else:
-        findings.append({"severity": "HIGH", "category": "cb_open", "detail": "3-consecutive failure did not trigger OPEN"})
+        findings.append(
+            {
+                "severity": "HIGH",
+                "category": "cb_open",
+                "detail": "3-consecutive failure did not trigger OPEN",
+            }
+        )
 
     cb.state = CircuitBreakerState.OPEN
     cb.last_failure_time = 0
     cb.check_cooldown()
     if cb.state == CircuitBreakerState.OPEN:
-        findings.append({"severity": "INFO", "category": "cb_cooldown", "detail": "Cooldown timer respected"})
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "cb_cooldown",
+                "detail": "Cooldown timer respected",
+            }
+        )
         score += 15
 
     cb.state = CircuitBreakerState.HALF_OPEN
@@ -436,9 +575,21 @@ def _score_circuit_breaker(cb):
     cb.record_success()
     if cb.state == CircuitBreakerState.CLOSED:
         score += 25
-        findings.append({"severity": "INFO", "category": "cb_half_open", "detail": "2/2 probes → CLOSED recovery correct"})
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "cb_half_open",
+                "detail": "2/2 probes → CLOSED recovery correct",
+            }
+        )
     else:
-        findings.append({"severity": "HIGH", "category": "cb_half_open", "detail": "Half-open recovery did not trigger"})
+        findings.append(
+            {
+                "severity": "HIGH",
+                "category": "cb_half_open",
+                "detail": "Half-open recovery did not trigger",
+            }
+        )
 
     cb.reset()
     cb.increment_depth()
@@ -447,9 +598,21 @@ def _score_circuit_breaker(cb):
     tripped = cb.increment_depth()
     if tripped and cb.state == CircuitBreakerState.OPEN:
         score += 20
-        findings.append({"severity": "INFO", "category": "cb_depth", "detail": "Recursion depth > 3 triggers circuit break"})
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "cb_depth",
+                "detail": "Recursion depth > 3 triggers circuit break",
+            }
+        )
     else:
-        findings.append({"severity": "WARNING", "category": "cb_depth", "detail": "Recursion depth limit not enforced"})
+        findings.append(
+            {
+                "severity": "WARNING",
+                "category": "cb_depth",
+                "detail": "Recursion depth limit not enforced",
+            }
+        )
 
     score = min(100, score)
     return round(score, 1), findings
@@ -465,14 +628,32 @@ def _score_oscillation(od):
     detection = od.detect_oscillation()
     if detection:
         score += 30
-        findings.append({"severity": "INFO", "category": "osc_detection", "detail": f"Oscillation detected (cycle length={detection})"})
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "osc_detection",
+                "detail": f"Oscillation detected (cycle length={detection})",
+            }
+        )
     else:
-        findings.append({"severity": "HIGH", "category": "osc_detection", "detail": "Failed to detect oscillation in A-B-A-B-A pattern"})
+        findings.append(
+            {
+                "severity": "HIGH",
+                "category": "osc_detection",
+                "detail": "Failed to detect oscillation in A-B-A-B-A pattern",
+            }
+        )
 
     od.stabilize()
     assert len(od.window) == 0
     score += 20
-    findings.append({"severity": "INFO", "category": "osc_stabilize", "detail": "Stabilization clears window correctly"})
+    findings.append(
+        {
+            "severity": "INFO",
+            "category": "osc_stabilize",
+            "detail": "Stabilization clears window correctly",
+        }
+    )
 
     od.window.clear()
     for s in ["A", "B", "C", "D", "E"]:
@@ -483,7 +664,13 @@ def _score_oscillation(od):
     od.record_false_positive()
     fpr = od.false_positive_rate
     score += max(0, 15 - (fpr * 100))
-    findings.append({"severity": "INFO", "category": "osc_fpr", "detail": f"False positive rate: {fpr:.2%}"})
+    findings.append(
+        {
+            "severity": "INFO",
+            "category": "osc_fpr",
+            "detail": f"False positive rate: {fpr:.2%}",
+        }
+    )
 
     score = min(100, score)
     return round(score, 1), findings
@@ -497,22 +684,52 @@ def _score_audit_trail(at):
         at.record({"event": f"test_{i}", "value": i})
     if len(at.entries) == 10:
         score += 25
-        findings.append({"severity": "INFO", "category": "audit_recording", "detail": "100% recording rate: 10/10 entries"})
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "audit_recording",
+                "detail": "100% recording rate: 10/10 entries",
+            }
+        )
     else:
-        findings.append({"severity": "HIGH", "category": "audit_recording", "detail": f"Recording rate: {len(at.entries)} entries"})
+        findings.append(
+            {
+                "severity": "HIGH",
+                "category": "audit_recording",
+                "detail": f"Recording rate: {len(at.entries)} entries",
+            }
+        )
 
     errors = at.verify_chain()
     if not errors:
         score += 35
-        findings.append({"severity": "INFO", "category": "audit_hmac", "detail": "HMAC-SHA256 chain integrity verified"})
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "audit_hmac",
+                "detail": "HMAC-SHA256 chain integrity verified",
+            }
+        )
     else:
-        findings.append({"severity": "CRITICAL", "category": "audit_hmac", "detail": f"Audit chain compromised: {errors}"})
+        findings.append(
+            {
+                "severity": "CRITICAL",
+                "category": "audit_hmac",
+                "detail": f"Audit chain compromised: {errors}",
+            }
+        )
 
     jsonl = at.export_jsonl()
     lines = jsonl.strip().split("\n")
     if len(lines) == 10:
         score += 20
-        findings.append({"severity": "INFO", "category": "audit_export", "detail": "JSONL export produces valid output"})
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "audit_export",
+                "detail": "JSONL export produces valid output",
+            }
+        )
 
     saved_entries = list(at.entries)
     saved_hash = at.last_hash
@@ -521,9 +738,21 @@ def _score_audit_trail(at):
     errors2 = at.verify_chain()
     if errors2:
         score += 20
-        findings.append({"severity": "INFO", "category": "audit_tamper", "detail": "Tamper detection works correctly"})
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "audit_tamper",
+                "detail": "Tamper detection works correctly",
+            }
+        )
     else:
-        findings.append({"severity": "CRITICAL", "category": "audit_tamper", "detail": "Tamper detection failed"})
+        findings.append(
+            {
+                "severity": "CRITICAL",
+                "category": "audit_tamper",
+                "detail": "Tamper detection failed",
+            }
+        )
     at.entries = saved_entries
     at.last_hash = saved_hash
 
@@ -545,10 +774,10 @@ def run_d4_governance():
     all_findings = sm_findings + cb_findings + osc_findings + audit_findings
 
     governance_score = (
-        sm_score * GOVERNANCE_WEIGHTS["state_machine"] +
-        cb_score * GOVERNANCE_WEIGHTS["circuit_breaker"] +
-        osc_score * GOVERNANCE_WEIGHTS["oscillation"] +
-        audit_score * GOVERNANCE_WEIGHTS["audit_trail"]
+        sm_score * GOVERNANCE_WEIGHTS["state_machine"]
+        + cb_score * GOVERNANCE_WEIGHTS["circuit_breaker"]
+        + osc_score * GOVERNANCE_WEIGHTS["oscillation"]
+        + audit_score * GOVERNANCE_WEIGHTS["audit_trail"]
     )
 
     return {
@@ -601,21 +830,45 @@ def _score_penetration_testing(card):
     auth_type = auth.get("type", "None")
     auth_score = AUTH_TYPE_SCORES.get(auth_type, 0)
     score += auth_score * 0.30
-    findings.append({"severity": "INFO" if auth_type != "None" else "CRITICAL", "category": "pentest_auth", "detail": AUTH_TYPE_RISKS.get(auth_type, "Unknown auth type")})
+    findings.append(
+        {
+            "severity": "INFO" if auth_type != "None" else "CRITICAL",
+            "category": "pentest_auth",
+            "detail": AUTH_TYPE_RISKS.get(auth_type, "Unknown auth type"),
+        }
+    )
 
     scopes = auth.get("scopes", [])
     if scopes:
         score += 10
-        findings.append({"severity": "INFO", "category": "pentest_scopes", "detail": f"Auth scopes declared: {', '.join(scopes)}"})
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "pentest_scopes",
+                "detail": f"Auth scopes declared: {', '.join(scopes)}",
+            }
+        )
     else:
-        findings.append({"severity": "WARNING", "category": "pentest_scopes", "detail": "No auth scopes declared — privilege escalation risk"})
+        findings.append(
+            {
+                "severity": "WARNING",
+                "category": "pentest_scopes",
+                "detail": "No auth scopes declared — privilege escalation risk",
+            }
+        )
 
     endpoints = card.get("endpoints", {})
     has_a2a = bool(endpoints.get("a2a"))
     has_mcp = bool(endpoints.get("mcp"))
     if has_a2a or has_mcp:
         score += 15
-        findings.append({"severity": "INFO", "category": "pentest_endpoints", "detail": f"Endpoints declared (A2A={has_a2a}, MCP={has_mcp}) — available for endpoint fuzzing"})
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "pentest_endpoints",
+                "detail": f"Endpoints declared (A2A={has_a2a}, MCP={has_mcp}) — available for endpoint fuzzing",
+            }
+        )
 
     capabilities = card.get("capabilities", [])
     high_risk_tools = {"bash", "file_write", "file_edit", "web_fetch", "bridge"}
@@ -623,17 +876,35 @@ def _score_penetration_testing(card):
     risky_tools = declared_tools & high_risk_tools
     if risky_tools:
         score += 15
-        findings.append({"severity": "INFO", "category": "pentest_risky_tools", "detail": f"High-risk tools declared ({', '.join(sorted(risky_tools))}) — injection vectors available for testing"})
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "pentest_risky_tools",
+                "detail": f"High-risk tools declared ({', '.join(sorted(risky_tools))}) — injection vectors available for testing",
+            }
+        )
 
     bool(card.get("authentication", {}).get("scopes"))
     injection_protection = auth_type in ("OAuth2", "mTLS")
     if injection_protection:
         score += 15
-        findings.append({"severity": "INFO", "category": "pentest_injection", "detail": "Strong auth provides injection attack protection"})
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "pentest_injection",
+                "detail": "Strong auth provides injection attack protection",
+            }
+        )
 
     prompt_rules = sum(1 for cap in capabilities if cap.get("business_rule_version"))
     score += min(15, prompt_rules * 2)
-    findings.append({"severity": "INFO", "category": "pentest_prompt_audit", "detail": f"{prompt_rules}/{len(capabilities)} capabilities have business rule versioning"})
+    findings.append(
+        {
+            "severity": "INFO",
+            "category": "pentest_prompt_audit",
+            "detail": f"{prompt_rules}/{len(capabilities)} capabilities have business rule versioning",
+        }
+    )
 
     score = min(100, score)
     return round(score, 1), findings
@@ -655,33 +926,85 @@ def _score_red_blue(card):
 
     if has_audit:
         score += 25
-        findings.append({"severity": "INFO", "category": "rb_audit", "detail": "Audit trail required — supports attack traceability"})
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "rb_audit",
+                "detail": "Audit trail required — supports attack traceability",
+            }
+        )
     else:
-        findings.append({"severity": "HIGH", "category": "rb_audit", "detail": "No audit trail — attacks may go undetected"})
+        findings.append(
+            {
+                "severity": "HIGH",
+                "category": "rb_audit",
+                "detail": "No audit trail — attacks may go undetected",
+            }
+        )
 
     if auth_type in ("OAuth2", "mTLS"):
         score += 20
-        findings.append({"severity": "INFO", "category": "rb_auth", "detail": f"Strong auth ({auth_type}) — supports identity verification in exercises"})
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "rb_auth",
+                "detail": f"Strong auth ({auth_type}) — supports identity verification in exercises",
+            }
+        )
 
     has_parallel_safe = orch.get("parallel_safe", False)
     has_stateful = orch.get("stateful", False)
-    defense_depth = sum([has_audit, auth_type != "None", has_parallel_safe, has_stateful])
+    defense_depth = sum(
+        [has_audit, auth_type != "None", has_parallel_safe, has_stateful]
+    )
     score += defense_depth * 10
-    findings.append({"severity": "INFO", "category": "rb_defense", "detail": f"Defense depth score: {defense_depth}/4 layers"})
+    findings.append(
+        {
+            "severity": "INFO",
+            "category": "rb_defense",
+            "detail": f"Defense depth score: {defense_depth}/4 layers",
+        }
+    )
 
     has_bash = "bash" in declared_tools
     has_agent = "agent_tool" in declared_tools
-    attack_surface = sum([has_bash, has_agent, bool(declared_tools & {"file_write", "file_edit", "web_fetch"})])
+    attack_surface = sum(
+        [
+            has_bash,
+            has_agent,
+            bool(declared_tools & {"file_write", "file_edit", "web_fetch"}),
+        ]
+    )
     score += attack_surface * 5
-    findings.append({"severity": "INFO", "category": "rb_attack_surface", "detail": f"Attack surface: {attack_surface} vectors available for red-team exercises"})
+    findings.append(
+        {
+            "severity": "INFO",
+            "category": "rb_attack_surface",
+            "detail": f"Attack surface: {attack_surface} vectors available for red-team exercises",
+        }
+    )
 
-    detection_score = 90 if auth_type in ("OAuth2", "mTLS") else 70 if auth_type == "APIKey" else 50
+    detection_score = (
+        90 if auth_type in ("OAuth2", "mTLS") else 70 if auth_type == "APIKey" else 50
+    )
     score += detection_score * 0.15
-    findings.append({"severity": "INFO", "category": "rb_detection", "detail": f"Estimated threat detection rate: {detection_score}%"})
+    findings.append(
+        {
+            "severity": "INFO",
+            "category": "rb_detection",
+            "detail": f"Estimated threat detection rate: {detection_score}%",
+        }
+    )
 
     response_score = 85 if role == "supervisor" else 70
     score += response_score * 0.10
-    findings.append({"severity": "INFO", "category": "rb_response", "detail": f"Estimated mean response time: {'<30s' if response_score >= 85 else '30-60s'}"})
+    findings.append(
+        {
+            "severity": "INFO",
+            "category": "rb_response",
+            "detail": f"Estimated mean response time: {'<30s' if response_score >= 85 else '30-60s'}",
+        }
+    )
 
     score = min(100, score)
     return round(score, 1), findings
@@ -697,38 +1020,92 @@ def _score_trust_chain(card):
 
     if auth_type == "mTLS":
         score += 40
-        findings.append({"severity": "INFO", "category": "trust_auth", "detail": "mTLS — mutual certificate verification, strongest trust"})
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "trust_auth",
+                "detail": "mTLS — mutual certificate verification, strongest trust",
+            }
+        )
     elif auth_type == "OAuth2":
         score += 30
-        findings.append({"severity": "INFO", "category": "trust_auth", "detail": "OAuth2 — token-based identity, verify certificate validation"})
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "trust_auth",
+                "detail": "OAuth2 — token-based identity, verify certificate validation",
+            }
+        )
     elif auth_type == "APIKey":
         score += 15
-        findings.append({"severity": "WARNING", "category": "trust_auth", "detail": "APIKey — identity verified but no certificate validation"})
+        findings.append(
+            {
+                "severity": "WARNING",
+                "category": "trust_auth",
+                "detail": "APIKey — identity verified but no certificate validation",
+            }
+        )
     else:
-        findings.append({"severity": "CRITICAL", "category": "trust_auth", "detail": "No authentication — trust chain broken"})
+        findings.append(
+            {
+                "severity": "CRITICAL",
+                "category": "trust_auth",
+                "detail": "No authentication — trust chain broken",
+            }
+        )
 
     if scopes:
         score += 20
-        findings.append({"severity": "INFO", "category": "trust_scopes", "detail": f"Identity scopes defined ({len(scopes)}) — supports trust score freshness"})
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "trust_scopes",
+                "detail": f"Identity scopes defined ({len(scopes)}) — supports trust score freshness",
+            }
+        )
 
     has_a2a = bool(card.get("endpoints", {}).get("a2a"))
     if has_a2a:
         score += 15
-        findings.append({"severity": "INFO", "category": "trust_a2a", "detail": "A2A endpoint — inter-agent identity verification available"})
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "trust_a2a",
+                "detail": "A2A endpoint — inter-agent identity verification available",
+            }
+        )
 
     constitution = card.get("constitution", {})
     health = constitution.get("health_state")
     if health:
         score += 10
-        findings.append({"severity": "INFO", "category": "trust_health", "detail": f"Health state ({health}) — trust score freshness trackable"})
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "trust_health",
+                "detail": f"Health state ({health}) — trust score freshness trackable",
+            }
+        )
 
     heartbeat = constitution.get("heartbeat_interval_seconds")
     if heartbeat and heartbeat <= 30:
         score += 15
-        findings.append({"severity": "INFO", "category": "trust_heartbeat", "detail": f"Frequent heartbeat ({heartbeat}s) — trust score freshness <30s achievable"})
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "trust_heartbeat",
+                "detail": f"Frequent heartbeat ({heartbeat}s) — trust score freshness <30s achievable",
+            }
+        )
     elif heartbeat:
         score += 5
-        findings.append({"severity": "WARNING", "category": "trust_heartbeat", "detail": f"Heartbeat interval ({heartbeat}s) — trust score freshness may exceed 30s"})
+        findings.append(
+            {
+                "severity": "WARNING",
+                "category": "trust_heartbeat",
+                "detail": f"Heartbeat interval ({heartbeat}s) — trust score freshness may exceed 30s",
+            }
+        )
 
     score = min(100, score)
     return round(score, 1), findings
@@ -746,40 +1123,94 @@ def _score_sast_scanning(card):
 
     if auth_type != "None":
         score += 20
-        findings.append({"severity": "INFO", "category": "sast_auth", "detail": "Authentication configured — SAST would validate credential handling"})
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "sast_auth",
+                "detail": "Authentication configured — SAST would validate credential handling",
+            }
+        )
     else:
-        findings.append({"severity": "HIGH", "category": "sast_auth", "detail": "No authentication — SAST finding: missing identity check"})
+        findings.append(
+            {
+                "severity": "HIGH",
+                "category": "sast_auth",
+                "detail": "No authentication — SAST finding: missing identity check",
+            }
+        )
 
     secret_risk_tools = {"bash", "file_write", "file_edit", "web_fetch", "bridge"}
     risky = declared_tools & secret_risk_tools
     if risky:
         score += 15
-        findings.append({"severity": "INFO", "category": "sast_secret_risk", "detail": f"Tools with secret leakage risk: {', '.join(sorted(risky))}"})
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "sast_secret_risk",
+                "detail": f"Tools with secret leakage risk: {', '.join(sorted(risky))}",
+            }
+        )
 
     deps = card.get("dependencies", [])
     if deps:
         score += 20
-        dep_strs = [d["name"] if isinstance(d, dict) else str(d) for d in deps if isinstance(d, (dict, str))]
-        findings.append({"severity": "INFO", "category": "sast_deps", "detail": f"Dependencies declared ({len(deps)}) — pip-audit can scan: {', '.join(dep_strs[:5])}"})
+        dep_strs = [
+            d["name"] if isinstance(d, dict) else str(d)
+            for d in deps
+            if isinstance(d, (dict, str))
+        ]
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "sast_deps",
+                "detail": f"Dependencies declared ({len(deps)}) — pip-audit can scan: {', '.join(dep_strs[:5])}",
+            }
+        )
     else:
-        findings.append({"severity": "WARNING", "category": "sast_deps", "detail": "No dependencies declared — dependency audit skipped"})
+        findings.append(
+            {
+                "severity": "WARNING",
+                "category": "sast_deps",
+                "detail": "No dependencies declared — dependency audit skipped",
+            }
+        )
 
-    has_business_rules = sum(1 for cap in capabilities if cap.get("business_rule_version"))
+    has_business_rules = sum(
+        1 for cap in capabilities if cap.get("business_rule_version")
+    )
     version_pct = has_business_rules / max(len(capabilities), 1) * 100
     score += min(20, has_business_rules * 3)
-    findings.append({"severity": "INFO", "category": "sast_versioning", "detail": f"Business rule versioning: {has_business_rules}/{len(capabilities)} capabilities ({version_pct:.0f}%)"})
+    findings.append(
+        {
+            "severity": "INFO",
+            "category": "sast_versioning",
+            "detail": f"Business rule versioning: {has_business_rules}/{len(capabilities)} capabilities ({version_pct:.0f}%)",
+        }
+    )
 
     has_audit = compliance.get("audit_trail_required", False)
     residency = compliance.get("data_residency")
     if has_audit and residency:
         score += 15
-        findings.append({"severity": "INFO", "category": "sast_compliance", "detail": f"Audit trail + data residency ({residency}) — SAST compliance checks pass"})
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "sast_compliance",
+                "detail": f"Audit trail + data residency ({residency}) — SAST compliance checks pass",
+            }
+        )
 
     env_fields = card.get("constitution", {}).get("envelope", {})
     has_envelope = all(env_fields.get(k) for k in ("message_id", "timestamp"))
     if has_envelope:
         score += 10
-        findings.append({"severity": "INFO", "category": "sast_envelope", "detail": "Message envelope — input validation verified"})
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "sast_envelope",
+                "detail": "Message envelope — input validation verified",
+            }
+        )
 
     score = min(100, score)
     return round(score, 1), findings
@@ -794,10 +1225,10 @@ def run_d4_security(card):
     all_findings = pen_findings + rb_findings + trust_findings + sast_findings
 
     security_score = (
-        pen_score * SECURITY_WEIGHTS["penetration_testing"] +
-        rb_score * SECURITY_WEIGHTS["red_blue_exercise"] +
-        trust_score * SECURITY_WEIGHTS["trust_chain"] +
-        sast_score * SECURITY_WEIGHTS["sast_scanning"]
+        pen_score * SECURITY_WEIGHTS["penetration_testing"]
+        + rb_score * SECURITY_WEIGHTS["red_blue_exercise"]
+        + trust_score * SECURITY_WEIGHTS["trust_chain"]
+        + sast_score * SECURITY_WEIGHTS["sast_scanning"]
     )
 
     return {

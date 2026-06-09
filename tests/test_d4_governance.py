@@ -6,17 +6,20 @@ Covers: StateMachine, CircuitBreaker, OscillationDetector, AuditTrail
 """
 
 import sys
-import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent.resolve()))
 
 from mas_eval.domains.d4_governance_security import (
-    StateMachine, CircuitBreaker, CircuitBreakerState,
-    OscillationDetector, AuditTrail,
-    run_d4_governance,
-    STATE_NAMES, GRAY_CODES, STATE_GRAY, GRAY_STATE,
     GOVERNANCE_WEIGHTS,
+    GRAY_CODES,
+    STATE_NAMES,
+    AuditTrail,
+    CircuitBreaker,
+    CircuitBreakerState,
+    OscillationDetector,
+    StateMachine,
+    run_d4_governance,
 )
 
 
@@ -37,7 +40,17 @@ class TestStateMachine:
 
     def test_full_path_to_halt(self):
         sm = StateMachine()
-        path = ["OBSERVE", "ANALYZE", "EVALUATE", "DECIDE", "ACT", "VERIFY", "STABILIZE", "REPORT", "HALT"]
+        path = [
+            "OBSERVE",
+            "ANALYZE",
+            "EVALUATE",
+            "DECIDE",
+            "ACT",
+            "VERIFY",
+            "STABILIZE",
+            "REPORT",
+            "HALT",
+        ]
         for state in path:
             assert sm.transition(state), f"Failed to transition to {state}"
         assert sm.current == "HALT"
@@ -71,7 +84,8 @@ class TestStateMachine:
         assert len(violations) == 0, f"Found {len(violations)} entropy violations"
 
     def test_gray_entropy_hump(self):
-        from mas_eval.domains.d4_governance_security import STATE_ENTROPY, PRIMARY_PATH
+        from mas_eval.domains.d4_governance_security import PRIMARY_PATH, STATE_ENTROPY
+
         entropies = [STATE_ENTROPY[s] for s in PRIMARY_PATH]
         assert entropies[0] == 0
         mid = len(entropies) // 2
@@ -124,7 +138,9 @@ class TestStateMachine:
         sm = StateMachine()
         sm.current = "HALT"
         for target in STATE_NAMES:
-            assert sm.transition(target) is False, f"Should not be able to leave HALT to {target}"
+            assert sm.transition(target) is False, (
+                f"Should not be able to leave HALT to {target}"
+            )
 
 
 class TestCircuitBreaker:
@@ -326,7 +342,12 @@ class TestD4Governance:
         assert result["domain"] == "D4"
         assert result["component"] == "governance"
         assert 0 <= result["score"] <= 100
-        assert set(result["subscores"].keys()) == {"state_machine", "circuit_breaker", "oscillation", "audit_trail"}
+        assert set(result["subscores"].keys()) == {
+            "state_machine",
+            "circuit_breaker",
+            "oscillation",
+            "audit_trail",
+        }
 
     def test_governance_subscore_ranges(self):
         result = run_d4_governance()
@@ -347,8 +368,18 @@ class TestD4Governance:
 
     def test_governance_all_state_names_defined(self):
         assert len(STATE_NAMES) == 10
-        expected = ["INIT", "OBSERVE", "ANALYZE", "EVALUATE", "DECIDE",
-                     "ACT", "VERIFY", "STABILIZE", "REPORT", "HALT"]
+        expected = [
+            "INIT",
+            "OBSERVE",
+            "ANALYZE",
+            "EVALUATE",
+            "DECIDE",
+            "ACT",
+            "VERIFY",
+            "STABILIZE",
+            "REPORT",
+            "HALT",
+        ]
         assert STATE_NAMES == expected
 
     def test_governance_audit_chain_valid(self):

@@ -6,7 +6,7 @@ import logging
 import subprocess
 import sys
 from pathlib import Path
-from unittest.mock import ANY, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -100,7 +100,11 @@ class TestRunStage:
         assert result["status"] == "FAIL"
 
     def test_timeout_expired(self):
-        with patch.object(subprocess, "run", side_effect=subprocess.TimeoutExpired(cmd=["test"], timeout=10)):
+        with patch.object(
+            subprocess,
+            "run",
+            side_effect=subprocess.TimeoutExpired(cmd=["test"], timeout=10),
+        ):
             result = mfs.run_stage("test", ["sleep", "100"])
         assert result["status"] == "TIMEOUT"
 
@@ -174,11 +178,15 @@ class TestRunMockCalibration:
 
     def test_with_all_thresholds(self):
         with patch.object(mfs, "run_stage", return_value={"status": "PASS"}) as mock_rs:
-            mfs.run_mock_calibration("/tmp/a", "/tmp/b", thresholds={
-                "sequence_similarity": 0.8,
-                "set_similarity": 0.7,
-                "param_match_rate": 0.9,
-            })
+            mfs.run_mock_calibration(
+                "/tmp/a",
+                "/tmp/b",
+                thresholds={
+                    "sequence_similarity": 0.8,
+                    "set_similarity": 0.7,
+                    "param_match_rate": 0.9,
+                },
+            )
         args = mock_rs.call_args[0][1]
         assert "--threshold-seq" in args
         assert "0.8" in args
@@ -189,7 +197,9 @@ class TestRunMockCalibration:
 
     def test_with_partial_thresholds(self):
         with patch.object(mfs, "run_stage", return_value={"status": "PASS"}) as mock_rs:
-            mfs.run_mock_calibration("/tmp/a", "/tmp/b", thresholds={"sequence_similarity": 0.9})
+            mfs.run_mock_calibration(
+                "/tmp/a", "/tmp/b", thresholds={"sequence_similarity": 0.9}
+            )
         args = mock_rs.call_args[0][1]
         assert "--threshold-seq" in args
         assert "--threshold-set" not in args
@@ -231,69 +241,162 @@ class TestPrintSummary:
 
     def test_stage_with_error_shown(self):
         with patch.object(mfs, "console") as mock_console:
-            mfs.print_summary(self._make_report("FAIL", "FAIL", error="something broke"))
+            mfs.print_summary(
+                self._make_report("FAIL", "FAIL", error="something broke")
+            )
         assert mock_console.print.called
 
 
 class TestMainFunction:
     def test_main_with_minimal_args(self):
         test_args = ["mas_fast_screen.py", "--cards-dir", "/tmp/cards"]
-        with patch.object(sys, "argv", test_args), \
-             patch.object(mfs, "run_stage", return_value={"status": "PASS", "duration_ms": 10, "stage": "Layer 1: Compliance Scan", "command": "test", "output": None, "error": None}), \
-             patch.object(mfs, "console"), \
-             patch.object(Path, "exists", return_value=True), \
-             patch("builtins.open"), \
-             patch.object(Path, "mkdir"), \
-             patch.object(Path, "parent"):
+        with (
+            patch.object(sys, "argv", test_args),
+            patch.object(
+                mfs,
+                "run_stage",
+                return_value={
+                    "status": "PASS",
+                    "duration_ms": 10,
+                    "stage": "Layer 1: Compliance Scan",
+                    "command": "test",
+                    "output": None,
+                    "error": None,
+                },
+            ),
+            patch.object(mfs, "console"),
+            patch.object(Path, "exists", return_value=True),
+            patch("builtins.open"),
+            patch.object(Path, "mkdir"),
+            patch.object(Path, "parent"),
+        ):
             with pytest.raises(SystemExit) as exc:
                 mfs.main()
             assert exc.value.code == 0
 
     def test_main_with_task_file(self):
-        test_args = ["mas_fast_screen.py", "--cards-dir", "/tmp/cards", "--task-file", "/tmp/tasks.json"]
-        with patch.object(sys, "argv", test_args), \
-             patch.object(mfs, "run_stage", return_value={"status": "PASS", "duration_ms": 10, "stage": "test", "command": "test", "output": None, "error": None}), \
-             patch.object(mfs, "console"), \
-             patch.object(Path, "exists", return_value=True), \
-             patch("builtins.open"), \
-             patch.object(Path, "mkdir"), \
-             patch.object(Path, "parent"):
+        test_args = [
+            "mas_fast_screen.py",
+            "--cards-dir",
+            "/tmp/cards",
+            "--task-file",
+            "/tmp/tasks.json",
+        ]
+        with (
+            patch.object(sys, "argv", test_args),
+            patch.object(
+                mfs,
+                "run_stage",
+                return_value={
+                    "status": "PASS",
+                    "duration_ms": 10,
+                    "stage": "test",
+                    "command": "test",
+                    "output": None,
+                    "error": None,
+                },
+            ),
+            patch.object(mfs, "console"),
+            patch.object(Path, "exists", return_value=True),
+            patch("builtins.open"),
+            patch.object(Path, "mkdir"),
+            patch.object(Path, "parent"),
+        ):
             with pytest.raises(SystemExit):
                 mfs.main()
 
     def test_main_with_output(self):
-        test_args = ["mas_fast_screen.py", "--cards-dir", "/tmp/cards", "--output", "/tmp/report.json"]
-        with patch.object(sys, "argv", test_args), \
-             patch.object(mfs, "run_stage", return_value={"status": "PASS", "duration_ms": 10, "stage": "test", "command": "test", "output": None, "error": None}), \
-             patch.object(mfs, "console"), \
-             patch.object(Path, "exists", return_value=True), \
-             patch("builtins.open") as mock_open, \
-             patch.object(Path, "mkdir"), \
-             patch.object(Path, "parent"):
+        test_args = [
+            "mas_fast_screen.py",
+            "--cards-dir",
+            "/tmp/cards",
+            "--output",
+            "/tmp/report.json",
+        ]
+        with (
+            patch.object(sys, "argv", test_args),
+            patch.object(
+                mfs,
+                "run_stage",
+                return_value={
+                    "status": "PASS",
+                    "duration_ms": 10,
+                    "stage": "test",
+                    "command": "test",
+                    "output": None,
+                    "error": None,
+                },
+            ),
+            patch.object(mfs, "console"),
+            patch.object(Path, "exists", return_value=True),
+            patch("builtins.open") as mock_open,
+            patch.object(Path, "mkdir"),
+            patch.object(Path, "parent"),
+        ):
             with pytest.raises(SystemExit):
                 mfs.main()
             mock_open.assert_called()
 
     def test_main_with_golden_and_mock(self):
-        test_args = ["mas_fast_screen.py", "--cards-dir", "/tmp/cards", "--golden-dir", "/tmp/golden", "--mock-dir", "/tmp/mock"]
-        with patch.object(sys, "argv", test_args), \
-             patch.object(mfs, "run_stage", return_value={"status": "PASS", "duration_ms": 10, "stage": "test", "command": "test", "output": None, "error": None}), \
-             patch.object(mfs, "console"), \
-             patch.object(Path, "exists", return_value=True), \
-             patch("builtins.open"), \
-             patch.object(Path, "mkdir"), \
-             patch.object(Path, "parent"):
+        test_args = [
+            "mas_fast_screen.py",
+            "--cards-dir",
+            "/tmp/cards",
+            "--golden-dir",
+            "/tmp/golden",
+            "--mock-dir",
+            "/tmp/mock",
+        ]
+        with (
+            patch.object(sys, "argv", test_args),
+            patch.object(
+                mfs,
+                "run_stage",
+                return_value={
+                    "status": "PASS",
+                    "duration_ms": 10,
+                    "stage": "test",
+                    "command": "test",
+                    "output": None,
+                    "error": None,
+                },
+            ),
+            patch.object(mfs, "console"),
+            patch.object(Path, "exists", return_value=True),
+            patch("builtins.open"),
+            patch.object(Path, "mkdir"),
+            patch.object(Path, "parent"),
+        ):
             with pytest.raises(SystemExit):
                 mfs.main()
 
     def test_main_with_timeout_arg(self):
-        test_args = ["mas_fast_screen.py", "--cards-dir", "/tmp/cards", "--timeout", "600"]
-        with patch.object(sys, "argv", test_args), \
-             patch.object(mfs, "run_stage", return_value={"status": "PASS", "duration_ms": 10, "stage": "test", "command": "test", "output": None, "error": None}), \
-             patch.object(mfs, "console"), \
-             patch.object(Path, "exists", return_value=True), \
-             patch("builtins.open"), \
-             patch.object(Path, "mkdir"), \
-             patch.object(Path, "parent"):
+        test_args = [
+            "mas_fast_screen.py",
+            "--cards-dir",
+            "/tmp/cards",
+            "--timeout",
+            "600",
+        ]
+        with (
+            patch.object(sys, "argv", test_args),
+            patch.object(
+                mfs,
+                "run_stage",
+                return_value={
+                    "status": "PASS",
+                    "duration_ms": 10,
+                    "stage": "test",
+                    "command": "test",
+                    "output": None,
+                    "error": None,
+                },
+            ),
+            patch.object(mfs, "console"),
+            patch.object(Path, "exists", return_value=True),
+            patch("builtins.open"),
+            patch.object(Path, "mkdir"),
+            patch.object(Path, "parent"),
+        ):
             with pytest.raises(SystemExit):
                 mfs.main()

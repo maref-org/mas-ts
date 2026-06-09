@@ -1,16 +1,15 @@
 # SPDX-FileCopyrightText: 2026 frankiehot-tech
 # SPDX-License-Identifier: Apache-2.0
 import importlib.util
-import sys
 from pathlib import Path
 
-import pytest
 
 def load_module(name, path):
     spec = importlib.util.spec_from_file_location(name, path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
+
 
 ml = load_module("mock_llm", Path(__file__).parent.parent / "mock_llm.py")
 
@@ -66,7 +65,11 @@ class TestGenerateMockTrajectory:
     def test_deterministic_task_has_tool_call(self):
         result = ml.generate_mock_trajectory("query_order")
         events = result["events"]
-        tool_events = [e for e in events if e["event_type"] == "agent_action" and e["action"]["type"] == "tool_call"]
+        tool_events = [
+            e
+            for e in events
+            if e["event_type"] == "agent_action" and e["action"]["type"] == "tool_call"
+        ]
         assert len(tool_events) >= 1
 
     def test_zero_cost(self):

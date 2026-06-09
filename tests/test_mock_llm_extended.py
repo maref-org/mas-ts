@@ -4,13 +4,13 @@ import importlib.util
 import json
 from pathlib import Path
 
-import pytest
 
 def load_module(name, path):
     spec = importlib.util.spec_from_file_location(name, path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
+
 
 ml = load_module("mock_llm", Path(__file__).parent.parent / "mock_llm.py")
 
@@ -49,6 +49,7 @@ class TestProcessTaskFile:
 
     def test_with_policy(self, tmp_path):
         import yaml
+
         tasks = ["query_order"]
         p = tmp_path / "tasks.json"
         p.write_text(json.dumps(tasks))

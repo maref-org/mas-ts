@@ -2,15 +2,15 @@
 # SPDX-License-Identifier: Apache-2.0
 """Tests for MAS-TS-001 L0-L4 Executive Harness."""
 
-import pytest
 from mas_eval.harness.l0_fast_screen import (
-    run_l0_fast_screen, L0_STAGES, L0_TIMEOUT_SECONDS,
+    L0_STAGES,
+    L0_TIMEOUT_SECONDS,
+    run_l0_fast_screen,
 )
 from mas_eval.harness.l1_standard import run_l1_standard
 from mas_eval.harness.l2_deep import run_l2_deep
 from mas_eval.harness.l3_comprehensive import run_l3_comprehensive
 from mas_eval.harness.l4_evolution import run_l4_evolution
-
 
 SAMPLE_CARD = {
     "agent_id": "test-agent-001",
@@ -24,14 +24,70 @@ SAMPLE_CARD = {
     "endpoint": "https://api.example.com/v1/chat",
     "model_backend": {"endpoint": "https://api.example.com/v1", "location": "US"},
     "capabilities": [
-        {"skill_id": "bash", "description": "run commands", "input_schema": {}, "output_schema": {}, "examples": ["ls"], "business_rule_version": "2026-05-01"},
-        {"skill_id": "file_read", "description": "read files", "input_schema": {}, "output_schema": {}, "examples": ["read"], "business_rule_version": "2026-05-01"},
-        {"skill_id": "file_edit", "description": "edit files", "input_schema": {}, "output_schema": {}, "examples": ["edit"], "business_rule_version": "2026-05-01"},
-        {"skill_id": "file_write", "description": "write files", "input_schema": {}, "output_schema": {}, "examples": ["write"], "business_rule_version": "2026-05-01"},
-        {"skill_id": "glob", "description": "glob", "input_schema": {}, "output_schema": {}, "examples": ["glob"], "business_rule_version": "2026-05-01"},
-        {"skill_id": "grep", "description": "grep", "input_schema": {}, "output_schema": {}, "examples": ["grep"], "business_rule_version": "2026-05-01"},
-        {"skill_id": "web_search", "description": "search", "input_schema": {}, "output_schema": {}, "examples": ["search"], "business_rule_version": "2026-05-01"},
-        {"skill_id": "web_fetch", "description": "fetch", "input_schema": {}, "output_schema": {}, "examples": ["fetch"], "business_rule_version": "2026-05-01"},
+        {
+            "skill_id": "bash",
+            "description": "run commands",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["ls"],
+            "business_rule_version": "2026-05-01",
+        },
+        {
+            "skill_id": "file_read",
+            "description": "read files",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["read"],
+            "business_rule_version": "2026-05-01",
+        },
+        {
+            "skill_id": "file_edit",
+            "description": "edit files",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["edit"],
+            "business_rule_version": "2026-05-01",
+        },
+        {
+            "skill_id": "file_write",
+            "description": "write files",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["write"],
+            "business_rule_version": "2026-05-01",
+        },
+        {
+            "skill_id": "glob",
+            "description": "glob",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["glob"],
+            "business_rule_version": "2026-05-01",
+        },
+        {
+            "skill_id": "grep",
+            "description": "grep",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["grep"],
+            "business_rule_version": "2026-05-01",
+        },
+        {
+            "skill_id": "web_search",
+            "description": "search",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["search"],
+            "business_rule_version": "2026-05-01",
+        },
+        {
+            "skill_id": "web_fetch",
+            "description": "fetch",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["fetch"],
+            "business_rule_version": "2026-05-01",
+        },
     ],
     "authentication": {"type": "OAuth2", "scopes": ["read", "write"]},
     "compliance": {

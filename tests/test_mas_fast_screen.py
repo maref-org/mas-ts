@@ -3,7 +3,6 @@
 import importlib.util
 from pathlib import Path
 
-import pytest
 
 def load_module(name, path):
     spec = importlib.util.spec_from_file_location(name, path)
@@ -11,7 +10,10 @@ def load_module(name, path):
     spec.loader.exec_module(mod)
     return mod
 
-mfs = load_module("mas_fast_screen", Path(__file__).parent.parent / "mas_fast_screen.py")
+
+mfs = load_module(
+    "mas_fast_screen", Path(__file__).parent.parent / "mas_fast_screen.py"
+)
 
 
 class TestDetermineOverallStatus:

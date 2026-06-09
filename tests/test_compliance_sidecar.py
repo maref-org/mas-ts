@@ -3,9 +3,9 @@
 import importlib.util
 import json
 from pathlib import Path
-from unittest.mock import mock_open, patch
 
 import pytest
+
 
 def load_module(name, path):
     spec = importlib.util.spec_from_file_location(name, path)
@@ -13,15 +13,15 @@ def load_module(name, path):
     spec.loader.exec_module(mod)
     return mod
 
-cs_mod = load_module("compliance_sidecar", Path(__file__).parent.parent / "compliance_sidecar.py")
+
+cs_mod = load_module(
+    "compliance_sidecar", Path(__file__).parent.parent / "compliance_sidecar.py"
+)
 
 
 @pytest.fixture
 def cn_sidecar(tmp_path):
-    card_data = {
-        "name": "test-agent",
-        "compliance": {"data_residency": "CN"}
-    }
+    card_data = {"name": "test-agent", "compliance": {"data_residency": "CN"}}
     p = tmp_path / "card.json"
     p.write_text(json.dumps(card_data))
     return cs_mod.ComplianceSidecar(str(p))
@@ -29,10 +29,7 @@ def cn_sidecar(tmp_path):
 
 @pytest.fixture
 def us_sidecar(tmp_path):
-    card_data = {
-        "name": "us-agent",
-        "compliance": {"data_residency": "US"}
-    }
+    card_data = {"name": "us-agent", "compliance": {"data_residency": "US"}}
     p = tmp_path / "card.json"
     p.write_text(json.dumps(card_data))
     return cs_mod.ComplianceSidecar(str(p))

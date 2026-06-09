@@ -1,15 +1,15 @@
 # SPDX-FileCopyrightText: 2026 frankiehot-tech
 # SPDX-License-Identifier: Apache-2.0
 import importlib.util
-import json
 import subprocess
 import sys
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
+import pytest
 import requests
 import tenacity
-import pytest
+
 
 def load_module(name, path):
     spec = importlib.util.spec_from_file_location(name, path)
@@ -17,7 +17,10 @@ def load_module(name, path):
     spec.loader.exec_module(mod)
     return mod
 
-ga_mod = load_module("generate_anchor", Path(__file__).parent.parent / "generate_anchor.py")
+
+ga_mod = load_module(
+    "generate_anchor", Path(__file__).parent.parent / "generate_anchor.py"
+)
 
 
 def _make_http_error(status_code, text):
@@ -35,7 +38,7 @@ class TestLlmRequest:
         mock_response.raise_for_status.side_effect = [
             _make_http_error(429, "Too Many Requests"),
             _make_http_error(429, "Too Many Requests"),
-            None
+            None,
         ]
         mock_response.json.return_value = {"choices": [{"message": {"content": "ok"}}]}
 
@@ -50,7 +53,7 @@ class TestLlmRequest:
         mock_response = MagicMock()
         mock_response.raise_for_status.side_effect = [
             _make_http_error(500, "Server Error"),
-            None
+            None,
         ]
         mock_response.json.return_value = {"choices": [{"message": {"content": "ok"}}]}
 
@@ -63,10 +66,14 @@ class TestLlmRequest:
     def test_gives_up_after_max_retries(self):
         """_llm_request raises RetryError after retries exhausted."""
         mock_response = MagicMock()
-        mock_response.raise_for_status.side_effect = _make_http_error(503, "Unavailable")
+        mock_response.raise_for_status.side_effect = _make_http_error(
+            503, "Unavailable"
+        )
 
         with patch("requests.post", return_value=mock_response):
-            with pytest.raises((tenacity.RetryError, requests.exceptions.RequestException)):
+            with pytest.raises(
+                (tenacity.RetryError, requests.exceptions.RequestException)
+            ):
                 ga_mod._llm_request("http://localhost:8000/v1", {}, {})
 
     def test_success_on_first_try(self):
@@ -89,7 +96,7 @@ class TestBenchmarkLlm:
         mock_response.raise_for_status.return_value = None
         mock_response.json.return_value = {
             "usage": {"completion_tokens": 64},
-            "choices": [{"message": {"content": "summary"}}]
+            "choices": [{"message": {"content": "summary"}}],
         }
 
         with patch("requests.post", return_value=mock_response) as mock_post:
@@ -104,7 +111,9 @@ class TestBenchmarkLlm:
     def test_benchmark_llm_fails_after_retries(self):
         """benchmark_llm sys.exits when API persistently fails."""
         mock_response = MagicMock()
-        mock_response.raise_for_status.side_effect = _make_http_error(503, "Unavailable")
+        mock_response.raise_for_status.side_effect = _make_http_error(
+            503, "Unavailable"
+        )
 
         with patch("requests.post", return_value=mock_response):
             with pytest.raises(SystemExit):
@@ -112,7 +121,11 @@ class TestBenchmarkLlm:
 
     def test_benchmark_llm_request_exception_direct(self):
         """benchmark_llm catches RequestException from _llm_request."""
-        with patch.object(ga_mod, "_llm_request", side_effect=requests.exceptions.RequestException("connection error")):
+        with patch.object(
+            ga_mod,
+            "_llm_request",
+            side_effect=requests.exceptions.RequestException("connection error"),
+        ):
             with pytest.raises(SystemExit):
                 ga_mod.benchmark_llm()
 
@@ -139,6 +152,7 @@ class TestDetectAccelerator:
             else:
                 mock_proc.returncode = 1
             return mock_proc
+
         with patch.object(subprocess, "run", side_effect=mock_subprocess):
             result = ga_mod.detect_accelerator()
         assert result["type"] == "NPU"
@@ -156,6 +170,7 @@ class TestDetectAccelerator:
             else:
                 mock_proc.returncode = 1
             return mock_proc
+
         with patch.object(subprocess, "run", side_effect=mock_subprocess):
             result = ga_mod.detect_accelerator()
         assert result["type"] == "DCU"
@@ -173,13 +188,16 @@ class TestDetectAccelerator:
             else:
                 mock_proc.returncode = 1
             return mock_proc
+
         with patch.object(subprocess, "run", side_effect=mock_subprocess):
             result = ga_mod.detect_accelerator()
         assert result["type"] == "SoC"
         assert result["vendor"] == "Apple"
 
     def test_fallback_to_cpu(self):
-        with patch.object(subprocess, "run", side_effect=FileNotFoundError("no such binary")):
+        with patch.object(
+            subprocess, "run", side_effect=FileNotFoundError("no such binary")
+        ):
             result = ga_mod.detect_accelerator()
         assert result["type"] == "CPU"
         assert result["vendor"] == "Generic"
@@ -204,14 +222,22 @@ class TestPrintAcceleratorGuide:
 
 class TestMainFunction:
     @patch.object(ga_mod, "benchmark_gemm", return_value=50.0)
-    @patch.object(ga_mod, "detect_accelerator", return_value={"type": "CPU", "vendor": "Generic", "details": ""})
+    @patch.object(
+        ga_mod,
+        "detect_accelerator",
+        return_value={"type": "CPU", "vendor": "Generic", "details": ""},
+    )
     def test_main_with_skip_llm(self, mock_accel, mock_gemm):
         test_args = ["generate_anchor.py", "--output", "/tmp/anchor.json", "--skip-llm"]
         with patch.object(sys, "argv", test_args), patch("builtins.open"):
             ga_mod.main()
 
     @patch.object(ga_mod, "benchmark_gemm", return_value=50.0)
-    @patch.object(ga_mod, "detect_accelerator", return_value={"type": "GPU", "vendor": "NVIDIA", "details": "Tesla V100"})
+    @patch.object(
+        ga_mod,
+        "detect_accelerator",
+        return_value={"type": "GPU", "vendor": "NVIDIA", "details": "Tesla V100"},
+    )
     def test_main_with_ascend_prints_guide(self, mock_accel, mock_gemm, capsys):
         test_args = ["generate_anchor.py", "--output", "/tmp/anchor.json", "--skip-llm"]
         with patch.object(sys, "argv", test_args), patch("builtins.open"):
@@ -220,7 +246,11 @@ class TestMainFunction:
         assert "Ascend" not in captured.out  # Not Ascend, so no guide
 
     @patch.object(ga_mod, "benchmark_gemm", return_value=50.0)
-    @patch.object(ga_mod, "detect_accelerator", return_value={"type": "NPU", "vendor": "Ascend", "details": "Ascend NPU"})
+    @patch.object(
+        ga_mod,
+        "detect_accelerator",
+        return_value={"type": "NPU", "vendor": "Ascend", "details": "Ascend NPU"},
+    )
     def test_main_ascend_prints_guide(self, mock_accel, mock_gemm, capsys):
         test_args = ["generate_anchor.py", "--output", "/tmp/anchor.json", "--skip-llm"]
         with patch.object(sys, "argv", test_args), patch("builtins.open"):
@@ -229,8 +259,16 @@ class TestMainFunction:
         assert "CANN" in captured.out
 
     @patch.object(ga_mod, "benchmark_gemm", return_value=50.0)
-    @patch.object(ga_mod, "detect_accelerator", return_value={"type": "CPU", "vendor": "Generic", "details": ""})
-    @patch.object(ga_mod, "benchmark_llm", return_value={"ttft_ms": 100.0, "tpot_ms": 10.0, "llm_coeff": 1.5})
+    @patch.object(
+        ga_mod,
+        "detect_accelerator",
+        return_value={"type": "CPU", "vendor": "Generic", "details": ""},
+    )
+    @patch.object(
+        ga_mod,
+        "benchmark_llm",
+        return_value={"ttft_ms": 100.0, "tpot_ms": 10.0, "llm_coeff": 1.5},
+    )
     def test_main_with_llm(self, mock_llm, mock_accel, mock_gemm):
         test_args = ["generate_anchor.py", "--output", "/tmp/anchor.json"]
         with patch.object(sys, "argv", test_args), patch("builtins.open"):

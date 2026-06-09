@@ -8,6 +8,7 @@ Usage: python generate_anchor.py --output report.json --runs 5
 Runs standardized benchmarks (GEMM + LLM inference) and generates
 a normalization coefficient relative to the official Docker-CPU baseline.
 """
+
 import argparse
 import json
 import logging
@@ -28,7 +29,7 @@ from mas_eval import __version__ as VERSION
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    datefmt="%Y-%m-%dT%H:%M:%S"
+    datefmt="%Y-%m-%dT%H:%M:%S",
 )
 logger = logging.getLogger(__name__)
 
@@ -37,7 +38,7 @@ DOCKER_CPU_BASELINE = {
     "gemm_gflops": 12.5,
     "llm_ttft_ms": 8500.0,
     "llm_tpot_ms": 45.0,
-    "source": "MAS-TS-001 Docker-CPU-Baseline v2026Q1"
+    "source": "MAS-TS-001 Docker-CPU-Baseline v2026Q1",
 }
 
 
@@ -59,7 +60,7 @@ def benchmark_gemm():
             times.append(end - start)
 
         avg_time = np.mean(times)
-        gflops = (2 * N ** 3) / (avg_time * 1e9)
+        gflops = (2 * N**3) / (avg_time * 1e9)
         gflops_list.append(gflops)
 
     return float(np.mean(gflops_list))
@@ -67,6 +68,7 @@ def benchmark_gemm():
 
 def _llm_request(endpoint: str, headers: dict, payload: dict) -> dict:
     """Make LLM API request with automatic retry on transient errors."""
+
     @tenacity.retry(
         retry=tenacity.retry_if_exception_type(
             (requests.exceptions.RequestException, tenacity.TryAgain)
@@ -85,11 +87,13 @@ def _llm_request(endpoint: str, headers: dict, payload: dict) -> dict:
 
 def benchmark_llm():
     """Run LLM inference benchmark using reference model (Qwen2.5-7B)."""
-    ENDPOINT = os.getenv("ANCHOR_LLM_ENDPOINT", "http://localhost:8000/v1/chat/completions")
+    ENDPOINT = os.getenv(
+        "ANCHOR_LLM_ENDPOINT", "http://localhost:8000/v1/chat/completions"
+    )
     MODEL = os.getenv("ANCHOR_LLM_MODEL", "qwen2.5-7b-instruct")
 
     test_prompt = (
-        'Please summarize the following news in one sentence: '
+        "Please summarize the following news in one sentence: "
         '"Scientists have discovered a new superconducting material that achieves zero-resistance transmission at room temperature, '
         'a breakthrough that could revolutionize energy transmission and quantum computing."'
     )
@@ -99,7 +103,7 @@ def benchmark_llm():
         "model": MODEL,
         "messages": [{"role": "user", "content": test_prompt}],
         "max_tokens": 64,
-        "temperature": 0.0
+        "temperature": 0.0,
     }
 
     ttft_list = []
@@ -122,12 +126,14 @@ def benchmark_llm():
             tpot_list.append(tpot * 1000)
         except Exception as e:
             logger.error("LLM benchmark failed: %s", e)
-            logger.warning("Ensure Qwen2.5-7B is deployed locally (e.g., via Ollama: ollama run qwen2.5:7b)")
+            logger.warning(
+                "Ensure Qwen2.5-7B is deployed locally (e.g., via Ollama: ollama run qwen2.5:7b)"
+            )
             sys.exit(1)
 
     return {
         "ttft_ms": float(np.median(ttft_list)),
-        "tpot_ms": float(np.median(tpot_list))
+        "tpot_ms": float(np.median(tpot_list)),
     }
 
 
@@ -136,7 +142,9 @@ def detect_accelerator():
     info = {"type": "CPU", "vendor": "Generic", "details": ""}
 
     try:
-        result = subprocess.run(["nvidia-smi", "-L"], capture_output=True, text=True, timeout=5)
+        result = subprocess.run(
+            ["nvidia-smi", "-L"], capture_output=True, text=True, timeout=5
+        )
         if result.returncode == 0:
             info["type"] = "GPU"
             info["vendor"] = "NVIDIA"
@@ -146,7 +154,9 @@ def detect_accelerator():
         pass
 
     try:
-        result = subprocess.run(["npu-smi", "info"], capture_output=True, text=True, timeout=5)
+        result = subprocess.run(
+            ["npu-smi", "info"], capture_output=True, text=True, timeout=5
+        )
         if result.returncode == 0:
             info["type"] = "NPU"
             info["vendor"] = "Ascend"
@@ -166,7 +176,12 @@ def detect_accelerator():
         pass
 
     try:
-        result = subprocess.run(["sysctl", "-n", "machdep.cpu.brand_string"], capture_output=True, text=True, timeout=5)
+        result = subprocess.run(
+            ["sysctl", "-n", "machdep.cpu.brand_string"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
         if "Apple" in result.stdout:
             info["type"] = "SoC"
             info["vendor"] = "Apple"
@@ -193,18 +208,28 @@ def print_accelerator_guide(vendor):
 2. Use PyTorch ROCm backend (Hygon ROCm-compatible)
 3. Deploy vLLM-ROCm: https://github.com/vllm-project/vllm/tree/main/examples/rocm
 4. Set env: export ANCHOR_LLM_ENDPOINT=http://localhost:8000/v1/chat/completions
-"""
+""",
     }
     if vendor in guides:
         print(guides[vendor])
 
 
 def main():
-    parser = argparse.ArgumentParser(description="MAS-TS-001 Hardware Anchor Coefficient Generator")
-    parser.add_argument("--version", action="version", version=f"mas-eval-harness {VERSION}")
-    parser.add_argument("--output", default="anchor_report.json", help="Output report path")
-    parser.add_argument("--runs", type=int, default=5, help="LLM inference repeat count")
-    parser.add_argument("--skip-llm", action="store_true", help="Skip LLM test (CPU-only environment)")
+    parser = argparse.ArgumentParser(
+        description="MAS-TS-001 Hardware Anchor Coefficient Generator"
+    )
+    parser.add_argument(
+        "--version", action="version", version=f"mas-eval-harness {VERSION}"
+    )
+    parser.add_argument(
+        "--output", default="anchor_report.json", help="Output report path"
+    )
+    parser.add_argument(
+        "--runs", type=int, default=5, help="LLM inference repeat count"
+    )
+    parser.add_argument(
+        "--skip-llm", action="store_true", help="Skip LLM test (CPU-only environment)"
+    )
     argcomplete.autocomplete(parser)
     args = parser.parse_args()
 
@@ -213,8 +238,8 @@ def main():
     logger.info("=" * 60)
 
     accel = detect_accelerator()
-    logger.info("Detected Hardware: %s %s", accel['vendor'], accel['type'])
-    logger.info("Details: %s", accel['details'])
+    logger.info("Detected Hardware: %s %s", accel["vendor"], accel["type"])
+    logger.info("Details: %s", accel["details"])
 
     if accel["vendor"] in ["Ascend", "Hygon"]:
         print_accelerator_guide(accel["vendor"])
@@ -222,7 +247,7 @@ def main():
     logger.info("[1/3] Running GEMM matrix multiplication benchmark...")
     gemm_gflops = benchmark_gemm()
     logger.info("  Local GFLOPS: %.2f", gemm_gflops)
-    logger.info("  Baseline GFLOPS: %.2f", DOCKER_CPU_BASELINE['gemm_gflops'])
+    logger.info("  Baseline GFLOPS: %.2f", DOCKER_CPU_BASELINE["gemm_gflops"])
     gemm_coeff = gemm_gflops / DOCKER_CPU_BASELINE["gemm_gflops"]
     logger.info("  GEMM Coefficient: %.2fx", gemm_coeff)
 
@@ -230,12 +255,14 @@ def main():
 
     if not args.skip_llm:
         logger.info("[2/3] Running LLM inference benchmark (Qwen2.5-7B)...")
-        logger.info("  Ensure local deployment is available (e.g., Ollama: ollama run qwen2.5:7b)")
+        logger.info(
+            "  Ensure local deployment is available (e.g., Ollama: ollama run qwen2.5:7b)"
+        )
         llm_result = benchmark_llm()
-        logger.info("  Local TTFT: %.1fms", llm_result['ttft_ms'])
-        logger.info("  Baseline TTFT: %.1fms", DOCKER_CPU_BASELINE['llm_ttft_ms'])
-        logger.info("  Local TPOT: %.1fms", llm_result['tpot_ms'])
-        logger.info("  Baseline TPOT: %.1fms", DOCKER_CPU_BASELINE['llm_tpot_ms'])
+        logger.info("  Local TTFT: %.1fms", llm_result["ttft_ms"])
+        logger.info("  Baseline TTFT: %.1fms", DOCKER_CPU_BASELINE["llm_ttft_ms"])
+        logger.info("  Local TPOT: %.1fms", llm_result["tpot_ms"])
+        logger.info("  Baseline TPOT: %.1fms", DOCKER_CPU_BASELINE["llm_tpot_ms"])
 
         ttft_ratio = DOCKER_CPU_BASELINE["llm_ttft_ms"] / llm_result["ttft_ms"]
         tpot_ratio = DOCKER_CPU_BASELINE["llm_tpot_ms"] / llm_result["tpot_ms"]
@@ -265,25 +292,30 @@ def main():
             "llm_ttft_ms": llm_result["ttft_ms"],
             "llm_tpot_ms": llm_result["tpot_ms"],
             "llm_coefficient": llm_result.get("llm_coeff"),
-            "final_normalization_coefficient": round(final_coeff, 2)
+            "final_normalization_coefficient": round(final_coeff, 2),
         },
         "usage": {
             "latency_conversion": f"Measured Latency x {round(final_coeff, 2)} = Baseline-equivalent Latency",
-            "example": f"If local Latency=10s, baseline-equivalent=10x{round(final_coeff, 2)}={round(10*final_coeff, 1)}s"
+            "example": f"If local Latency=10s, baseline-equivalent=10x{round(final_coeff, 2)}={round(10 * final_coeff, 1)}s",
         },
         "submission_guide": {
             "to_community": "github.com/maa-swg/hardware-coefficients",
             "required_evidence": ["report.json", "3 repeated run logs"],
-            "review_time": "7 business days"
-        }
+            "review_time": "7 business days",
+        },
     }
 
     with open(args.output, "w", encoding="utf-8") as f:
         json.dump(report, f, indent=2)
 
     logger.info("DONE: Report saved: %s", args.output)
-    logger.info("SUBMIT: Submit this report for community review to join the official table")
-    logger.info("CONVERT: When reporting latency, multiply by %.2fx to convert to baseline", round(final_coeff, 2))
+    logger.info(
+        "SUBMIT: Submit this report for community review to join the official table"
+    )
+    logger.info(
+        "CONVERT: When reporting latency, multiply by %.2fx to convert to baseline",
+        round(final_coeff, 2),
+    )
 
 
 if __name__ == "__main__":

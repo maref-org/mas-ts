@@ -3,10 +3,15 @@
 """Tests for MAS-TS-001 Absolute Scoring Model."""
 
 import pytest
+
 from mas_eval.scoring.absolute import (
-    score_domain, score_to_grade, grade_to_emoji,
-    compute_overall, determine_verdict,
-    DOMAIN_WEIGHTS, SEVERITY_PENALTIES, GRADE_THRESHOLDS,
+    DOMAIN_WEIGHTS,
+    SEVERITY_PENALTIES,
+    compute_overall,
+    determine_verdict,
+    grade_to_emoji,
+    score_domain,
+    score_to_grade,
 )
 
 
@@ -46,10 +51,13 @@ class TestScoreDomain:
         assert result == 75.0
 
     def test_multiple_penalties(self):
-        result = score_domain(100, [
-            {"severity": "CRITICAL"},
-            {"severity": "HIGH"},
-        ])
+        result = score_domain(
+            100,
+            [
+                {"severity": "CRITICAL"},
+                {"severity": "HIGH"},
+            ],
+        )
         assert result == 60.0
 
     def test_floor_at_zero(self):
@@ -64,11 +72,14 @@ class TestScoreDomain:
         assert score_domain(75, []) == 75.0
 
     def test_mixed_severity(self):
-        result = score_domain(90, [
-            {"severity": "HIGH"},
-            {"severity": "WARNING"},
-            {"severity": "INFO"},
-        ])
+        result = score_domain(
+            90,
+            [
+                {"severity": "HIGH"},
+                {"severity": "WARNING"},
+                {"severity": "INFO"},
+            ],
+        )
         assert result == 70.0
 
     def test_unknown_severity_defaults_info(self):

@@ -3,13 +3,13 @@
 import importlib.util
 from pathlib import Path
 
-import pytest
 
 def load_module(name, path):
     spec = importlib.util.spec_from_file_location(name, path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
+
 
 ga = load_module("generate_anchor", Path(__file__).parent.parent / "generate_anchor.py")
 

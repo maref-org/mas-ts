@@ -11,11 +11,12 @@ Usage:
 Compares Mock LLM output against Golden Trajectory (real LLM recorded behavior).
 Blocks release if drift exceeds thresholds.
 """
-import json
-import sys
+
 import argparse
-import time
+import json
 import logging
+import sys
+import time
 from difflib import SequenceMatcher
 from pathlib import Path
 
@@ -27,7 +28,7 @@ from mas_eval import __version__ as VERSION
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    datefmt="%Y-%m-%dT%H:%M:%S"
+    datefmt="%Y-%m-%dT%H:%M:%S",
 )
 logger = logging.getLogger(__name__)
 
@@ -69,23 +70,42 @@ def compare_trajectories(golden, mock, thresholds=None):
     threshold_set = thresholds.get("set_similarity", 0.90)
     threshold_param = thresholds.get("param_match_rate", 0.80)
 
-    golden_sigs = [extract_tool_signature(e) for e in golden if extract_tool_signature(e)]
+    golden_sigs = [
+        extract_tool_signature(e) for e in golden if extract_tool_signature(e)
+    ]
     mock_sigs = [extract_tool_signature(e) for e in mock if extract_tool_signature(e)]
 
     seq_sim = SequenceMatcher(None, golden_sigs, mock_sigs).ratio()
 
     golden_set = set(golden_sigs)
     mock_set = set(mock_sigs)
-    set_sim = len(golden_set & mock_set) / len(golden_set | mock_set) if (golden_set | mock_set) else 1.0
+    set_sim = (
+        len(golden_set & mock_set) / len(golden_set | mock_set)
+        if (golden_set | mock_set)
+        else 1.0
+    )
 
-    param_match = sum(1 for g, m in zip(golden_sigs, mock_sigs) if g == m) / max(len(golden_sigs), 1)
+    param_match = sum(1 for g, m in zip(golden_sigs, mock_sigs) if g == m) / max(
+        len(golden_sigs), 1
+    )
 
-    golden_routes = [extract_routing_decision(e) for e in golden if extract_routing_decision(e)]
-    mock_routes = [extract_routing_decision(e) for e in mock if extract_routing_decision(e)]
+    golden_routes = [
+        extract_routing_decision(e) for e in golden if extract_routing_decision(e)
+    ]
+    mock_routes = [
+        extract_routing_decision(e) for e in mock if extract_routing_decision(e)
+    ]
     route_match = 0
     if golden_routes and mock_routes:
         min_len = min(len(golden_routes), len(mock_routes))
-        route_match = sum(1 for g, m in zip(golden_routes[:min_len], mock_routes[:min_len]) if g == m) / min_len
+        route_match = (
+            sum(
+                1
+                for g, m in zip(golden_routes[:min_len], mock_routes[:min_len])
+                if g == m
+            )
+            / min_len
+        )
 
     drift_detected = (
         seq_sim < threshold_seq
@@ -105,8 +125,8 @@ def compare_trajectories(golden, mock, thresholds=None):
         "thresholds": {
             "sequence_similarity": threshold_seq,
             "set_similarity": threshold_set,
-            "param_match_rate": threshold_param
-        }
+            "param_match_rate": threshold_param,
+        },
     }
 
 
@@ -133,54 +153,79 @@ def calibrate_directory(golden_dir, mock_dir, thresholds=None, skip_missing=Fals
         if name not in golden_files:
             if skip_missing:
                 continue
-            results.append({
-                "task": name,
-                "status": "MISSING_GOLDEN",
-                "drift_detected": True,
-                "error": "No golden trajectory found"
-            })
+            results.append(
+                {
+                    "task": name,
+                    "status": "MISSING_GOLDEN",
+                    "drift_detected": True,
+                    "error": "No golden trajectory found",
+                }
+            )
             continue
         if name not in mock_files:
             if skip_missing:
                 continue
-            results.append({
-                "task": name,
-                "status": "MISSING_MOCK",
-                "drift_detected": True,
-                "error": "No mock output found"
-            })
+            results.append(
+                {
+                    "task": name,
+                    "status": "MISSING_MOCK",
+                    "drift_detected": True,
+                    "error": "No mock output found",
+                }
+            )
             continue
 
         try:
-            result = calibrate_pair(str(golden_files[name]), str(mock_files[name]), thresholds)
+            result = calibrate_pair(
+                str(golden_files[name]), str(mock_files[name]), thresholds
+            )
             result["task"] = name
             result["status"] = "DRIFT" if result["drift_detected"] else "OK"
             results.append(result)
         except Exception as e:
-            results.append({
-                "task": name,
-                "status": "ERROR",
-                "drift_detected": True,
-                "error": str(e)
-            })
+            results.append(
+                {
+                    "task": name,
+                    "status": "ERROR",
+                    "drift_detected": True,
+                    "error": str(e),
+                }
+            )
 
     return results
 
 
 def main():
     parser = argparse.ArgumentParser(description="MAS-TS-001 Mock Drift Guard v2.0")
-    parser.add_argument("--version", action="version", version=f"mas-eval-harness {VERSION}")
+    parser.add_argument(
+        "--version", action="version", version=f"mas-eval-harness {VERSION}"
+    )
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--golden", help="Single Golden Trajectory JSON path")
     group.add_argument("--golden-dir", help="Directory of Golden Trajectory JSONs")
     parser.add_argument("--mock-output", help="Single Mock output trajectory JSON path")
     parser.add_argument("--mock-dir", help="Directory of Mock output trajectory JSONs")
-    parser.add_argument("--threshold-seq", type=float, default=0.85, help="Sequence similarity threshold")
-    parser.add_argument("--threshold-set", type=float, default=0.90, help="Set similarity threshold")
-    parser.add_argument("--threshold-param", type=float, default=0.80, help="Parameter match threshold")
-    parser.add_argument("--block", action="store_true", help="Exit with error on drift detected")
+    parser.add_argument(
+        "--threshold-seq",
+        type=float,
+        default=0.85,
+        help="Sequence similarity threshold",
+    )
+    parser.add_argument(
+        "--threshold-set", type=float, default=0.90, help="Set similarity threshold"
+    )
+    parser.add_argument(
+        "--threshold-param", type=float, default=0.80, help="Parameter match threshold"
+    )
+    parser.add_argument(
+        "--block", action="store_true", help="Exit with error on drift detected"
+    )
     parser.add_argument("--output", help="Save report to JSON file")
-    parser.add_argument("--skip-missing", action="store_true", help="Skip missing golden/mock pairs instead of marking as drift")
+    parser.add_argument(
+        "--skip-missing",
+        action="store_true",
+        help="Skip missing golden/mock pairs instead of marking as drift",
+    )
     argcomplete.autocomplete(parser)
     args = parser.parse_args()
 
@@ -202,19 +247,21 @@ def main():
             "scanned_at": scanned_at,
             "mode": "single",
             "results": [result],
-            "overall_passed": not result["drift_detected"]
+            "overall_passed": not result["drift_detected"],
         }
     elif args.golden_dir:
         if not args.mock_dir:
             parser.error("--mock-dir is required when using --golden-dir")
-        results = calibrate_directory(args.golden_dir, args.mock_dir, thresholds, skip_missing=args.skip_missing)
+        results = calibrate_directory(
+            args.golden_dir, args.mock_dir, thresholds, skip_missing=args.skip_missing
+        )
         report = {
             "standard": "MAS-TS-001",
             "version": "v2.1",
             "scanned_at": scanned_at,
             "mode": "batch",
             "results": results,
-            "overall_passed": not any(r.get("drift_detected", True) for r in results)
+            "overall_passed": not any(r.get("drift_detected", True) for r in results),
         }
     else:
         parser.error("Must specify --golden or --golden-dir")
@@ -228,7 +275,9 @@ def main():
         logger.info("Report saved to %s", args.output)
 
     if not report["overall_passed"] and args.block:
-        logger.error("Mock Drift exceeded thresholds! Update mock rules or adjust thresholds.")
+        logger.error(
+            "Mock Drift exceeded thresholds! Update mock rules or adjust thresholds."
+        )
         sys.exit(1)
     elif not report["overall_passed"]:
         logger.warning("Mock drift detected. Review and update mock rules.")

@@ -3,13 +3,25 @@
 """Tests for MAS-TS-001 D5: Evolution & Robustness (Part 1 — Chaos Engineering + Drift Detection, Part 2 — Reflection Loop + Convergence Verification)."""
 
 import math
+
 import pytest
+
 from mas_eval.domains.d5_robustness import (
-    ChaosEngine, DriftDetector, ReflectiveAgent, ConvergenceVerifier,
-    _kl_divergence, _js_divergence, _hellinger_distance, _cosine_sim,
-    INFRA_FAULTS, LLM_FAULTS,
-    QUALITY_DIMS, CRITIQUE_CATEGORIES,
-    run_d5_part1, run_d5_part2, run_d5,
+    CRITIQUE_CATEGORIES,
+    INFRA_FAULTS,
+    LLM_FAULTS,
+    QUALITY_DIMS,
+    ChaosEngine,
+    ConvergenceVerifier,
+    DriftDetector,
+    ReflectiveAgent,
+    _cosine_sim,
+    _hellinger_distance,
+    _js_divergence,
+    _kl_divergence,
+    run_d5,
+    run_d5_part1,
+    run_d5_part2,
 )
 
 
@@ -165,7 +177,9 @@ class TestChaosEngine:
         ce2.inject("network_partition", 0)
         ce1.record_healing("network_partition", True)
         ce2.record_healing("network_partition", True)
-        assert ce1.healing_results["network_partition"][0]["recovery_time"] == pytest.approx(
+        assert ce1.healing_results["network_partition"][0][
+            "recovery_time"
+        ] == pytest.approx(
             ce2.healing_results["network_partition"][0]["recovery_time"], abs=0.01
         )
 
@@ -202,7 +216,9 @@ class TestDriftDetector:
 
     def test_check_drift_identical(self):
         dd = DriftDetector()
-        dd.add_baseline("tool_weights", [0.25, 0.20, 0.15, 0.10, 0.10, 0.10, 0.05, 0.05])
+        dd.add_baseline(
+            "tool_weights", [0.25, 0.20, 0.15, 0.10, 0.10, 0.10, 0.05, 0.05]
+        )
         sample = [0.25, 0.20, 0.15, 0.10, 0.10, 0.10, 0.05, 0.05]
         result = dd.check_drift("tool_weights", sample)
         assert result["kl_divergence"] == pytest.approx(0.0, abs=1e-10)
@@ -211,7 +227,9 @@ class TestDriftDetector:
 
     def test_check_drift_detected(self):
         dd = DriftDetector()
-        dd.add_baseline("tool_weights", [0.25, 0.20, 0.15, 0.10, 0.10, 0.10, 0.05, 0.05])
+        dd.add_baseline(
+            "tool_weights", [0.25, 0.20, 0.15, 0.10, 0.10, 0.10, 0.05, 0.05]
+        )
         sample = [0.40, 0.30, 0.10, 0.05, 0.05, 0.05, 0.03, 0.02]
         result = dd.check_drift("tool_weights", sample)
         assert result["kl_divergence"] > 0.01
@@ -331,7 +349,11 @@ class TestRunD5Part1:
 
     def test_combined_score_reasonableness(self):
         result = run_d5_part1()
-        expected = round(result["subscores"]["chaos_engineering"] * 0.30 + result["subscores"]["drift_detection"] * 0.25, 1)
+        expected = round(
+            result["subscores"]["chaos_engineering"] * 0.30
+            + result["subscores"]["drift_detection"] * 0.25,
+            1,
+        )
         assert result["score"] == expected
 
     def test_consistency_reproducible(self):
@@ -342,22 +364,38 @@ class TestRunD5Part1:
 
     def test_unhealed_faults_findings(self):
         result = run_d5_part1()
-        chaos_warnings = [f for f in result["findings"] if "unhealed" in f.get("category", "")]
+        chaos_warnings = [
+            f for f in result["findings"] if "unhealed" in f.get("category", "")
+        ]
         assert isinstance(chaos_warnings, list)
 
     def test_drift_auto_reset_finding(self):
         result = run_d5_part1()
-        auto_reset_findings = [f for f in result["findings"] if f.get("category") == "drift_auto_reset"]
+        auto_reset_findings = [
+            f for f in result["findings"] if f.get("category") == "drift_auto_reset"
+        ]
         assert len(auto_reset_findings) >= 0
 
 
 class TestINFRAFAULTSConstants:
     def test_known_infra_faults(self):
-        expected = {"network_partition", "cpu_pressure", "memory_pressure", "disk_failure", "process_kill"}
+        expected = {
+            "network_partition",
+            "cpu_pressure",
+            "memory_pressure",
+            "disk_failure",
+            "process_kill",
+        }
         assert set(INFRA_FAULTS) == expected
 
     def test_known_llm_faults(self):
-        expected = {"timeout", "hallucination", "token_corruption", "model_degradation", "rate_limiting"}
+        expected = {
+            "timeout",
+            "hallucination",
+            "token_corruption",
+            "model_degradation",
+            "rate_limiting",
+        }
         assert set(LLM_FAULTS) == expected
 
     def test_all_faults_distinct(self):
@@ -394,13 +432,25 @@ class TestQUALITYDIMS:
         assert QUALITY_DIMS["correctness"] == 0.25
 
     def test_has_all_dims(self):
-        expected = {"correctness", "completeness", "safety", "efficiency", "consistency"}
+        expected = {
+            "correctness",
+            "completeness",
+            "safety",
+            "efficiency",
+            "consistency",
+        }
         assert set(QUALITY_DIMS.keys()) == expected
 
 
 class TestCritiqueCategories:
     def test_has_categories(self):
-        expected = {"logical_error", "missing_edge_case", "safety_concern", "inefficient", "inconsistent"}
+        expected = {
+            "logical_error",
+            "missing_edge_case",
+            "safety_concern",
+            "inefficient",
+            "inconsistent",
+        }
         assert set(CRITIQUE_CATEGORIES) == expected
 
 
@@ -427,9 +477,15 @@ class TestReflectiveAgent:
     def test_critique_with_custom_scores(self):
         ra = ReflectiveAgent()
         ra.generate("test")
-        custom = {"correctness": 0.9, "completeness": 0.8, "safety": 1.0, "efficiency": 0.7, "consistency": 0.9}
+        custom = {
+            "correctness": 0.9,
+            "completeness": 0.8,
+            "safety": 1.0,
+            "efficiency": 0.7,
+            "consistency": 0.9,
+        }
         score = ra.critique(custom)
-        expected = 0.9*0.25 + 0.8*0.25 + 1.0*0.20 + 0.7*0.15 + 0.9*0.15
+        expected = 0.9 * 0.25 + 0.8 * 0.25 + 1.0 * 0.20 + 0.7 * 0.15 + 0.9 * 0.15
         assert score == pytest.approx(expected)
 
     def test_critique_max_iterations(self):
@@ -464,7 +520,15 @@ class TestReflectiveAgent:
     def test_verify_true_when_above_threshold(self):
         ra = ReflectiveAgent()
         ra.generate("test")
-        ra.critique({"correctness": 1.0, "completeness": 1.0, "safety": 1.0, "efficiency": 1.0, "consistency": 1.0})
+        ra.critique(
+            {
+                "correctness": 1.0,
+                "completeness": 1.0,
+                "safety": 1.0,
+                "efficiency": 1.0,
+                "consistency": 1.0,
+            }
+        )
         assert ra.verify() is True
 
     def test_accept_returns_dict(self):
@@ -627,7 +691,12 @@ class TestRunD5:
 
     def test_has_all_subscores(self):
         result = run_d5()
-        expected = {"chaos_engineering", "drift_detection", "reflection_loop", "convergence_cycle"}
+        expected = {
+            "chaos_engineering",
+            "drift_detection",
+            "reflection_loop",
+            "convergence_cycle",
+        }
         assert expected == set(result["subscores"].keys())
 
     def test_all_subscores_in_range(self):

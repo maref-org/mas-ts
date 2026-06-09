@@ -7,7 +7,7 @@ Tests the full flow: Agent Card → D1-D5 domain evaluation → L0/L3 harness �
 
 import json
 import time
-import pytest
+
 from mas_eval.domains.d1_compliance import run_d1
 from mas_eval.domains.d2_single_agent import run_d2
 from mas_eval.domains.d3_multi_agent import run_d3
@@ -15,8 +15,7 @@ from mas_eval.domains.d4_governance_security import run_d4
 from mas_eval.domains.d5_robustness import run_d5
 from mas_eval.harness.l0_fast_screen import run_l0_fast_screen
 from mas_eval.harness.l3_comprehensive import run_l3_comprehensive
-from mas_eval.scoring.absolute import compute_overall, score_to_grade, determine_verdict
-
+from mas_eval.scoring.absolute import compute_overall, determine_verdict, score_to_grade
 
 SAMPLE_CARD = {
     "agent_id": "test-agent-001",
@@ -30,14 +29,70 @@ SAMPLE_CARD = {
     "endpoint": "https://api.example.com/v1/chat",
     "model_backend": {"endpoint": "https://api.example.com/v1", "location": "US"},
     "capabilities": [
-        {"skill_id": "bash", "description": "run commands", "input_schema": {}, "output_schema": {}, "examples": ["ls"], "business_rule_version": "2026-05-01"},
-        {"skill_id": "file_read", "description": "read files", "input_schema": {}, "output_schema": {}, "examples": ["read"], "business_rule_version": "2026-05-01"},
-        {"skill_id": "file_edit", "description": "edit files", "input_schema": {}, "output_schema": {}, "examples": ["edit"], "business_rule_version": "2026-05-01"},
-        {"skill_id": "file_write", "description": "write files", "input_schema": {}, "output_schema": {}, "examples": ["write"], "business_rule_version": "2026-05-01"},
-        {"skill_id": "glob", "description": "glob", "input_schema": {}, "output_schema": {}, "examples": ["glob"], "business_rule_version": "2026-05-01"},
-        {"skill_id": "grep", "description": "grep", "input_schema": {}, "output_schema": {}, "examples": ["grep"], "business_rule_version": "2026-05-01"},
-        {"skill_id": "web_search", "description": "search", "input_schema": {}, "output_schema": {}, "examples": ["search"], "business_rule_version": "2026-05-01"},
-        {"skill_id": "web_fetch", "description": "fetch", "input_schema": {}, "output_schema": {}, "examples": ["fetch"], "business_rule_version": "2026-05-01"},
+        {
+            "skill_id": "bash",
+            "description": "run commands",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["ls"],
+            "business_rule_version": "2026-05-01",
+        },
+        {
+            "skill_id": "file_read",
+            "description": "read files",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["read"],
+            "business_rule_version": "2026-05-01",
+        },
+        {
+            "skill_id": "file_edit",
+            "description": "edit files",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["edit"],
+            "business_rule_version": "2026-05-01",
+        },
+        {
+            "skill_id": "file_write",
+            "description": "write files",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["write"],
+            "business_rule_version": "2026-05-01",
+        },
+        {
+            "skill_id": "glob",
+            "description": "glob",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["glob"],
+            "business_rule_version": "2026-05-01",
+        },
+        {
+            "skill_id": "grep",
+            "description": "grep",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["grep"],
+            "business_rule_version": "2026-05-01",
+        },
+        {
+            "skill_id": "web_search",
+            "description": "search",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["search"],
+            "business_rule_version": "2026-05-01",
+        },
+        {
+            "skill_id": "web_fetch",
+            "description": "fetch",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["fetch"],
+            "business_rule_version": "2026-05-01",
+        },
     ],
     "authentication": {"type": "OAuth2", "scopes": ["read", "write"]},
     "compliance": {
@@ -86,8 +141,16 @@ class TestD1D5Pipeline:
         d4 = run_d4(SAMPLE_CARD)
         d5 = run_d5()
 
-        for name, result in [("D1", d1), ("D2", d2), ("D3", d3), ("D4", d4), ("D5", d5)]:
-            assert 0 <= result["score"] <= 100, f"{name} score {result['score']} out of range"
+        for name, result in [
+            ("D1", d1),
+            ("D2", d2),
+            ("D3", d3),
+            ("D4", d4),
+            ("D5", d5),
+        ]:
+            assert 0 <= result["score"] <= 100, (
+                f"{name} score {result['score']} out of range"
+            )
 
     def test_all_domains_have_findings(self):
         d1 = run_d1(SAMPLE_CARD)
@@ -96,7 +159,13 @@ class TestD1D5Pipeline:
         d4 = run_d4(SAMPLE_CARD)
         d5 = run_d5()
 
-        for name, result in [("D1", d1), ("D2", d2), ("D3", d3), ("D4", d4), ("D5", d5)]:
+        for name, result in [
+            ("D1", d1),
+            ("D2", d2),
+            ("D3", d3),
+            ("D4", d4),
+            ("D5", d5),
+        ]:
             assert isinstance(result.get("findings"), list), f"{name} missing findings"
             assert len(result["findings"]) > 0, f"{name} has no findings"
 
@@ -108,13 +177,30 @@ class TestD1D5Pipeline:
         d5 = run_d5()
 
         overall = compute_overall(
-            d1=d1["score"], d2=d2["score"],
-            d3=d3["score"], d4=d4["score"], d5=d5["score"],
+            d1=d1["score"],
+            d2=d2["score"],
+            d3=d3["score"],
+            d4=d4["score"],
+            d5=d5["score"],
         )
         assert 0 <= overall <= 100
 
         grade = score_to_grade(overall)
-        assert grade in ("A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D+", "D", "D-", "F")
+        assert grade in (
+            "A+",
+            "A",
+            "A-",
+            "B+",
+            "B",
+            "B-",
+            "C+",
+            "C",
+            "C-",
+            "D+",
+            "D",
+            "D-",
+            "F",
+        )
 
     def test_verdict_determined(self):
         d1 = run_d1(SAMPLE_CARD)
@@ -123,10 +209,19 @@ class TestD1D5Pipeline:
         d4 = run_d4(SAMPLE_CARD)
         d5 = run_d5()
 
-        all_findings = d1["findings"] + d2["findings"] + d3["findings"] + d4["findings"] + d5["findings"]
+        all_findings = (
+            d1["findings"]
+            + d2["findings"]
+            + d3["findings"]
+            + d4["findings"]
+            + d5["findings"]
+        )
         overall = compute_overall(
-            d1=d1["score"], d2=d2["score"],
-            d3=d3["score"], d4=d4["score"], d5=d5["score"],
+            d1=d1["score"],
+            d2=d2["score"],
+            d3=d3["score"],
+            d4=d4["score"],
+            d5=d5["score"],
         )
         verdict = determine_verdict(overall, findings=all_findings)
         assert verdict in ("APPROVED", "CONDITIONAL", "BLOCKED")
@@ -139,8 +234,11 @@ class TestD1D5Pipeline:
         d4 = run_d4(SAMPLE_CARD)
         d5 = run_d5()
         overall = compute_overall(
-            d1=d1["score"], d2=d2["score"],
-            d3=d3["score"], d4=d4["score"], d5=d5["score"],
+            d1=d1["score"],
+            d2=d2["score"],
+            d3=d3["score"],
+            d4=d4["score"],
+            d5=d5["score"],
         )
         elapsed = time.time() - t0
         assert elapsed < 5, f"Pipeline took {elapsed:.2f}s"
@@ -161,7 +259,13 @@ class TestL0Pipeline:
         result = run_l0_fast_screen(SAMPLE_CARD)
         assert len(result["stages"]) == 5
         stage_names = [s["stage"] for s in result["stages"]]
-        assert stage_names == ["card_validation", "constitution_check", "mock_tasks", "agent_spawn", "traffic_light"]
+        assert stage_names == [
+            "card_validation",
+            "constitution_check",
+            "mock_tasks",
+            "agent_spawn",
+            "traffic_light",
+        ]
 
     def test_l0_each_stage_has_score(self):
         result = run_l0_fast_screen(SAMPLE_CARD)
@@ -193,28 +297,56 @@ class TestL3Pipeline:
 
 class TestCLIEntryPoints:
     def test_fast_screen_v3_flag(self):
-        import subprocess, sys, tempfile, json, os
+        import os
+        import subprocess
+        import sys
+        import tempfile
+
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             json.dump(SAMPLE_CARD, f)
             card_path = f.name
         try:
             r = subprocess.run(
-                [sys.executable, "mas_fast_screen.py", "--engine", "v3", "--card", card_path],
-                capture_output=True, text=True, timeout=15,
+                [
+                    sys.executable,
+                    "mas_fast_screen.py",
+                    "--engine",
+                    "v3",
+                    "--card",
+                    card_path,
+                ],
+                capture_output=True,
+                text=True,
+                timeout=15,
             )
             assert r.returncode == 0
         finally:
             os.unlink(card_path)
 
     def test_full_run_v3_flag(self):
-        import subprocess, sys, tempfile, json, os
+        import os
+        import subprocess
+        import sys
+        import tempfile
+
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             json.dump(SAMPLE_CARD, f)
             card_path = f.name
         try:
             r = subprocess.run(
-                [sys.executable, "mas_full_run.py", "--engine", "v3", "--level", "L1", "--card", card_path],
-                capture_output=True, text=True, timeout=15,
+                [
+                    sys.executable,
+                    "mas_full_run.py",
+                    "--engine",
+                    "v3",
+                    "--level",
+                    "L1",
+                    "--card",
+                    card_path,
+                ],
+                capture_output=True,
+                text=True,
+                timeout=15,
             )
             assert r.returncode == 0
         finally:
@@ -224,6 +356,7 @@ class TestCLIEntryPoints:
 class TestScoringPipeline:
     def test_elo_leaderboard(self):
         from mas_eval.scoring.elo import EloRating
+
         elo = EloRating()
         for i in range(5):
             elo.add_contestant(f"agent_{i}")
@@ -236,6 +369,7 @@ class TestScoringPipeline:
 
     def test_elo_confidence_interval(self):
         from mas_eval.scoring.elo import EloRating
+
         elo = EloRating()
         for i in range(60):
             elo.record_match(f"opp_{i}", "target", 80, 70)

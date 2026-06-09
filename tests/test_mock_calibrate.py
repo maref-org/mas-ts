@@ -2,10 +2,10 @@
 # SPDX-License-Identifier: Apache-2.0
 import importlib.util
 import json
-import sys
 from pathlib import Path
 
 import pytest
+
 
 def load_module(name, path):
     spec = importlib.util.spec_from_file_location(name, path)
@@ -13,19 +13,32 @@ def load_module(name, path):
     spec.loader.exec_module(mod)
     return mod
 
+
 mc = load_module("mock_calibrate", Path(__file__).parent.parent / "mock_calibrate.py")
 
 
 class TestExtractToolSignature:
     def test_tool_call_event(self):
-        event = {"action": {"type": "tool_call", "tool_id": "read_file", "input": {"path": "/tmp"}}}
+        event = {
+            "action": {
+                "type": "tool_call",
+                "tool_id": "read_file",
+                "input": {"path": "/tmp"},
+            }
+        }
         assert mc.extract_tool_signature(event) == "read_file:path"
 
     def test_non_tool_call_event(self):
         assert mc.extract_tool_signature({"action": {"type": "task_start"}}) is None
 
     def test_multiple_params(self):
-        event = {"action": {"type": "tool_call", "tool_id": "search_flight", "input": {"origin": "BJS", "dest": "SHA"}}}
+        event = {
+            "action": {
+                "type": "tool_call",
+                "tool_id": "search_flight",
+                "input": {"origin": "BJS", "dest": "SHA"},
+            }
+        }
         assert mc.extract_tool_signature(event) == "search_flight:dest,origin"
 
     def test_no_input(self):
@@ -37,15 +50,39 @@ class TestCompareTrajectories:
     @pytest.fixture
     def golden(self):
         return [
-            {"action": {"type": "tool_call", "tool_id": "search_flight", "input": {"origin": "BJS", "dest": "SHA"}}},
-            {"action": {"type": "tool_call", "tool_id": "book_ticket", "input": {"flight_no": "CA1234", "passenger": "Zhang"}}},
+            {
+                "action": {
+                    "type": "tool_call",
+                    "tool_id": "search_flight",
+                    "input": {"origin": "BJS", "dest": "SHA"},
+                }
+            },
+            {
+                "action": {
+                    "type": "tool_call",
+                    "tool_id": "book_ticket",
+                    "input": {"flight_no": "CA1234", "passenger": "Zhang"},
+                }
+            },
         ]
 
     @pytest.fixture
     def mock_identical(self):
         return [
-            {"action": {"type": "tool_call", "tool_id": "search_flight", "input": {"origin": "BJS", "dest": "SHA"}}},
-            {"action": {"type": "tool_call", "tool_id": "book_ticket", "input": {"flight_no": "CA1234", "passenger": "Zhang"}}},
+            {
+                "action": {
+                    "type": "tool_call",
+                    "tool_id": "search_flight",
+                    "input": {"origin": "BJS", "dest": "SHA"},
+                }
+            },
+            {
+                "action": {
+                    "type": "tool_call",
+                    "tool_id": "book_ticket",
+                    "input": {"flight_no": "CA1234", "passenger": "Zhang"},
+                }
+            },
         ]
 
     def test_identical_trajectories_no_drift(self, golden, mock_identical):
@@ -57,26 +94,54 @@ class TestCompareTrajectories:
 
     def test_different_trajectories_drift_detected(self, golden):
         different = [
-            {"action": {"type": "tool_call", "tool_id": "get_profile", "input": {"user_id": "1"}}},
+            {
+                "action": {
+                    "type": "tool_call",
+                    "tool_id": "get_profile",
+                    "input": {"user_id": "1"},
+                }
+            },
         ]
         result = mc.compare_trajectories(golden, different)
         assert result["drift_detected"]
 
     def test_empty_golden(self):
-        result = mc.compare_trajectories([], [{"action": {"type": "tool_call", "tool_id": "x", "input": {}}}])
+        result = mc.compare_trajectories(
+            [], [{"action": {"type": "tool_call", "tool_id": "x", "input": {}}}]
+        )
         assert result["param_match_rate"] == 0.0
 
     def test_custom_thresholds(self):
         result = mc.compare_trajectories(
             [{"action": {"type": "tool_call", "tool_id": "a", "input": {}}}],
             [{"action": {"type": "tool_call", "tool_id": "b", "input": {}}}],
-            thresholds={"sequence_similarity": 0.0, "set_similarity": 0.0, "param_match_rate": 0.0}
+            thresholds={
+                "sequence_similarity": 0.0,
+                "set_similarity": 0.0,
+                "param_match_rate": 0.0,
+            },
         )
         assert not result["drift_detected"]
 
     def test_routing_decision_match(self):
-        golden = [{"action": {"type": "tool_call", "tool_id": "a", "input": {}}, "orchestration": {"routing_decision": "auto", "routing_reason": "match"}}]
-        mock = [{"action": {"type": "tool_call", "tool_id": "a", "input": {}}, "orchestration": {"routing_decision": "auto", "routing_reason": "match"}}]
+        golden = [
+            {
+                "action": {"type": "tool_call", "tool_id": "a", "input": {}},
+                "orchestration": {
+                    "routing_decision": "auto",
+                    "routing_reason": "match",
+                },
+            }
+        ]
+        mock = [
+            {
+                "action": {"type": "tool_call", "tool_id": "a", "input": {}},
+                "orchestration": {
+                    "routing_decision": "auto",
+                    "routing_reason": "match",
+                },
+            }
+        ]
         result = mc.compare_trajectories(golden, mock)
         assert result["route_match_rate"] == 1.0
 

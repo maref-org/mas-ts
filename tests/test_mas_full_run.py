@@ -6,11 +6,13 @@ from pathlib import Path
 
 import pytest
 
+
 def load_module(name, path):
     spec = importlib.util.spec_from_file_location(name, path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
+
 
 mfr = load_module("mas_full_run", Path(__file__).parent.parent / "mas_full_run.py")
 
@@ -81,31 +83,47 @@ class TestComputeOverallScore:
 class TestGenerateRecommendations:
     def test_critical_finding(self):
         card = {"compliance": {}, "orchestration_hints": {}}
-        layers = [{
-            "layer": 1, "score": 50, "findings": [
-                {"severity": "CRITICAL", "category": "test", "detail": "critical issue"}
-            ]
-        }]
+        layers = [
+            {
+                "layer": 1,
+                "score": 50,
+                "findings": [
+                    {
+                        "severity": "CRITICAL",
+                        "category": "test",
+                        "detail": "critical issue",
+                    }
+                ],
+            }
+        ]
         recs = mfr.generate_recommendations(layers, card)
         assert any(r["priority"] == "P0" for r in recs)
 
     def test_high_finding(self):
         card = {"compliance": {}, "orchestration_hints": {}}
-        layers = [{
-            "layer": 1, "score": 50, "findings": [
-                {"severity": "HIGH", "category": "test", "detail": "high issue"}
-            ]
-        }]
+        layers = [
+            {
+                "layer": 1,
+                "score": 50,
+                "findings": [
+                    {"severity": "HIGH", "category": "test", "detail": "high issue"}
+                ],
+            }
+        ]
         recs = mfr.generate_recommendations(layers, card)
         assert any(r["priority"] == "P1" for r in recs)
 
     def test_no_critical_high(self):
         card = {"compliance": {}, "orchestration_hints": {}}
-        layers = [{
-            "layer": 1, "score": 100, "findings": [
-                {"severity": "INFO", "category": "test", "detail": "info"}
-            ]
-        }]
+        layers = [
+            {
+                "layer": 1,
+                "score": 100,
+                "findings": [
+                    {"severity": "INFO", "category": "test", "detail": "info"}
+                ],
+            }
+        ]
         recs = mfr.generate_recommendations(layers, card)
         critical_or_high = [r for r in recs if r["priority"] in ("P0", "P1")]
         assert len(critical_or_high) == 0

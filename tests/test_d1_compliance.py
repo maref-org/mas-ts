@@ -11,18 +11,18 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.resolve()))
 
 from mas_eval.domains.d1_compliance import (
-    run_d1,
-    check_schema,
-    check_data_residency,
+    CORE_TOOLS,
+    check_authentication,
+    check_capabilities_completeness,
     check_cross_border,
+    check_dag_acyclicity,
+    check_data_residency,
     check_envelope,
     check_health_state,
     check_heartbeat,
-    check_authentication,
     check_prompt_rot,
-    check_capabilities_completeness,
-    check_dag_acyclicity,
-    CORE_TOOLS,
+    check_schema,
+    run_d1,
 )
 
 SAMPLE_CARD = {
@@ -55,14 +55,70 @@ SAMPLE_CARD = {
         "endpoint": "https://api.anthropic.com/v1/messages",
     },
     "capabilities": [
-        {"skill_id": "bash", "description": "run commands", "input_schema": {}, "output_schema": {}, "examples": ["ls"], "business_rule_version": "2026-05-01"},
-        {"skill_id": "file_read", "description": "read files", "input_schema": {}, "output_schema": {}, "examples": ["read"], "business_rule_version": "2026-05-01"},
-        {"skill_id": "file_edit", "description": "edit files", "input_schema": {}, "output_schema": {}, "examples": ["edit"], "business_rule_version": "2026-05-01"},
-        {"skill_id": "file_write", "description": "write files", "input_schema": {}, "output_schema": {}, "examples": ["write"], "business_rule_version": "2026-05-01"},
-        {"skill_id": "glob", "description": "glob", "input_schema": {}, "output_schema": {}, "examples": ["glob"], "business_rule_version": "2026-05-01"},
-        {"skill_id": "grep", "description": "grep", "input_schema": {}, "output_schema": {}, "examples": ["grep"], "business_rule_version": "2026-05-01"},
-        {"skill_id": "web_search", "description": "search", "input_schema": {}, "output_schema": {}, "examples": ["search"], "business_rule_version": "2026-05-01"},
-        {"skill_id": "web_fetch", "description": "fetch", "input_schema": {}, "output_schema": {}, "examples": ["fetch"], "business_rule_version": "2026-05-01"},
+        {
+            "skill_id": "bash",
+            "description": "run commands",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["ls"],
+            "business_rule_version": "2026-05-01",
+        },
+        {
+            "skill_id": "file_read",
+            "description": "read files",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["read"],
+            "business_rule_version": "2026-05-01",
+        },
+        {
+            "skill_id": "file_edit",
+            "description": "edit files",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["edit"],
+            "business_rule_version": "2026-05-01",
+        },
+        {
+            "skill_id": "file_write",
+            "description": "write files",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["write"],
+            "business_rule_version": "2026-05-01",
+        },
+        {
+            "skill_id": "glob",
+            "description": "glob",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["glob"],
+            "business_rule_version": "2026-05-01",
+        },
+        {
+            "skill_id": "grep",
+            "description": "grep",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["grep"],
+            "business_rule_version": "2026-05-01",
+        },
+        {
+            "skill_id": "web_search",
+            "description": "search",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["search"],
+            "business_rule_version": "2026-05-01",
+        },
+        {
+            "skill_id": "web_fetch",
+            "description": "fetch",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["fetch"],
+            "business_rule_version": "2026-05-01",
+        },
     ],
     "authentication": {"type": "APIKey", "scopes": ["test"]},
     "dependencies": ["git", "nodejs"],
@@ -72,20 +128,34 @@ SAMPLE_CARD = {
 def test_d1_full_compliant():
     result = run_d1(SAMPLE_CARD)
     assert result["domain"] == "D1"
-    assert result["score"] >= 90, f"Expected high score for compliant card, got {result['score']}"
+    assert result["score"] >= 90, (
+        f"Expected high score for compliant card, got {result['score']}"
+    )
     assert result["conformance_verdict"] in ("COMPLIANT", "COMPLIANT-WITH-NOTES")
 
 
 def test_d1_schema_missing_required():
-    import tempfile, os
+    import os
+    import tempfile
+
     card = dict(SAMPLE_CARD)
     del card["agent_id"]
     with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-        json.dump({"type": "object", "required": ["agent_id"], "properties": {"agent_id": {"type": "string"}}, "additionalProperties": True}, f)
+        json.dump(
+            {
+                "type": "object",
+                "required": ["agent_id"],
+                "properties": {"agent_id": {"type": "string"}},
+                "additionalProperties": True,
+            },
+            f,
+        )
         schema_path = f.name
     result = run_d1(card, schema_path)
     os.unlink(schema_path)
-    assert any(f["check"] == "1.1" and f["severity"] == "CRITICAL" for f in result["findings"])
+    assert any(
+        f["check"] == "1.1" and f["severity"] == "CRITICAL" for f in result["findings"]
+    )
 
 
 def test_d1_data_residency_mismatch_critical():
@@ -94,7 +164,9 @@ def test_d1_data_residency_mismatch_critical():
     card["compliance"]["data_residency"] = "CN"
     card["compliance"]["model_backend_location"] = "US"
     result = run_d1(card)
-    assert any(f["check"] == "1.2" and f["severity"] == "CRITICAL" for f in result["findings"])
+    assert any(
+        f["check"] == "1.2" and f["severity"] == "CRITICAL" for f in result["findings"]
+    )
 
 
 def test_d1_cross_border_fraud():
@@ -106,7 +178,9 @@ def test_d1_cross_border_fraud():
     card["model_backend"] = dict(card["model_backend"])
     card["model_backend"]["endpoint"] = "https://api.deepseek.com/v1"
     result = run_d1(card)
-    assert any(f["check"] == "1.3" and f["severity"] == "CRITICAL" for f in result["findings"])
+    assert any(
+        f["check"] == "1.3" and f["severity"] == "CRITICAL" for f in result["findings"]
+    )
 
 
 def test_d1_envelope_missing():
@@ -136,13 +210,22 @@ def test_d1_no_auth():
     card = dict(SAMPLE_CARD)
     card["authentication"] = {"type": "None"}
     result = run_d1(card)
-    assert any(f["check"] == "1.7" and f["severity"] == "HIGH" for f in result["findings"])
+    assert any(
+        f["check"] == "1.7" and f["severity"] == "HIGH" for f in result["findings"]
+    )
 
 
 def test_d1_prompt_rot():
     card = dict(SAMPLE_CARD)
     card["capabilities"] = [
-        {"skill_id": "bash", "description": "run", "input_schema": {}, "output_schema": {}, "examples": ["ls"], "business_rule_version": "2024-01-01"},
+        {
+            "skill_id": "bash",
+            "description": "run",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["ls"],
+            "business_rule_version": "2024-01-01",
+        },
     ]
     result = run_d1(card)
     assert any(f["check"] == "1.8" for f in result["findings"])
@@ -151,7 +234,13 @@ def test_d1_prompt_rot():
 def test_d1_capabilities_below_50_pct():
     card = dict(SAMPLE_CARD)
     card["capabilities"] = [
-        {"skill_id": "bash", "description": "run", "input_schema": {}, "output_schema": {}, "examples": ["ls"]},
+        {
+            "skill_id": "bash",
+            "description": "run",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["ls"],
+        },
     ]
     result = run_d1(card)
     assert any(f["check"] == "1.9" for f in result["findings"])
@@ -159,18 +248,36 @@ def test_d1_capabilities_below_50_pct():
 
 def test_d1_dag_acyclic():
     result = run_d1(SAMPLE_CARD)
-    assert any(f["check"] == "1.10" and f["severity"] == "INFO" for f in result["findings"])
+    assert any(
+        f["check"] == "1.10" and f["severity"] == "INFO" for f in result["findings"]
+    )
 
 
 def test_d1_score_floor():
-    card = {"card_version": "1.2", "agent_id": "bad", "name": "Bad", "version": "0.0.0", "compliance": {}, "model_backend": {}, "capabilities": [], "authentication": {"type": "None"}}
+    card = {
+        "card_version": "1.2",
+        "agent_id": "bad",
+        "name": "Bad",
+        "version": "0.0.0",
+        "compliance": {},
+        "model_backend": {},
+        "capabilities": [],
+        "authentication": {"type": "None"},
+    }
     result = run_d1(card)
     assert result["score"] == 0
 
 
 def test_d1_check_schema():
     with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-        json.dump({"type": "object", "required": ["agent_id"], "properties": {"agent_id": {"type": "string"}}}, f)
+        json.dump(
+            {
+                "type": "object",
+                "required": ["agent_id"],
+                "properties": {"agent_id": {"type": "string"}},
+            },
+            f,
+        )
         schema_path = f.name
     card_invalid = {"name": "no-agent-id"}
     findings = check_schema(card_invalid, schema_path)
@@ -202,7 +309,16 @@ def test_d1_check_envelope_missing():
 
 
 def test_d1_check_envelope_complete():
-    card = {"constitution": {"envelope": {"message_id": "1", "correlation_id": "2", "timestamp": "3", "sender": "4"}}}
+    card = {
+        "constitution": {
+            "envelope": {
+                "message_id": "1",
+                "correlation_id": "2",
+                "timestamp": "3",
+                "sender": "4",
+            }
+        }
+    }
     findings = check_envelope(card)
     assert any(f["severity"] == "INFO" for f in findings)
 
@@ -218,7 +334,14 @@ def test_d1_check_health_state_invalid():
 
 
 def test_d1_check_heartbeat_valid():
-    findings = check_heartbeat({"constitution": {"heartbeat_interval_seconds": 30, "stale_node_timeout_seconds": 60}})
+    findings = check_heartbeat(
+        {
+            "constitution": {
+                "heartbeat_interval_seconds": 30,
+                "stale_node_timeout_seconds": 60,
+            }
+        }
+    )
     assert any(f["severity"] == "INFO" for f in findings)
 
 
@@ -238,7 +361,18 @@ def test_d1_check_auth_valid():
 
 
 def test_d1_check_prompt_rot_missing_brv():
-    findings = check_prompt_rot({"capabilities": [{"skill_id": "bash", "description": "x", "input_schema": {}, "output_schema": {}}]})
+    findings = check_prompt_rot(
+        {
+            "capabilities": [
+                {
+                    "skill_id": "bash",
+                    "description": "x",
+                    "input_schema": {},
+                    "output_schema": {},
+                }
+            ]
+        }
+    )
     assert any(f["severity"] == "WARNING" for f in findings)
 
 
@@ -265,7 +399,16 @@ def test_d1_findings_count():
 
 
 def test_d1_conformance_blocked():
-    card = {"card_version": "1.2", "agent_id": "bad", "name": "Bad", "version": "0.0.0", "compliance": {}, "model_backend": {}, "capabilities": [], "authentication": {"type": "None"}}
+    card = {
+        "card_version": "1.2",
+        "agent_id": "bad",
+        "name": "Bad",
+        "version": "0.0.0",
+        "compliance": {},
+        "model_backend": {},
+        "capabilities": [],
+        "authentication": {"type": "None"},
+    }
     result = run_d1(card)
     assert "NON-COMPLIANT" in result["conformance_verdict"]
     assert "blocked" in result["conformance_verdict"]

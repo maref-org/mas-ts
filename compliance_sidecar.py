@@ -8,11 +8,11 @@ Usage: Set HTTP_PROXY=http://localhost:8080 before starting your Agent.
 Intercepts all outbound HTTP requests and blocks cross-border requests
 based on the Agent Card's declared data_residency.
 """
+
 import argparse
 import asyncio
 import json
 import logging
-import re
 import sys
 from pathlib import Path
 from urllib.parse import urlparse
@@ -25,7 +25,7 @@ from mas_eval import __version__ as VERSION
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    datefmt="%Y-%m-%dT%H:%M:%S"
+    datefmt="%Y-%m-%dT%H:%M:%S",
 )
 logger = logging.getLogger(__name__)
 
@@ -67,7 +67,9 @@ class ComplianceSidecar:
             logger.error("Failed to parse agent card JSON: %s", e)
             sys.exit(1)
         self.residency = card.get("compliance", {}).get("data_residency", "UNKNOWN")
-        self.allowed_regions = RESIDENCY_ALLOWED.get(self.residency, [self.residency, "LOCAL"])
+        self.allowed_regions = RESIDENCY_ALLOWED.get(
+            self.residency, [self.residency, "LOCAL"]
+        )
         self.agent_name = card.get("name", "unknown-agent")
 
     def _resolve_region(self, domain):
@@ -100,10 +102,13 @@ class ComplianceSidecar:
                 False,
                 f"BLOCKED: Agent '{self.agent_name}' tried to access {domain} "
                 f"(region={region}), but declared residency={self.residency} "
-                f"only allows {self.allowed_regions}"
+                f"only allows {self.allowed_regions}",
             )
 
-        return True, f"ALLOWED: {domain} (region={region}) matches residency={self.residency}"
+        return (
+            True,
+            f"ALLOWED: {domain} (region={region}) matches residency={self.residency}",
+        )
 
     async def alert(self, message):
         """Send alert. Override this to integrate with Slack/DingTalk/WeChat."""
@@ -122,7 +127,7 @@ async def handle_request(reader, writer, sidecar):
         parts = request_line.split()
 
         if len(parts) >= 2:
-            method = parts[0]
+            parts[0]
             target = parts[1]
 
             # For CONNECT proxy, target is hostname:port
@@ -161,8 +166,7 @@ async def run_server(host="127.0.0.1", port=8080, agent_card="agent_card.json"):
     logger.info("Set HTTP_PROXY=http://%s:%s in your Agent environment", host, port)
 
     server = await asyncio.start_server(
-        lambda r, w: handle_request(r, w, sidecar),
-        host, port
+        lambda r, w: handle_request(r, w, sidecar), host, port
     )
     async with server:
         await server.serve_forever()
@@ -170,8 +174,12 @@ async def run_server(host="127.0.0.1", port=8080, agent_card="agent_card.json"):
 
 def main():
     parser = argparse.ArgumentParser(description="Compliance Sidecar HTTP Proxy")
-    parser.add_argument("--version", action="version", version=f"mas-eval-harness {VERSION}")
-    parser.add_argument("--card", default="agent_card.json", help="Agent Card JSON path")
+    parser.add_argument(
+        "--version", action="version", version=f"mas-eval-harness {VERSION}"
+    )
+    parser.add_argument(
+        "--card", default="agent_card.json", help="Agent Card JSON path"
+    )
     parser.add_argument("--host", default="127.0.0.1", help="Bind host")
     parser.add_argument("--port", type=int, default=8080, help="Bind port")
     argcomplete.autocomplete(parser)

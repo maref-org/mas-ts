@@ -4,13 +4,13 @@ import importlib.util
 import json
 from pathlib import Path
 
-import pytest
 
 def load_module(name, path):
     spec = importlib.util.spec_from_file_location(name, path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
+
 
 cs = load_module("compliance_scan", Path(__file__).parent.parent / "compliance_scan.py")
 
@@ -24,7 +24,10 @@ class TestScanAgentCard:
         assert any("Missing data_residency" in i["msg"] for i in issues)
 
     def test_missing_capabilities(self, tmp_path):
-        card = {"name": "test", "compliance": {"data_residency": "CN", "model_backend_location": "CN"}}
+        card = {
+            "name": "test",
+            "compliance": {"data_residency": "CN", "model_backend_location": "CN"},
+        }
         p = tmp_path / "card.json"
         p.write_text(json.dumps(card))
         issues = cs.scan_agent_card(str(p))
@@ -33,8 +36,12 @@ class TestScanAgentCard:
     def test_fraudulent_cross_border(self, tmp_path):
         card = {
             "name": "test",
-            "compliance": {"data_residency": "CN", "model_backend_location": "US", "cross_border": False},
-            "capabilities": []
+            "compliance": {
+                "data_residency": "CN",
+                "model_backend_location": "US",
+                "cross_border": False,
+            },
+            "capabilities": [],
         }
         p = tmp_path / "card.json"
         p.write_text(json.dumps(card))
@@ -52,7 +59,9 @@ class TestScanAgentCard:
             "name": "compliant",
             "model_backend": {"endpoint": "https://dashscope.aliyuncs.com/v1"},
             "compliance": {"data_residency": "CN", "model_backend_location": "CN"},
-            "capabilities": [{"skill_id": "bash", "business_rule_version": "2026-05-01"}]
+            "capabilities": [
+                {"skill_id": "bash", "business_rule_version": "2026-05-01"}
+            ],
         }
         p = tmp_path / "card.json"
         p.write_text(json.dumps(card))
@@ -62,9 +71,10 @@ class TestScanAgentCard:
 
     def test_endpoint_mismatch(self, tmp_path):
         card = {
-            "name": "test", "model_backend": {"endpoint": "https://api.openai.com/v1"},
+            "name": "test",
+            "model_backend": {"endpoint": "https://api.openai.com/v1"},
             "compliance": {"data_residency": "CN", "model_backend_location": "CN"},
-            "capabilities": [{"skill_id": "bash"}]
+            "capabilities": [{"skill_id": "bash"}],
         }
         p = tmp_path / "card.json"
         p.write_text(json.dumps(card))
@@ -75,7 +85,7 @@ class TestScanAgentCard:
         card = {
             "name": "test",
             "compliance": {"data_residency": "CN", "model_backend_location": "US"},
-            "capabilities": [{"skill_id": "bash"}]
+            "capabilities": [{"skill_id": "bash"}],
         }
         p = tmp_path / "card.json"
         p.write_text(json.dumps(card))
@@ -89,7 +99,14 @@ class TestScanDirectory:
         assert len(results) == 0
 
     def test_mixed_results(self, tmp_path):
-        good = {"name": "good", "model_backend": {"endpoint": "https://dashscope.aliyuncs.com/v1"}, "capabilities": [{"skill_id": "bash", "business_rule_version": "2026-05-01"}], "compliance": {"data_residency": "CN", "model_backend_location": "CN"}}
+        good = {
+            "name": "good",
+            "model_backend": {"endpoint": "https://dashscope.aliyuncs.com/v1"},
+            "capabilities": [
+                {"skill_id": "bash", "business_rule_version": "2026-05-01"}
+            ],
+            "compliance": {"data_residency": "CN", "model_backend_location": "CN"},
+        }
         bad = {"name": "bad"}
         (tmp_path / "good.json").write_text(json.dumps(good))
         (tmp_path / "bad.json").write_text(json.dumps(bad))
@@ -114,7 +131,9 @@ class TestValidateSchema:
 
 class TestCheckEndpointLocationExtended:
     def test_cn_overseas_azure_detected(self):
-        passed, risk, _ = cs.check_endpoint_location("https://mycompany.azure.com/v1", "CN")
+        passed, risk, _ = cs.check_endpoint_location(
+            "https://mycompany.azure.com/v1", "CN"
+        )
         assert not passed
         assert risk == "HIGH"
 

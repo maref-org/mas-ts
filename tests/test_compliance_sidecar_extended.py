@@ -6,13 +6,17 @@ from pathlib import Path
 
 import pytest
 
+
 def load_module(name, path):
     spec = importlib.util.spec_from_file_location(name, path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
 
-cs_mod = load_module("compliance_sidecar", Path(__file__).parent.parent / "compliance_sidecar.py")
+
+cs_mod = load_module(
+    "compliance_sidecar", Path(__file__).parent.parent / "compliance_sidecar.py"
+)
 
 
 class TestResolveRegion:

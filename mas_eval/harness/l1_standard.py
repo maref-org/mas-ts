@@ -32,7 +32,9 @@ def run_l1_standard(card, tasks=None):
     d3_score = score_domain(d3["score"], d3.get("findings"))
 
     overall = compute_overall(d1=d1_score, d2=d2_score, d3=d3_score)
-    all_findings = d1.get("findings", []) + d2.get("findings", []) + d3.get("findings", [])
+    all_findings = (
+        d1.get("findings", []) + d2.get("findings", []) + d3.get("findings", [])
+    )
     verdict = determine_verdict(overall, findings=all_findings)
 
     return {

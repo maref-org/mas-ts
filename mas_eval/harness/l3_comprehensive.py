@@ -37,10 +37,16 @@ def run_l3_comprehensive(card, tasks=None):
     d4_score = score_domain(d4["score"], d4.get("findings"))
     d5_score = score_domain(d5["score"], d5.get("findings"))
 
-    overall = compute_overall(d1=d1_score, d2=d2_score, d3=d3_score, d4=d4_score, d5=d5_score)
-    all_findings = (d1.get("findings", []) + d2.get("findings", []) +
-                    d3.get("findings", []) + d4.get("findings", []) +
-                    d5.get("findings", []))
+    overall = compute_overall(
+        d1=d1_score, d2=d2_score, d3=d3_score, d4=d4_score, d5=d5_score
+    )
+    all_findings = (
+        d1.get("findings", [])
+        + d2.get("findings", [])
+        + d3.get("findings", [])
+        + d4.get("findings", [])
+        + d5.get("findings", [])
+    )
     verdict = determine_verdict(overall, findings=all_findings)
 
     return {
@@ -50,7 +56,19 @@ def run_l3_comprehensive(card, tasks=None):
         "score": overall,
         "grade": score_to_grade(overall),
         "verdict": verdict,
-        "domain_scores": {"d1": d1_score, "d2": d2_score, "d3": d3_score, "d4": d4_score, "d5": d5_score},
-        "domains": {"d1_detail": d1, "d2_detail": d2, "d3_detail": d3, "d4_detail": d4, "d5_detail": d5},
+        "domain_scores": {
+            "d1": d1_score,
+            "d2": d2_score,
+            "d3": d3_score,
+            "d4": d4_score,
+            "d5": d5_score,
+        },
+        "domains": {
+            "d1_detail": d1,
+            "d2_detail": d2,
+            "d3_detail": d3,
+            "d4_detail": d4,
+            "d5_detail": d5,
+        },
         "findings": all_findings,
     }

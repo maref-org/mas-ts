@@ -3,9 +3,11 @@
 """Tests for MAS-TS-001 Pairwise Elo Ranking."""
 
 import pytest
+
 from mas_eval.scoring.elo import (
+    ELO_INITIAL,
+    ELO_MIN_MATCHES,
     EloRating,
-    ELO_INITIAL, ELO_K, ELO_MIN_MATCHES,
 )
 
 

@@ -8,15 +8,15 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.resolve()))
 
 from mas_eval.domains.d2_single_agent import (
-    run_d2,
-    run_model_quality,
-    run_tool_coverage,
-    run_task_completion,
-    run_e2e_scenarios,
-    MODEL_QUALITY_DB,
-    CORE_TOOLS,
     ADVANCED_TOOLS,
+    CORE_TOOLS,
     E2E_SCENARIOS,
+    MODEL_QUALITY_DB,
+    run_d2,
+    run_e2e_scenarios,
+    run_model_quality,
+    run_task_completion,
+    run_tool_coverage,
 )
 
 FULL_CARD = {
@@ -24,18 +24,84 @@ FULL_CARD = {
     "agent_id": "urn:agent:test:test:test-01",
     "name": "Test Agent",
     "version": "1.0.0",
-    "model_backend": {"provider": "test", "model": "claude-sonnet-4", "deployment": "cloud", "endpoint": "https://api.anthropic.com/v1/messages"},
+    "model_backend": {
+        "provider": "test",
+        "model": "claude-sonnet-4",
+        "deployment": "cloud",
+        "endpoint": "https://api.anthropic.com/v1/messages",
+    },
     "capabilities": [
-        {"skill_id": "bash", "description": "x", "input_schema": {}, "output_schema": {}, "examples": ["ls"], "business_rule_version": "2026-05-01"},
-        {"skill_id": "file_read", "description": "x", "input_schema": {}, "output_schema": {}, "examples": ["r"]},
-        {"skill_id": "file_edit", "description": "x", "input_schema": {}, "output_schema": {}, "examples": ["e"]},
-        {"skill_id": "file_write", "description": "x", "input_schema": {}, "output_schema": {}, "examples": ["w"]},
-        {"skill_id": "glob", "description": "x", "input_schema": {}, "output_schema": {}, "examples": ["g"]},
-        {"skill_id": "grep", "description": "x", "input_schema": {}, "output_schema": {}, "examples": ["gr"]},
-        {"skill_id": "web_search", "description": "x", "input_schema": {}, "output_schema": {}, "examples": ["s"]},
-        {"skill_id": "web_fetch", "description": "x", "input_schema": {"type": "object"}, "output_schema": {"type": "object"}, "examples": ["f"]},
-        {"skill_id": "agent_tool", "description": "x", "input_schema": {}, "output_schema": {}, "examples": ["a"]},
-        {"skill_id": "mcp_tool", "description": "x", "input_schema": {}, "output_schema": {}, "examples": ["m"]},
+        {
+            "skill_id": "bash",
+            "description": "x",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["ls"],
+            "business_rule_version": "2026-05-01",
+        },
+        {
+            "skill_id": "file_read",
+            "description": "x",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["r"],
+        },
+        {
+            "skill_id": "file_edit",
+            "description": "x",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["e"],
+        },
+        {
+            "skill_id": "file_write",
+            "description": "x",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["w"],
+        },
+        {
+            "skill_id": "glob",
+            "description": "x",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["g"],
+        },
+        {
+            "skill_id": "grep",
+            "description": "x",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["gr"],
+        },
+        {
+            "skill_id": "web_search",
+            "description": "x",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["s"],
+        },
+        {
+            "skill_id": "web_fetch",
+            "description": "x",
+            "input_schema": {"type": "object"},
+            "output_schema": {"type": "object"},
+            "examples": ["f"],
+        },
+        {
+            "skill_id": "agent_tool",
+            "description": "x",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["a"],
+        },
+        {
+            "skill_id": "mcp_tool",
+            "description": "x",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["m"],
+        },
     ],
 }
 
@@ -44,25 +110,96 @@ MINIMAL_CARD = {
     "agent_id": "urn:agent:test:minimal:min-01",
     "name": "Minimal Agent",
     "version": "0.1.0",
-    "model_backend": {"provider": "unknown", "model": "unknown-model", "deployment": "local", "endpoint": "http://localhost:8080"},
+    "model_backend": {
+        "provider": "unknown",
+        "model": "unknown-model",
+        "deployment": "local",
+        "endpoint": "http://localhost:8080",
+    },
     "capabilities": [
-        {"skill_id": "bash", "description": "x", "input_schema": {}, "output_schema": {}, "examples": ["ls"]},
+        {
+            "skill_id": "bash",
+            "description": "x",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["ls"],
+        },
     ],
 }
 
 GOLDEN_TRAJECTORY = {
     "events": [
-        {"action": {"type": "tool_call", "tool_id": "grep", "input": {"pattern": "foo"}}, "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}},
-        {"action": {"type": "tool_call", "tool_id": "file_read", "input": {"path": "/x.py"}}, "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}},
-        {"action": {"type": "tool_call", "tool_id": "file_edit", "input": {"path": "/x.py", "old_str": "foo", "new_str": "bar"}}, "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}},
+        {
+            "action": {
+                "type": "tool_call",
+                "tool_id": "grep",
+                "input": {"pattern": "foo"},
+            },
+            "orchestration": {
+                "routing_decision": "auto",
+                "routing_reason": "capability_match",
+            },
+        },
+        {
+            "action": {
+                "type": "tool_call",
+                "tool_id": "file_read",
+                "input": {"path": "/x.py"},
+            },
+            "orchestration": {
+                "routing_decision": "auto",
+                "routing_reason": "capability_match",
+            },
+        },
+        {
+            "action": {
+                "type": "tool_call",
+                "tool_id": "file_edit",
+                "input": {"path": "/x.py", "old_str": "foo", "new_str": "bar"},
+            },
+            "orchestration": {
+                "routing_decision": "auto",
+                "routing_reason": "capability_match",
+            },
+        },
     ]
 }
 
 MOCK_TRAJECTORY = {
     "events": [
-        {"action": {"type": "tool_call", "tool_id": "grep", "input": {"pattern": "foo"}}, "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}},
-        {"action": {"type": "tool_call", "tool_id": "file_read", "input": {"path": "/x.py"}}, "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}},
-        {"action": {"type": "tool_call", "tool_id": "file_edit", "input": {"path": "/x.py", "old_str": "foo", "new_str": "bar"}}, "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}},
+        {
+            "action": {
+                "type": "tool_call",
+                "tool_id": "grep",
+                "input": {"pattern": "foo"},
+            },
+            "orchestration": {
+                "routing_decision": "auto",
+                "routing_reason": "capability_match",
+            },
+        },
+        {
+            "action": {
+                "type": "tool_call",
+                "tool_id": "file_read",
+                "input": {"path": "/x.py"},
+            },
+            "orchestration": {
+                "routing_decision": "auto",
+                "routing_reason": "capability_match",
+            },
+        },
+        {
+            "action": {
+                "type": "tool_call",
+                "tool_id": "file_edit",
+                "input": {"path": "/x.py", "old_str": "foo", "new_str": "bar"},
+            },
+            "orchestration": {
+                "routing_decision": "auto",
+                "routing_reason": "capability_match",
+            },
+        },
     ]
 }
 
@@ -72,7 +209,12 @@ def test_d2_full():
     assert result["domain"] == "D2"
     assert 0 <= result["score"] <= 100
     assert "subscores" in result
-    assert set(result["subscores"].keys()) == {"model_quality", "tool_coverage", "task_completion", "e2e_scenarios"}
+    assert set(result["subscores"].keys()) == {
+        "model_quality",
+        "tool_coverage",
+        "task_completion",
+        "e2e_scenarios",
+    }
 
 
 def test_d2_model_quality_known():
@@ -91,8 +233,15 @@ def test_d2_model_quality_all_models():
     for model_key, data in MODEL_QUALITY_DB.items():
         card = {"model_backend": {"model": model_key}}
         score, _ = run_model_quality(card)
-        expected = data["reasoning"] * 0.35 + data["coding"] * 0.30 + data["multilingual"] * 0.20 + data["instruction"] * 0.15
-        assert score == round(expected, 1), f"{model_key}: expected {expected}, got {score}"
+        expected = (
+            data["reasoning"] * 0.35
+            + data["coding"] * 0.30
+            + data["multilingual"] * 0.20
+            + data["instruction"] * 0.15
+        )
+        assert score == round(expected, 1), (
+            f"{model_key}: expected {expected}, got {score}"
+        )
 
 
 def test_d2_tool_coverage_full():
@@ -106,14 +255,18 @@ def test_d2_tool_coverage_minimal():
 
 
 def test_d2_tool_coverage_all_core():
-    caps = [{"skill_id": t, "input_schema": {}, "output_schema": {}} for t in CORE_TOOLS]
+    caps = [
+        {"skill_id": t, "input_schema": {}, "output_schema": {}} for t in CORE_TOOLS
+    ]
     card = {"capabilities": caps}
     score, findings = run_tool_coverage(card)
     assert score >= 80
 
 
 def test_d2_tool_coverage_all_advanced():
-    caps = [{"skill_id": t, "input_schema": {}, "output_schema": {}} for t in ADVANCED_TOOLS]
+    caps = [
+        {"skill_id": t, "input_schema": {}, "output_schema": {}} for t in ADVANCED_TOOLS
+    ]
     card = {"capabilities": caps}
     score, findings = run_tool_coverage(card)
     assert score > 0
@@ -131,7 +284,14 @@ def test_d2_task_completion_no_data():
 
 
 def test_d2_task_completion_mismatch():
-    mock_bad = {"events": [{"action": {"type": "tool_call", "tool_id": "bash", "input": {}}, "orchestration": {}}]}
+    mock_bad = {
+        "events": [
+            {
+                "action": {"type": "tool_call", "tool_id": "bash", "input": {}},
+                "orchestration": {},
+            }
+        ]
+    }
     score, findings = run_task_completion(FULL_CARD, GOLDEN_TRAJECTORY, mock_bad)
     assert score < 50
 

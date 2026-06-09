@@ -57,16 +57,22 @@ class EloRating:
 
         self.match_counts[name_a] += 1
         self.match_counts[name_b] += 1
-        self.match_history.append({
-            "contestant_a": name_a,
-            "contestant_b": name_b,
-            "score_a": score_a,
-            "score_b": score_b,
-            "rating_a_before": round(self.ratings[name_a] - k * (actual_a - e_a), 1),
-            "rating_b_before": round(self.ratings[name_b] - k * (actual_b - e_b), 1),
-            "rating_a_after": round(self.ratings[name_a], 1),
-            "rating_b_after": round(self.ratings[name_b], 1),
-        })
+        self.match_history.append(
+            {
+                "contestant_a": name_a,
+                "contestant_b": name_b,
+                "score_a": score_a,
+                "score_b": score_b,
+                "rating_a_before": round(
+                    self.ratings[name_a] - k * (actual_a - e_a), 1
+                ),
+                "rating_b_before": round(
+                    self.ratings[name_b] - k * (actual_b - e_b), 1
+                ),
+                "rating_a_after": round(self.ratings[name_a], 1),
+                "rating_b_after": round(self.ratings[name_b], 1),
+            }
+        )
 
     def get_rating(self, name):
         return self.ratings.get(name, self.initial_elo)
@@ -91,12 +97,14 @@ class EloRating:
         entries = []
         for name, rating in self.ratings.items():
             if self.match_counts.get(name, 0) >= min_matches:
-                entries.append({
-                    "rank": 0,
-                    "name": name,
-                    "elo": round(rating, 1),
-                    "matches": self.match_counts.get(name, 0),
-                })
+                entries.append(
+                    {
+                        "rank": 0,
+                        "name": name,
+                        "elo": round(rating, 1),
+                        "matches": self.match_counts.get(name, 0),
+                    }
+                )
         entries.sort(key=lambda x: x["elo"], reverse=True)
         for i, e in enumerate(entries):
             e["rank"] = i + 1

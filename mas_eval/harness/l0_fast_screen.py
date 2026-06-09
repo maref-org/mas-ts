@@ -16,7 +16,13 @@ from mas_eval.scoring.absolute import score_to_grade
 logger = logging.getLogger(__name__)
 
 L0_TIMEOUT_SECONDS = 300
-L0_STAGES = ["card_validation", "constitution_check", "mock_tasks", "agent_spawn", "traffic_light"]
+L0_STAGES = [
+    "card_validation",
+    "constitution_check",
+    "mock_tasks",
+    "agent_spawn",
+    "traffic_light",
+]
 
 
 def run_l0_fast_screen(card, tasks=None):
@@ -110,7 +116,9 @@ def _stage_traffic_light(stages):
     all_pass = all(s["status"] == "PASS" for s in stages)
     any_fail = any(s["status"] == "FAIL" for s in stages)
     status = "PASS" if all_pass else ("FAIL" if any_fail else "WARNING")
-    overall = sum(s["score"] for s in stages if s["status"] != "FAIL") / max(len(stages), 1)
+    overall = sum(s["score"] for s in stages if s["status"] != "FAIL") / max(
+        len(stages), 1
+    )
     return {
         "stage": "traffic_light",
         "status": status,

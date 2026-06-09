@@ -25,16 +25,24 @@ SEVERITY_PENALTIES = {
 }
 
 GRADE_THRESHOLDS = [
-    ("A+", 97), ("A", 93), ("A-", 90),
-    ("B+", 87), ("B", 83), ("B-", 80),
-    ("C+", 77), ("C", 73), ("C-", 70),
-    ("D+", 67), ("D", 63), ("D-", 60),
+    ("A+", 97),
+    ("A", 93),
+    ("A-", 90),
+    ("B+", 87),
+    ("B", 83),
+    ("B-", 80),
+    ("C+", 77),
+    ("C", 73),
+    ("C-", 70),
+    ("D+", 67),
+    ("D", 63),
+    ("D-", 60),
 ]
 
 
 def score_domain(raw_score, findings=None):
     s = raw_score
-    for f in (findings or []):
+    for f in findings or []:
         s += SEVERITY_PENALTIES.get(f.get("severity", "INFO"), 0)
     return max(0, min(100, round(s, 1)))
 
@@ -69,10 +77,18 @@ def score_to_grade(score):
 
 def grade_to_emoji(grade):
     mapping = {
-        "A+": "🟢", "A": "🟢", "A-": "🟢",
-        "B+": "🟢", "B": "🟢", "B-": "🟡",
-        "C+": "🟡", "C": "🟡", "C-": "🟡",
-        "D+": "🟠", "D": "🟠", "D-": "🟠",
+        "A+": "🟢",
+        "A": "🟢",
+        "A-": "🟢",
+        "B+": "🟢",
+        "B": "🟢",
+        "B-": "🟡",
+        "C+": "🟡",
+        "C": "🟡",
+        "C-": "🟡",
+        "D+": "🟠",
+        "D": "🟠",
+        "D-": "🟠",
         "F": "🔴",
     }
     return mapping.get(grade, "⚪")
@@ -96,7 +112,7 @@ def compute_overall(d1=None, d2=None, d3=None, d4=None, d5=None):
 
 def determine_verdict(overall, findings=None, severity_threshold="CRITICAL"):
     has_blocker = False
-    for f in (findings or []):
+    for f in findings or []:
         if f.get("severity") == severity_threshold:
             has_blocker = True
             break

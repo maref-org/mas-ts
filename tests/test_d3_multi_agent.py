@@ -2,23 +2,21 @@
 # SPDX-License-Identifier: Apache-2.0
 """Tests for D3: Multi-Agent Collaboration (MAS-TS-001 v3.0)"""
 
-import json
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent.resolve()))
 
 from mas_eval.domains.d3_multi_agent import (
-    run_d3,
-    _score_spawn,
-    _score_protocol,
-    _score_orchestration,
-    _score_isolation,
-    _score_conflict,
-    _score_persistence,
     D3_MAS_TASKS,
-    SPAWN_REQUIRED_TOOLS,
     TRANSPORT_TYPES,
+    _score_conflict,
+    _score_isolation,
+    _score_orchestration,
+    _score_persistence,
+    _score_protocol,
+    _score_spawn,
+    run_d3,
 )
 
 FULL_MAS_CARD = {
@@ -26,10 +24,26 @@ FULL_MAS_CARD = {
     "agent_id": "urn:agent:test:mas:full-01",
     "name": "Full MAS Agent",
     "version": "2.0.0",
-    "model_backend": {"provider": "anthropic", "model": "claude-sonnet-4", "deployment": "cloud", "endpoint": "https://api.anthropic.com/v1/messages"},
-    "compliance": {"data_residency": "US", "data_classification": "confidential", "cross_border": True, "model_backend_location": "US", "audit_trail_required": True},
+    "model_backend": {
+        "provider": "anthropic",
+        "model": "claude-sonnet-4",
+        "deployment": "cloud",
+        "endpoint": "https://api.anthropic.com/v1/messages",
+    },
+    "compliance": {
+        "data_residency": "US",
+        "data_classification": "confidential",
+        "cross_border": True,
+        "model_backend_location": "US",
+        "audit_trail_required": True,
+    },
     "constitution": {
-        "envelope": {"message_id": "msg-001", "correlation_id": "corr-001", "timestamp": "2026-05-29T00:00:00Z", "sender": "urn:agent:test:mas:full-01"},
+        "envelope": {
+            "message_id": "msg-001",
+            "correlation_id": "corr-001",
+            "timestamp": "2026-05-29T00:00:00Z",
+            "sender": "urn:agent:test:mas:full-01",
+        },
         "health_state": "HEALTHY",
         "heartbeat_interval_seconds": 30,
         "stale_node_timeout_seconds": 60,
@@ -40,23 +54,96 @@ FULL_MAS_CARD = {
         },
     },
     "capabilities": [
-        {"skill_id": "agent_tool", "description": "Spawn sub-agents", "input_schema": {}, "output_schema": {}, "examples": ["spawn"], "rate_limit": "30/min", "business_rule_version": "2026-05-01"},
-        {"skill_id": "mcp_tool", "description": "MCP protocol", "input_schema": {}, "output_schema": {}, "examples": ["mcp"], "rate_limit": "30/min", "business_rule_version": "2026-05-01"},
-        {"skill_id": "worktree", "description": "Isolated sessions", "input_schema": {}, "output_schema": {}, "examples": ["wt"]},
-        {"skill_id": "memory", "description": "State persistence", "input_schema": {}, "output_schema": {}, "examples": ["mem"]},
-        {"skill_id": "task_management", "description": "Task lifecycle", "input_schema": {}, "output_schema": {}, "examples": ["task"]},
-        {"skill_id": "todo_write", "description": "Todo lists", "input_schema": {}, "output_schema": {}, "examples": ["todo"]},
-        {"skill_id": "cron", "description": "Scheduling", "input_schema": {}, "output_schema": {}, "examples": ["cron"]},
-        {"skill_id": "bash", "description": "Shell", "input_schema": {}, "output_schema": {}, "examples": ["bash"]},
-        {"skill_id": "file_read", "description": "Read", "input_schema": {}, "output_schema": {}, "examples": ["read"]},
-        {"skill_id": "file_edit", "description": "Edit", "input_schema": {}, "output_schema": {}, "examples": ["edit"]},
-        {"skill_id": "file_write", "description": "Write", "input_schema": {}, "output_schema": {}, "examples": ["write"]},
+        {
+            "skill_id": "agent_tool",
+            "description": "Spawn sub-agents",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["spawn"],
+            "rate_limit": "30/min",
+            "business_rule_version": "2026-05-01",
+        },
+        {
+            "skill_id": "mcp_tool",
+            "description": "MCP protocol",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["mcp"],
+            "rate_limit": "30/min",
+            "business_rule_version": "2026-05-01",
+        },
+        {
+            "skill_id": "worktree",
+            "description": "Isolated sessions",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["wt"],
+        },
+        {
+            "skill_id": "memory",
+            "description": "State persistence",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["mem"],
+        },
+        {
+            "skill_id": "task_management",
+            "description": "Task lifecycle",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["task"],
+        },
+        {
+            "skill_id": "todo_write",
+            "description": "Todo lists",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["todo"],
+        },
+        {
+            "skill_id": "cron",
+            "description": "Scheduling",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["cron"],
+        },
+        {
+            "skill_id": "bash",
+            "description": "Shell",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["bash"],
+        },
+        {
+            "skill_id": "file_read",
+            "description": "Read",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["read"],
+        },
+        {
+            "skill_id": "file_edit",
+            "description": "Edit",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["edit"],
+        },
+        {
+            "skill_id": "file_write",
+            "description": "Write",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["write"],
+        },
     ],
     "endpoints": {
         "a2a": "https://agent.example.com/a2a",
         "mcp": "https://agent.example.com/mcp/sse",
     },
-    "authentication": {"type": "OAuth2", "scopes": ["agent:spawn", "agent:communicate"]},
+    "authentication": {
+        "type": "OAuth2",
+        "scopes": ["agent:spawn", "agent:communicate"],
+    },
     "orchestration_hints": {
         "preferred_role": "supervisor",
         "parallel_safe": True,
@@ -69,10 +156,27 @@ MINIMAL_MAS_CARD = {
     "agent_id": "urn:agent:test:mas:minimal-01",
     "name": "Minimal MAS Agent",
     "version": "0.1.0",
-    "model_backend": {"provider": "test", "model": "test-model", "deployment": "local", "endpoint": "http://localhost:8080"},
+    "model_backend": {
+        "provider": "test",
+        "model": "test-model",
+        "deployment": "local",
+        "endpoint": "http://localhost:8080",
+    },
     "capabilities": [
-        {"skill_id": "bash", "description": "Shell", "input_schema": {}, "output_schema": {}, "examples": ["bash"]},
-        {"skill_id": "file_read", "description": "Read", "input_schema": {}, "output_schema": {}, "examples": ["read"]},
+        {
+            "skill_id": "bash",
+            "description": "Shell",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["bash"],
+        },
+        {
+            "skill_id": "file_read",
+            "description": "Read",
+            "input_schema": {},
+            "output_schema": {},
+            "examples": ["read"],
+        },
     ],
     "authentication": {"type": "None"},
     "orchestration_hints": {
@@ -84,9 +188,42 @@ MINIMAL_MAS_CARD = {
 
 GOLDEN_MAS_TRAJECTORY = {
     "events": [
-        {"action": {"type": "tool_call", "tool_id": "agent_tool", "input": {"task": "search"}, "output": {"status": "assigned", "task_id": "sub-001"}}, "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}},
-        {"action": {"type": "tool_call", "tool_id": "agent_tool", "input": {"task": "implement"}, "output": {"status": "assigned", "task_id": "sub-002"}}, "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}},
-        {"action": {"type": "tool_call", "tool_id": "file_write", "input": {"path": "/tmp/test.py"}, "output": {"status": "created"}}, "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}},
+        {
+            "action": {
+                "type": "tool_call",
+                "tool_id": "agent_tool",
+                "input": {"task": "search"},
+                "output": {"status": "assigned", "task_id": "sub-001"},
+            },
+            "orchestration": {
+                "routing_decision": "auto",
+                "routing_reason": "capability_match",
+            },
+        },
+        {
+            "action": {
+                "type": "tool_call",
+                "tool_id": "agent_tool",
+                "input": {"task": "implement"},
+                "output": {"status": "assigned", "task_id": "sub-002"},
+            },
+            "orchestration": {
+                "routing_decision": "auto",
+                "routing_reason": "capability_match",
+            },
+        },
+        {
+            "action": {
+                "type": "tool_call",
+                "tool_id": "file_write",
+                "input": {"path": "/tmp/test.py"},
+                "output": {"status": "created"},
+            },
+            "orchestration": {
+                "routing_decision": "auto",
+                "routing_reason": "capability_match",
+            },
+        },
     ]
 }
 
@@ -96,7 +233,14 @@ class TestD3:
         result = run_d3(FULL_MAS_CARD, tasks={})
         assert result["domain"] == "D3"
         assert 0 <= result["score"] <= 100
-        assert set(result["subscores"].keys()) == {"spawn", "protocol", "orchestration", "isolation", "conflict", "persistence"}
+        assert set(result["subscores"].keys()) == {
+            "spawn",
+            "protocol",
+            "orchestration",
+            "isolation",
+            "conflict",
+            "persistence",
+        }
 
     def test_d3_minimal(self):
         result = run_d3(MINIMAL_MAS_CARD)
@@ -163,8 +307,18 @@ class TestProtocol:
 
     def test_protocol_a2a_mcp(self):
         card = {
-            "endpoints": {"a2a": "https://example.com/a2a", "mcp": "https://example.com/mcp"},
-            "constitution": {"envelope": {"message_id": "1", "correlation_id": "2", "timestamp": "3", "sender": "4"}},
+            "endpoints": {
+                "a2a": "https://example.com/a2a",
+                "mcp": "https://example.com/mcp",
+            },
+            "constitution": {
+                "envelope": {
+                    "message_id": "1",
+                    "correlation_id": "2",
+                    "timestamp": "3",
+                    "sender": "4",
+                }
+            },
         }
         score, findings = _score_protocol(card)
         assert score > 0
@@ -183,7 +337,14 @@ class TestProtocol:
             "constitution": {
                 "message_format": {
                     "version": "1.0",
-                    "supported_transports": ["stdio", "sse", "websocket", "http", "grpc", "ipc"],
+                    "supported_transports": [
+                        "stdio",
+                        "sse",
+                        "websocket",
+                        "http",
+                        "grpc",
+                        "ipc",
+                    ],
                     "max_payload_bytes": 1048576,
                 }
             }
@@ -206,12 +367,22 @@ class TestOrchestration:
         assert score > 0
 
     def test_orchestration_parallel_safe(self):
-        card = {"capabilities": [], "orchestration_hints": {"preferred_role": "supervisor", "parallel_safe": True, "stateful": True}}
+        card = {
+            "capabilities": [],
+            "orchestration_hints": {
+                "preferred_role": "supervisor",
+                "parallel_safe": True,
+                "stateful": True,
+            },
+        }
         score, findings = _score_orchestration(card, tasks={})
         assert score >= 40
 
     def test_orchestration_not_parallel_safe(self):
-        card = {"capabilities": [], "orchestration_hints": {"preferred_role": "worker", "parallel_safe": False}}
+        card = {
+            "capabilities": [],
+            "orchestration_hints": {"preferred_role": "worker", "parallel_safe": False},
+        }
         score, findings = _score_orchestration(card, tasks={})
         assert score < 40
 
@@ -235,12 +406,16 @@ class TestIsolation:
         assert score < 40
 
     def test_isolation_parallel_safe_plus_memory(self):
-        card = {"capabilities": [{"skill_id": "worktree"}, {"skill_id": "memory"}], "orchestration_hints": {"parallel_safe": True}}
+        card = {
+            "capabilities": [{"skill_id": "worktree"}, {"skill_id": "memory"}],
+            "orchestration_hints": {"parallel_safe": True},
+        }
         score, findings = _score_isolation(card)
         assert score >= 70
 
     def test_isolation_tool_required(self):
         from mas_eval.domains.d3_multi_agent import ISOLATION_TOOLS
+
         assert "worktree" in ISOLATION_TOOLS
 
 
@@ -259,15 +434,21 @@ class TestConflict:
         assert 20 <= score < 40
 
     def test_conflict_supervisor_bonus(self):
-        card = {"capabilities": [{"skill_id": "agent_tool"}, {"skill_id": "mcp_tool"}], "orchestration_hints": {"preferred_role": "supervisor"}}
+        card = {
+            "capabilities": [{"skill_id": "agent_tool"}, {"skill_id": "mcp_tool"}],
+            "orchestration_hints": {"preferred_role": "supervisor"},
+        }
         score, findings = _score_conflict(card)
         assert score >= 70
 
     def test_conflict_shared_tools(self):
         card = {
             "capabilities": [
-                {"skill_id": "agent_tool"}, {"skill_id": "mcp_tool"},
-                {"skill_id": "file_edit"}, {"skill_id": "file_write"}, {"skill_id": "bash"},
+                {"skill_id": "agent_tool"},
+                {"skill_id": "mcp_tool"},
+                {"skill_id": "file_edit"},
+                {"skill_id": "file_write"},
+                {"skill_id": "bash"},
             ],
             "orchestration_hints": {"preferred_role": "supervisor"},
         }
@@ -285,7 +466,10 @@ class TestPersistence:
         assert score < 30
 
     def test_persistence_memory_only(self):
-        card = {"capabilities": [{"skill_id": "memory"}], "orchestration_hints": {"stateful": True}}
+        card = {
+            "capabilities": [{"skill_id": "memory"}],
+            "orchestration_hints": {"stateful": True},
+        }
         score, findings = _score_persistence(card)
         assert score >= 40
 
@@ -300,6 +484,9 @@ class TestPersistence:
         assert score == 0
 
     def test_persistence_cron_bonus(self):
-        card = {"capabilities": [{"skill_id": "memory"}, {"skill_id": "cron"}], "orchestration_hints": {"stateful": True}}
+        card = {
+            "capabilities": [{"skill_id": "memory"}, {"skill_id": "cron"}],
+            "orchestration_hints": {"stateful": True},
+        }
         score, findings = _score_persistence(card)
         assert score >= 60

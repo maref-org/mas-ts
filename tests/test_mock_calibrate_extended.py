@@ -4,13 +4,13 @@ import importlib.util
 import json
 from pathlib import Path
 
-import pytest
 
 def load_module(name, path):
     spec = importlib.util.spec_from_file_location(name, path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
+
 
 mc = load_module("mock_calibrate", Path(__file__).parent.parent / "mock_calibrate.py")
 
@@ -50,8 +50,12 @@ class TestCalibratePair:
 class TestCalibrateDirectory:
     def test_skip_missing(self, tmp_path):
         golden = tmp_path / "only_golden.json"
-        golden.write_text(json.dumps([{"action": {"type": "tool_call", "tool_id": "a", "input": {}}}]))
-        results = mc.calibrate_directory(str(tmp_path), str(tmp_path), skip_missing=True)
+        golden.write_text(
+            json.dumps([{"action": {"type": "tool_call", "tool_id": "a", "input": {}}}])
+        )
+        results = mc.calibrate_directory(
+            str(tmp_path), str(tmp_path), skip_missing=True
+        )
         assert len(results) == 1  # only the matched pair, no MISSING_MOCK
 
     def test_no_skip_missing(self, tmp_path):
@@ -59,8 +63,12 @@ class TestCalibrateDirectory:
         mock_dir = tmp_path / "mock"
         golden_dir.mkdir()
         mock_dir.mkdir()
-        (golden_dir / "only_golden.json").write_text(json.dumps([{"action": {"type": "tool_call", "tool_id": "a", "input": {}}}]))
-        results = mc.calibrate_directory(str(golden_dir), str(mock_dir), skip_missing=False)
+        (golden_dir / "only_golden.json").write_text(
+            json.dumps([{"action": {"type": "tool_call", "tool_id": "a", "input": {}}}])
+        )
+        results = mc.calibrate_directory(
+            str(golden_dir), str(mock_dir), skip_missing=False
+        )
         assert any(r.get("status") == "MISSING_MOCK" for r in results)
 
     def test_perfect_match(self, tmp_path):
@@ -74,7 +82,9 @@ class TestCalibrateDirectory:
 
 class TestExtractRoutingDecision:
     def test_routing_decision_present(self):
-        event = {"orchestration": {"routing_decision": "auto", "routing_reason": "match"}}
+        event = {
+            "orchestration": {"routing_decision": "auto", "routing_reason": "match"}
+        }
         assert mc.extract_routing_decision(event) == "match"
 
     def test_routing_decision_missing(self):
