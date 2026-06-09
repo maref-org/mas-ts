@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Shared utilities for MAS-TS-001 domain evaluators."""
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
 
 
 def safe_get(card, key, default=None, of_type=None):

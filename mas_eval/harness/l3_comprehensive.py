@@ -13,7 +13,12 @@ from mas_eval.domains.d2_single_agent import run_d2
 from mas_eval.domains.d3_multi_agent import run_d3
 from mas_eval.domains.d4_governance_security import run_d4
 from mas_eval.domains.d5_robustness import run_d5
-from mas_eval.scoring.absolute import score_domain, compute_overall, score_to_grade, determine_verdict
+from mas_eval.scoring.absolute import (
+    compute_overall,
+    determine_verdict,
+    score_domain,
+    score_to_grade,
+)
 
 logger = logging.getLogger(__name__)
 

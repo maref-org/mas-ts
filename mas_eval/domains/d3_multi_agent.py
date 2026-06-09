@@ -16,7 +16,6 @@ D3 = Spawn×0.20 + Protocol×0.20 + Orchestration×0.25 + Isolation×0.15 + Conf
 
 import logging
 import re
-from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +53,6 @@ def _score_spawn(card, golden_trajectory=None):
     else:
         findings.append({"severity": "HIGH", "category": "spawn_capability", "detail": "Missing agent_tool — no sub-agent spawn capability"})
 
-    spawn_count = 0
     for cap in card.get("capabilities", []):
         if cap["skill_id"] == "agent_tool":
             rl = cap.get("rate_limit", "")
@@ -142,7 +140,7 @@ def _score_orchestration(card, tasks=None):
         score += 15
         findings.append({"severity": "INFO", "category": "orchestration_role", "detail": "Planner role — can decompose tasks"})
     else:
-        findings.append({"severity": "WARNING", "category": "orchestration_role", "detail": f"Worker role — limited coordination capability"})
+        findings.append({"severity": "WARNING", "category": "orchestration_role", "detail": "Worker role — limited coordination capability"})
 
     available_orch = declared_tools & ORCHESTRATION_TOOLS
     orch_coverage = len(available_orch) / len(ORCHESTRATION_TOOLS)

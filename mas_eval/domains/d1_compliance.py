@@ -11,9 +11,9 @@ Scoring: Base=100, deduct per severity CRITICAL(-25)/HIGH(-15)/WARNING(-5)/INFO(
 """
 
 import json
+import logging
 import re
 import time
-import logging
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlparse

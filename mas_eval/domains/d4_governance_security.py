@@ -31,10 +31,9 @@ Usage:
   at.verify()                   # validate chain
 """
 
-import enum
-import json
 import hashlib
 import hmac
+import json
 import logging
 import time
 from collections import deque
@@ -136,7 +135,6 @@ class StateMachine:
 
     def verify_single_bit_transitions(self):
         violations = []
-        visited_primary = set()
         for i in range(len(PRIMARY_PATH) - 1):
             state = PRIMARY_PATH[i]
             neighbor = PRIMARY_PATH[i + 1]
@@ -627,7 +625,7 @@ def _score_penetration_testing(card):
         score += 15
         findings.append({"severity": "INFO", "category": "pentest_risky_tools", "detail": f"High-risk tools declared ({', '.join(sorted(risky_tools))}) — injection vectors available for testing"})
 
-    has_secret_protection = bool(card.get("authentication", {}).get("scopes"))
+    bool(card.get("authentication", {}).get("scopes"))
     injection_protection = auth_type in ("OAuth2", "mTLS")
     if injection_protection:
         score += 15

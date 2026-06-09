@@ -11,7 +11,12 @@ import time
 from mas_eval.domains.d1_compliance import run_d1
 from mas_eval.domains.d2_single_agent import run_d2
 from mas_eval.domains.d3_multi_agent import run_d3
-from mas_eval.scoring.absolute import score_domain, compute_overall, score_to_grade, determine_verdict
+from mas_eval.scoring.absolute import (
+    compute_overall,
+    determine_verdict,
+    score_domain,
+    score_to_grade,
+)
 
 logger = logging.getLogger(__name__)
 

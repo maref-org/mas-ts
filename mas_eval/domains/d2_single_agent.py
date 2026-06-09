@@ -14,7 +14,6 @@ D2 = ModelQuality×0.25 + ToolCoverage×0.20 + TaskCompletion×0.30 + E2EScenari
 
 import logging
 from difflib import SequenceMatcher
-from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
