@@ -184,7 +184,7 @@ def generate_mock_trajectory(task_description, agent_card=None, policy=None):
     events.append(
         {
             "trace_id": trace_id,
-            "standard_version": "MAS-TS-001-v2.1",
+            "standard_version": "MAS-TS-001-v3.0",
             "run_mode": "fast-screen",
             "timestamp": now,
             "event_type": "task_start",
@@ -229,7 +229,7 @@ def generate_mock_trajectory(task_description, agent_card=None, policy=None):
         events.append(
             {
                 "trace_id": trace_id,
-                "standard_version": "MAS-TS-001-v2.1",
+                "standard_version": "MAS-TS-001-v3.0",
                 "run_mode": "fast-screen",
                 "timestamp": now,
                 "event_type": "agent_action",
@@ -263,7 +263,7 @@ def generate_mock_trajectory(task_description, agent_card=None, policy=None):
         events.append(
             {
                 "trace_id": trace_id,
-                "standard_version": "MAS-TS-001-v2.1",
+                "standard_version": "MAS-TS-001-v3.0",
                 "run_mode": "fast-screen",
                 "timestamp": now,
                 "event_type": "task_complete",
@@ -285,7 +285,7 @@ def generate_mock_trajectory(task_description, agent_card=None, policy=None):
         events.append(
             {
                 "trace_id": trace_id,
-                "standard_version": "MAS-TS-001-v2.1",
+                "standard_version": "MAS-TS-001-v3.0",
                 "run_mode": "fast-screen",
                 "timestamp": now,
                 "event_type": "agent_action",
@@ -309,7 +309,7 @@ def generate_mock_trajectory(task_description, agent_card=None, policy=None):
         events.append(
             {
                 "trace_id": trace_id,
-                "standard_version": "MAS-TS-001-v2.1",
+                "standard_version": "MAS-TS-001-v3.0",
                 "run_mode": "fast-screen",
                 "timestamp": now,
                 "event_type": "agent_action",
@@ -332,7 +332,7 @@ def generate_mock_trajectory(task_description, agent_card=None, policy=None):
 
     return {
         "trace_id": trace_id,
-        "standard_version": "MAS-TS-001-v2.1",
+        "standard_version": "MAS-TS-001-v3.0",
         "run_mode": "fast-screen",
         "task_description": task_description,
         "task_type": task_type,
@@ -403,7 +403,7 @@ def main():
         results = process_task_file(args.task_file, args.policy, args.output_dir)
         output = {
             "standard": "MAS-TS-001",
-            "version": "v2.1",
+            "version": "v3.0",
             "mode": "fast-screen",
             "total_tasks": len(results),
             "mocked_tasks": len([r for r in results if r["matched_tool"]]),

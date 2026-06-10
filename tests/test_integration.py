@@ -228,18 +228,11 @@ class TestD1D5Pipeline:
 
     def test_full_pipeline_under_5_seconds(self):
         t0 = time.time()
-        d1 = run_d1(SAMPLE_CARD)
-        d2 = run_d2(SAMPLE_CARD, [])
-        d3 = run_d3(SAMPLE_CARD)
-        d4 = run_d4(SAMPLE_CARD)
-        d5 = run_d5()
-        overall = compute_overall(
-            d1=d1["score"],
-            d2=d2["score"],
-            d3=d3["score"],
-            d4=d4["score"],
-            d5=d5["score"],
-        )
+        run_d1(SAMPLE_CARD)
+        run_d2(SAMPLE_CARD, [])
+        run_d3(SAMPLE_CARD)
+        run_d4(SAMPLE_CARD)
+        run_d5()
         elapsed = time.time() - t0
         assert elapsed < 5, f"Pipeline took {elapsed:.2f}s"
 

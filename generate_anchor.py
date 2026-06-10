@@ -282,7 +282,7 @@ def main():
 
     report = {
         "standard": "MAS-TS-001",
-        "version": "v2.1",
+        "version": "v3.0",
         "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "hardware": accel,
         "baseline": DOCKER_CPU_BASELINE,

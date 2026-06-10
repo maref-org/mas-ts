@@ -346,7 +346,7 @@ def main():
         passed = len([i for i in issues if i["level"] in ["CRITICAL", "HIGH"]]) == 0
         report = {
             "standard": "MAS-TS-001",
-            "version": "v2.1",
+            "version": "v3.0",
             "scanned_at": scanned_at,
             "mode": "single",
             "results": [{"card": args.card, "issues": issues, "passed": passed}],
@@ -356,7 +356,7 @@ def main():
         results = scan_directory(args.dir, schema_path)
         report = {
             "standard": "MAS-TS-001",
-            "version": "v2.1",
+            "version": "v3.0",
             "scanned_at": scanned_at,
             "mode": "batch",
             "results": results,

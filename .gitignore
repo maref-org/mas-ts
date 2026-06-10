@@ -91,3 +91,6 @@ task_plan.md
 
 # Trae AI config (local only)
 .trae/
+
+# Local governance config (internal Athena references, not for publish)
+athena-governance.jsonc

@@ -36,9 +36,16 @@ Usage:
 
 import logging
 import math
+import os
+import platform
 import random
+import signal
+import stat
+import subprocess
+import tempfile
 import time
 from collections import defaultdict
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +58,224 @@ except ImportError:
     logger.warning(
         "scipy not available — KL/JS divergence fallback to manual computation"
     )
+
+
+class FaultInjector:
+    """Real system-level fault injection with graceful fallback.
+
+    Attempts platform-specific fault injection (stress-ng, pfctl, kill),
+    falls back to simulation when tools/sudo are unavailable.
+    """
+
+    def __init__(self, mode="auto"):
+        self.mode = mode
+        self._cleanup_handlers = []
+        self._injection_mode = None
+
+    def injection_mode(self):
+        if self._injection_mode is not None:
+            return self._injection_mode
+        if self.mode == "sim":
+            self._injection_mode = "simulated"
+            return self._injection_mode
+        self._injection_mode = self._probe_capabilities()
+        return self._injection_mode
+
+    def _probe_capabilities(self):
+        has_stress = (
+            subprocess.run(
+                ["which", "stress-ng"], capture_output=True, text=True
+            ).returncode
+            == 0
+        )
+        has_pfctl = (
+            subprocess.run(
+                ["which", "pfctl"], capture_output=True, text=True
+            ).returncode
+            == 0
+        )
+        has_sudo = (
+            subprocess.run(
+                ["sudo", "-n", "true"], capture_output=True, text=True
+            ).returncode
+            == 0
+        )
+        if has_stress or has_pfctl:
+            return "real" if has_sudo else "partial"
+        return "simulated"
+
+    def inject_cpu_pressure(self, cores=2, duration=10):
+        try:
+            proc = subprocess.Popen(
+                ["stress-ng", "--cpu", str(cores), "--timeout", f"{duration}s"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            self._cleanup_handlers.append(lambda: proc.terminate())
+            return {
+                "fault": "cpu_pressure",
+                "mode": "real",
+                "detail": f"stress-ng --cpu {cores} for {duration}s",
+            }
+        except FileNotFoundError:
+            return {"fault": "cpu_pressure", "mode": "simulated"}
+
+    def inject_memory_pressure(self, megabytes=256, duration=10):
+        try:
+            proc = subprocess.Popen(
+                [
+                    "stress-ng",
+                    "--vm",
+                    "1",
+                    "--vm-bytes",
+                    f"{megabytes}M",
+                    "--timeout",
+                    f"{duration}s",
+                ],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            self._cleanup_handlers.append(lambda: proc.terminate())
+            return {
+                "fault": "memory_pressure",
+                "mode": "real",
+                "detail": f"stress-ng --vm 1 --vm-bytes {megabytes}M for {duration}s",
+            }
+        except FileNotFoundError:
+            return {"fault": "memory_pressure", "mode": "simulated"}
+
+    def inject_disk_failure(self):
+        try:
+            tmpdir = Path(tempfile.mkdtemp())
+            test_file = tmpdir / "test_write"
+            test_file.write_text("test")
+            os.chmod(str(tmpdir), stat.S_IRUSR | stat.S_IXUSR)
+
+            def cleanup():
+                os.chmod(str(tmpdir), stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
+                for f in tmpdir.iterdir():
+                    f.unlink()
+                tmpdir.rmdir()
+
+            self._cleanup_handlers.append(cleanup)
+            return {
+                "fault": "disk_failure",
+                "mode": "real",
+                "detail": f"read-only directory at {tmpdir}",
+                "tmpdir": str(tmpdir),
+            }
+        except Exception:
+            return {"fault": "disk_failure", "mode": "simulated"}
+
+    def inject_process_kill(self, pid=None):
+        if pid is not None:
+            try:
+                os.kill(pid, signal.SIGKILL)
+                return {
+                    "fault": "process_kill",
+                    "mode": "real",
+                    "detail": f"killed PID {pid}",
+                }
+            except (OSError, PermissionError):
+                return {"fault": "process_kill", "mode": "simulated"}
+        try:
+            sleeper = subprocess.Popen(
+                ["sleep", "60"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
+            os.kill(sleeper.pid, signal.SIGKILL)
+            return {
+                "fault": "process_kill",
+                "mode": "real",
+                "detail": f"killed subprocess PID {sleeper.pid}",
+            }
+        except Exception:
+            return {"fault": "process_kill", "mode": "simulated"}
+
+    def inject_network_partition(self, target_ip=None, duration=30):
+        target = target_ip or "127.0.0.2"
+        system = platform.system()
+        try:
+            if (
+                system == "Darwin"
+                and subprocess.run(
+                    ["sudo", "-n", "pfctl", "-t", "blocked_hosts", "-T", "add", target],
+                    capture_output=True,
+                    text=True,
+                ).returncode
+                == 0
+            ):
+                self._cleanup_handlers.append(
+                    lambda: subprocess.run(
+                        [
+                            "sudo",
+                            "pfctl",
+                            "-t",
+                            "blocked_hosts",
+                            "-T",
+                            "delete",
+                            target,
+                        ],
+                        capture_output=True,
+                    )
+                )
+                return {
+                    "fault": "network_partition",
+                    "mode": "real",
+                    "detail": f"pfctl blocked {target} for {duration}s",
+                }
+            if (
+                system == "Linux"
+                and subprocess.run(
+                    [
+                        "sudo",
+                        "-n",
+                        "iptables",
+                        "-A",
+                        "INPUT",
+                        "-s",
+                        target,
+                        "-j",
+                        "DROP",
+                    ],
+                    capture_output=True,
+                ).returncode
+                == 0
+            ):
+                self._cleanup_handlers.append(
+                    lambda: subprocess.run(
+                        ["sudo", "iptables", "-D", "INPUT", "-s", target, "-j", "DROP"],
+                        capture_output=True,
+                    )
+                )
+                return {
+                    "fault": "network_partition",
+                    "mode": "real",
+                    "detail": f"iptables blocked {target} for {duration}s",
+                }
+        except Exception:
+            pass
+        return {"fault": "network_partition", "mode": "simulated"}
+
+    def inject(self, fault_type):
+        injectors = {
+            "network_partition": lambda: self.inject_network_partition(),
+            "cpu_pressure": lambda: self.inject_cpu_pressure(),
+            "memory_pressure": lambda: self.inject_memory_pressure(),
+            "disk_failure": lambda: self.inject_disk_failure(),
+            "process_kill": lambda: self.inject_process_kill(),
+        }
+        injector = injectors.get(fault_type)
+        if injector:
+            return injector()
+        return {"fault": fault_type, "mode": "unknown"}
+
+    def cleanup(self):
+        for handler in reversed(self._cleanup_handlers):
+            try:
+                handler()
+            except Exception as e:
+                logger.warning("FaultInjector cleanup error: %s", e)
+        self._cleanup_handlers.clear()
 
 
 # --- Chaos Engineering ---
@@ -105,16 +330,23 @@ LLM_PASS_CRITERIA = {
 
 
 class ChaosEngine:
-    def __init__(self, seed=None):
+    def __init__(self, seed=None, fault_injector=None):
         self.rng = random.Random(seed)
         self.fault_history = []
         self.healing_results = defaultdict(list)
+        self.injector = fault_injector or FaultInjector(mode="auto")
+        self._injection_mode = self.injector.injection_mode()
+
+    def injection_mode(self):
+        return self._injection_mode
 
     def inject(self, fault_type, scenario=0):
         if fault_type in INFRA_FAULTS:
             domain = "infra"
+            inject_result = self.injector.inject(fault_type)
         elif fault_type in LLM_FAULTS:
             domain = "llm"
+            inject_result = {"mode": "simulated", "fault": fault_type}
         else:
             return {
                 "fault": fault_type,
@@ -128,15 +360,18 @@ class ChaosEngine:
             "scenario": scenario,
             "timestamp": time.time(),
             "expected_recovery_time_seconds": self._expected_recovery(fault_type),
+            "injection_mode": inject_result.get("mode", "simulated"),
+            "injection_detail": inject_result.get("detail", ""),
         }
         self.fault_history.append(record)
         return record
 
     def record_healing(self, fault_type, success, recovery_time=None):
+        measured = recovery_time if recovery_time is not None else None
         self.healing_results[fault_type].append(
             {
                 "success": success,
-                "recovery_time": recovery_time or self.rng.uniform(1, 30),
+                "recovery_time": measured or self.rng.uniform(1, 30),
                 "timestamp": time.time(),
             }
         )
@@ -190,6 +425,7 @@ class ChaosEngine:
     def clear(self):
         self.fault_history.clear()
         self.healing_results.clear()
+        self.injector.cleanup()
 
 
 # --- Drift Detection ---
@@ -346,6 +582,15 @@ def _score_chaos(ce, card=None):
     findings = []
     score = 0.0
 
+    injection_mode = ce.injection_mode()
+    findings.append(
+        {
+            "severity": "INFO",
+            "category": "chaos_injection_mode",
+            "detail": f"Fault injection mode: {injection_mode}",
+        }
+    )
+
     base_success_rate = 0.85
     if card:
         capabilities = card.get("capabilities", [])
@@ -367,7 +612,8 @@ def _score_chaos(ce, card=None):
         for scenario in range(3):
             ce.inject(fault, scenario)
             success = ce.rng.random() > infra_threshold
-            ce.record_healing(fault, success, recovery_time=ce.rng.uniform(1, 25))
+            recovery = ce.rng.uniform(1, 25)
+            ce.record_healing(fault, success, recovery_time=recovery)
             if not success:
                 ce.fault_history[-1]["healed"] = False
 
@@ -385,7 +631,8 @@ def _score_chaos(ce, card=None):
         for scenario in range(3):
             ce.inject(fault, scenario)
             success = ce.rng.random() > llm_threshold
-            ce.record_healing(fault, success, recovery_time=ce.rng.uniform(1, 35))
+            recovery = ce.rng.uniform(1, 35)
+            ce.record_healing(fault, success, recovery_time=recovery)
             if not success:
                 ce.fault_history[-1]["healed"] = False
 

@@ -47,12 +47,12 @@ STATE_NAMES = [
     "INIT",
     "OBSERVE",
     "ANALYZE",
-    "EVALUATE",
-    "DECIDE",
+    "PLAN",
     "ACT",
-    "VERIFY",
+    "MONITOR",
+    "ADAPT",
     "STABILIZE",
-    "REPORT",
+    "VERIFY",
     "HALT",
 ]
 
@@ -77,12 +77,12 @@ STATE_ENTROPY = {
     "INIT": 0,
     "OBSERVE": 1,
     "ANALYZE": 2,
-    "EVALUATE": 3,
-    "DECIDE": 4,
-    "ACT": 3,
-    "VERIFY": 2,
+    "PLAN": 3,
+    "ACT": 4,
+    "MONITOR": 3,
+    "ADAPT": 2,
     "STABILIZE": 1,
-    "REPORT": 1,
+    "VERIFY": 1,
     "HALT": 0,
 }
 
@@ -90,12 +90,12 @@ PRIMARY_PATH = [
     "INIT",
     "OBSERVE",
     "ANALYZE",
-    "EVALUATE",
-    "DECIDE",
+    "PLAN",
     "ACT",
-    "VERIFY",
+    "MONITOR",
+    "ADAPT",
     "STABILIZE",
-    "REPORT",
+    "VERIFY",
     "HALT",
 ]
 
@@ -115,13 +115,13 @@ class StateMachine:
         return {
             "INIT": ["OBSERVE", "HALT"],
             "OBSERVE": ["INIT", "ANALYZE", "HALT"],
-            "ANALYZE": ["OBSERVE", "EVALUATE", "HALT"],
-            "EVALUATE": ["ANALYZE", "DECIDE", "HALT"],
-            "DECIDE": ["EVALUATE", "ACT", "HALT"],
-            "ACT": ["DECIDE", "VERIFY", "STABILIZE", "HALT"],
-            "VERIFY": ["ACT", "STABILIZE", "REPORT", "HALT"],
-            "STABILIZE": ["VERIFY", "REPORT", "OBSERVE", "HALT"],
-            "REPORT": ["STABILIZE", "HALT", "INIT"],
+            "ANALYZE": ["OBSERVE", "PLAN", "HALT"],
+            "PLAN": ["ANALYZE", "ACT", "HALT"],
+            "ACT": ["PLAN", "MONITOR", "HALT"],
+            "MONITOR": ["ACT", "ADAPT", "STABILIZE", "HALT"],
+            "ADAPT": ["MONITOR", "STABILIZE", "VERIFY", "HALT"],
+            "STABILIZE": ["ADAPT", "VERIFY", "OBSERVE", "HALT"],
+            "VERIFY": ["STABILIZE", "HALT", "INIT"],
             "HALT": [],
         }
 
@@ -201,7 +201,7 @@ class StateMachine:
                         (state, neighbor, current_entropy, neighbor_entropy)
                     )
             else:
-                if neighbor_entropy > current_entropy and neighbor not in ("REPORT",):
+                if neighbor_entropy > current_entropy and neighbor not in ("VERIFY",):
                     violations.append(
                         (state, neighbor, current_entropy, neighbor_entropy)
                     )

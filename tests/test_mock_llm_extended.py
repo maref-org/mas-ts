@@ -42,7 +42,7 @@ class TestProcessTaskFile:
         p = tmp_path / "tasks.json"
         p.write_text(json.dumps(tasks))
         out_dir = tmp_path / "outputs"
-        results = ml.process_task_file(str(p), output_dir=str(out_dir))
+        ml.process_task_file(str(p), output_dir=str(out_dir))
         assert out_dir.exists()
         files = list(out_dir.glob("*.json"))
         assert len(files) == 2

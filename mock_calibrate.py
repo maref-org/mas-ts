@@ -243,7 +243,7 @@ def main():
         result = calibrate_pair(args.golden, args.mock_output, thresholds)
         report = {
             "standard": "MAS-TS-001",
-            "version": "v2.1",
+            "version": "v3.0",
             "scanned_at": scanned_at,
             "mode": "single",
             "results": [result],
@@ -257,7 +257,7 @@ def main():
         )
         report = {
             "standard": "MAS-TS-001",
-            "version": "v2.1",
+            "version": "v3.0",
             "scanned_at": scanned_at,
             "mode": "batch",
             "results": results,

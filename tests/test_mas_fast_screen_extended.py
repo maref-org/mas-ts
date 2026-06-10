@@ -213,7 +213,7 @@ class TestPrintSummary:
             stage["error"] = error
         return {
             "standard": "MAS-TS-001",
-            "version": "v2.1",
+            "version": "v3.0",
             "mode": "fast-screen",
             "started_at": "2026-01-01T00:00:00.000Z",
             "total_duration_ms": 100,
@@ -223,19 +223,19 @@ class TestPrintSummary:
 
     def test_pass_logs_info(self, caplog):
         caplog.set_level(logging.INFO)
-        with patch.object(mfs, "console") as mock_console:
+        with patch.object(mfs, "console"):
             mfs.print_summary(self._make_report("PASS", "PASS"))
         assert "passed" in caplog.text
 
     def test_fail_logs_error(self, caplog):
         caplog.set_level(logging.ERROR)
-        with patch.object(mfs, "console") as mock_console:
+        with patch.object(mfs, "console"):
             mfs.print_summary(self._make_report("FAIL", "FAIL"))
         assert "FAILED" in caplog.text
 
     def test_warning_logs_warning(self, caplog):
         caplog.set_level(logging.WARNING)
-        with patch.object(mfs, "console") as mock_console:
+        with patch.object(mfs, "console"):
             mfs.print_summary(self._make_report("WARNING", "PASS"))
         assert "warnings" in caplog.text
 

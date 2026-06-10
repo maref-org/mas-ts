@@ -43,12 +43,12 @@ class TestStateMachine:
         path = [
             "OBSERVE",
             "ANALYZE",
-            "EVALUATE",
-            "DECIDE",
+            "PLAN",
             "ACT",
-            "VERIFY",
+            "MONITOR",
+            "ADAPT",
             "STABILIZE",
-            "REPORT",
+            "VERIFY",
             "HALT",
         ]
         for state in path:
@@ -88,7 +88,6 @@ class TestStateMachine:
 
         entropies = [STATE_ENTROPY[s] for s in PRIMARY_PATH]
         assert entropies[0] == 0
-        mid = len(entropies) // 2
         assert max(entropies) == 4
         assert entropies[-1] == 0
 
@@ -110,10 +109,10 @@ class TestStateMachine:
         sm = StateMachine()
         sm.transition("OBSERVE")
         sm.transition("ANALYZE")
-        sm.transition("EVALUATE")
-        sm.transition("DECIDE")
+        sm.transition("PLAN")
         sm.transition("ACT")
-        sm.transition("VERIFY")
+        sm.transition("MONITOR")
+        sm.transition("ADAPT")
         assert sm.force_stabilize() is True
         assert sm.current == "STABILIZE"
 
@@ -372,12 +371,12 @@ class TestD4Governance:
             "INIT",
             "OBSERVE",
             "ANALYZE",
-            "EVALUATE",
-            "DECIDE",
+            "PLAN",
             "ACT",
-            "VERIFY",
+            "MONITOR",
+            "ADAPT",
             "STABILIZE",
-            "REPORT",
+            "VERIFY",
             "HALT",
         ]
         assert STATE_NAMES == expected

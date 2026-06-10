@@ -558,7 +558,7 @@ class TestReflectiveAgent:
         ra = ReflectiveAgent(max_iterations=3)
         ra.generate("Solve: 2x+4=10")
         for i in range(3):
-            s = ra.critique()
+            ra.critique()
             ra.refine()
             if ra.verify():
                 break

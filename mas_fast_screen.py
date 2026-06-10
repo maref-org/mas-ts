@@ -311,7 +311,7 @@ def main():
 
     report = {
         "standard": "MAS-TS-001",
-        "version": "v2.1",
+        "version": "v3.0",
         "mode": "fast-screen",
         "started_at": started_at,
         "total_duration_ms": total_duration,

@@ -1,6 +1,6 @@
 # MAS-TS-001 Evaluation Harness
 
-**Version**: v0.1.0 | **Standard**: MAS-TS-001 v2.1 | **License**: Apache-2.0
+**Version**: v0.1.0 | **Standard**: MAS-TS-001 v3.0 | **License**: Apache-2.0
 
 Fast-Screen and Full-Run evaluation pipeline for multi-agent systems.
 
@@ -36,58 +36,47 @@ python generate_anchor.py --output reports/anchor.json
 
 ## Architecture
 
-7 standalone scripts + `mas_eval/` package:
+7 standalone scripts + `mas_eval/` package built on the **D1-D5 × L0-L4 matrix**:
 
-| Script | Function | Layers |
+| Script | Function | Levels |
 |--------|----------|--------|
-| `mas_fast_screen.py` | Fast-Screen orchestrator | Layer 1 + Layer 3 (Mock) |
-| `mas_full_run.py` | Full-Run 5-layer evaluation | Layer 1-5 |
-| `compliance_scan.py` | Static Agent Card scanner | Layer 1 |
+| `mas_fast_screen.py` | Fast-Screen orchestrator (CI gate) | D1+D2+D3 subset |
+| `mas_full_run.py` | Full-Run, dispatches L0-L4 | L0-L4 |
+| `compliance_scan.py` | Static Agent Card scanner | D1 |
 | `compliance_sidecar.py` | Runtime proxy interceptor | Runtime |
-| `mock_llm.py` | Rule-based LLM simulator | Layer 3 (Mock) |
+| `mock_llm.py` | Rule-based LLM simulator (zero-cost) | D2 |
 | `mock_calibrate.py` | Golden trajectory calibration | QA |
 | `generate_anchor.py` | Hardware benchmark coefficient | Infra |
 
-## Two Evaluation Systems
+## Evaluation Model: D1-D5 × L0-L4 Matrix
 
-This project implements **two independent evaluation frameworks**. Understand their differences before use:
+MAS-TS-001 v3.0 evaluates agents across **5 Domains (D1-D5)** at **5 Execution Levels (L0-L4)**:
 
-### D1-D5 Domain Evaluation (MAS-TS-001 Standard)
+### Domains
 
-The **primary standard** defined by MAS-TS-001. Evaluates agent capabilities across 5 domains:
-
-| Domain | Name | Weight | Logic |
-|--------|------|--------|-------|
-| D1 | Compliance | ×0.10 | Schema validation, data residency, constitution checks |
-| D2 | Single Agent | ×0.25 | Model quality, tool coverage, task completion |
-| D3 | Multi-Agent | ×0.25 | Spawn, protocol, orchestration, isolation, conflict resolution |
-| D4 | Governance & Security | ×0.20 | State machine, circuit breaker, audit trail, security |
+| Domain | Name | Weight | Evaluates |
+|--------|------|--------|-----------|
+| D1 | Compliance | ×0.10 | Schema validation, data residency, constitution, DAG acyclicity |
+| D2 | Single Agent | ×0.25 | Model quality, tool coverage, task completion, E2E scenarios |
+| D3 | Multi-Agent | ×0.25 | Spawn, protocol, orchestration, isolation, conflict, persistence |
+| D4 | Governance & Security | ×0.20 | State machine, circuit breaker, oscillation, audit, security |
 | D5 | Evolution & Robustness | ×0.20 | Chaos engineering, drift detection, reflection, convergence |
 
-**Usage**: `python scripts/audit_deep_eval.py` or direct domain calls via `mas_eval/domains/`
+### Execution Levels
 
-### L1-L5 Layer Evaluation (Full-Run Mode)
+| Level | Name | Domains | Duration | Cost |
+|-------|------|---------|----------|------|
+| L0 | Fast-Screen | D1+D2+D3 subset | <5 min | $0 (zero LLM) |
+| L1 | Standard | D1-D3 | ~30 min | Low |
+| L2 | Deep | D1-D4 | ~2 h | Medium |
+| L3 | Comprehensive | D1-D5 | ~8 h | High |
+| L4 | Evolution | D5 lifecycle | Multi-day | Variable |
 
-A **reporting-oriented** layered evaluation used by `mas_full_run.py`:
-
-| Layer | Name | Weight | Logic |
-|-------|------|--------|-------|
-| L1 | Static Audit | ×0.15 | Compliance scan, schema, cross-border, prompt rot |
-| L2 | Inference Metrics | ×0.20 | Model quality DB, latency, context window |
-| L3 | Action Metrics | ×0.25 | Tool coverage, schema correctness, task coverage |
-| L4 | E2E Metrics | ×0.25 | Scenario coverage, auth, dependencies |
-| L5 | MAS Dimension | ×0.15 | 6-dimensional MAS readiness assessment |
-
-**Usage**: `python mas_full_run.py --card <card.json>`
-
-### Key Differences
-
-| Aspect | D1-D5 | L1-L5 |
-|--------|-------|-------|
-| Purpose | Standard compliance assessment | Detailed diagnostic report |
-| Scoring | Domain-weighted (0-100) | Layer-weighted (0-100) |
-| MAS Logic | D3 uses spawn/protocol/orchestration/isolation/conflict/persistence | L5 uses spawn/isolation/coordination/persistence/scheduling/remote_control |
-| Recommendation | Use for official MAS-TS-001 grading | Use for debugging and improvement guidance |
+**Usage**:
+```bash
+python mas_full_run.py --card <card.json> --level L3
+python mas_full_run.py --card <card.json> --level all   # runs L0 → L1 → L2 → L3 → L4
+```
 
 ## Test
 
