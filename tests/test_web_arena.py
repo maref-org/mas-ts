@@ -4,6 +4,7 @@
 
 import sys
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, str(Path(__file__).parent.parent.resolve()))
 
@@ -83,7 +84,7 @@ SHOP_NO_COMPLETE = {
     ]
 }
 
-SHOP_EMPTY_TRAJECTORY = {"events": []}
+SHOP_EMPTY_TRAJECTORY: dict = {"events": []}
 
 WRONG_TRAJECTORY = {
     "events": [
@@ -288,3 +289,340 @@ class TestWebArenaIntegration:
             SAMPLE_CARD, "web-arena", mock_trajectory=SHOP_EMPTY_TRAJECTORY
         )
         assert result["subscores"]["oracle_score"] == 0.0
+
+
+class TestCheckPageSuccess:
+    def test_product_page_reached(self):
+        page = MagicMock()
+        page.locator.return_value.first.count.return_value = 1
+        result = WebArenaOracle._check_page_success(
+            page, {"success_criteria": "product_page_reached"}
+        )
+        assert result is True
+
+    def test_product_page_not_reached(self):
+        page = MagicMock()
+        page.locator.return_value.first.count.return_value = 0
+        result = WebArenaOracle._check_page_success(
+            page, {"success_criteria": "product_page_reached"}
+        )
+        assert result is False
+
+    def test_search_results_shown(self):
+        page = MagicMock()
+        page.locator.return_value.first.count.return_value = 1
+        result = WebArenaOracle._check_page_success(
+            page, {"success_criteria": "search_results_shown"}
+        )
+        assert result is True
+
+    def test_flight_results_shown(self):
+        page = MagicMock()
+        page.locator.return_value.first.count.return_value = 1
+        result = WebArenaOracle._check_page_success(
+            page, {"success_criteria": "flight_results_shown"}
+        )
+        assert result is True
+
+    def test_information_found(self):
+        page = MagicMock()
+        page.locator.return_value.first.count.return_value = 1
+        result = WebArenaOracle._check_page_success(
+            page, {"success_criteria": "information_found"}
+        )
+        assert result is True
+
+    def test_form_submitted(self):
+        page = MagicMock()
+        page.locator.return_value.first.count.return_value = 1
+        result = WebArenaOracle._check_page_success(
+            page, {"success_criteria": "form_submitted"}
+        )
+        assert result is True
+
+    def test_unknown_criteria_fallback(self):
+        page = MagicMock()
+        page.content.return_value = "<html>some content</html>"
+        result = WebArenaOracle._check_page_success(
+            page, {"success_criteria": "unknown_criteria"}
+        )
+        assert result is True
+
+    def test_unknown_criteria_empty_fallback(self):
+        page = MagicMock()
+        page.content.return_value = ""
+        result = WebArenaOracle._check_page_success(
+            page, {"success_criteria": "unknown_criteria"}
+        )
+        assert result is False
+
+
+class TestWebArenaEdgeCases:
+    def setup_method(self):
+        self.oracle = WebArenaOracle()
+
+    def test_validate_env_file_missing(self):
+        with patch("mas_eval.oracle.web_arena.TASKS_FILE") as mock_file:
+            mock_file.exists.return_value = False
+            mock_file.name = "web_arena_tasks.json"
+            ok, msg = self.oracle.validate_environment()
+            assert ok is False
+            assert "not found" in msg
+
+    def test_validate_env_playwright_available(self):
+        mock_file = MagicMock()
+        mock_file.exists.return_value = True
+        mock_file.name = "web_arena_tasks.json"
+        with (
+            patch("mas_eval.oracle.web_arena.TASKS_FILE", mock_file),
+            patch(
+                "mas_eval.oracle.web_arena.check_playwright",
+                return_value=(True, "pw ok"),
+            ),
+        ):
+            ok, msg = self.oracle.validate_environment()
+            assert ok is True
+            assert "Playwright available" in msg
+
+    def test_load_tasks_file_missing(self):
+        with patch("mas_eval.oracle.web_arena.TASKS_FILE") as mock_file:
+            mock_file.exists.return_value = False
+            self.oracle._tasks_cache = None
+            tasks = self.oracle._load_tasks()
+            assert tasks == []
+
+    def test_get_events_list(self):
+        events = [{"action": {"type": "tool_call"}}]
+        result = WebArenaOracle._get_events(events)
+        assert result is events
+        assert len(result) == 1
+
+    def test_get_events_fallback(self):
+        result = WebArenaOracle._get_events("not a list or dict")
+        assert result == []
+
+    def test_get_keywords_not_found(self):
+        from mas_eval.oracle.oracle_base import OracleTask
+
+        task = OracleTask(task_id="nonexistent", prompt="test")
+        keywords = self.oracle._get_keywords(task)
+        assert keywords == []
+
+    def test_simulate_score_no_keywords(self):
+        """When no keywords found, return 100.0"""
+        with patch.object(self.oracle, "_get_keywords", return_value=[]):
+            score = self.oracle._simulate_score(
+                MagicMock(task_id="any"),
+                [{"action": {"type": "tool_call"}}],
+            )
+            assert score == 100.0
+
+    def test_score_with_trajectory_list(self):
+        """Cover _get_events(list) path via score()."""
+        with patch(
+            "mas_eval.oracle.web_arena.check_playwright", return_value=(False, "no pw")
+        ):
+            task = self.oracle.list_tasks()[0]
+            traj = [
+                {
+                    "action": {
+                        "type": "tool_call",
+                        "tool_id": "web_search",
+                        "input": {"query": "test"},
+                    }
+                }
+            ]
+            score = self.oracle.score(task, traj)
+            assert isinstance(score, float)
+
+    def test_real_score_no_task_data(self):
+        with patch(
+            "mas_eval.oracle.web_arena.check_playwright", return_value=(True, "ok")
+        ):
+            from mas_eval.oracle.oracle_base import OracleTask
+
+            task = OracleTask(task_id="nonexistent", prompt="test")
+            score = self.oracle._real_score(task, [])
+            assert score == 0.0
+
+    def test_real_score_no_nav_events(self):
+        """When no navigation events, fall back to simulate."""
+        with (
+            patch(
+                "mas_eval.oracle.web_arena.check_playwright", return_value=(True, "ok")
+            ),
+            patch.object(self.oracle, "_simulate_score", return_value=50.0) as mock_sim,
+        ):
+            task = self.oracle.list_tasks()[0]
+            events = [{"action": {"type": "tool_call", "tool_id": "bash", "input": {}}}]
+            score = self.oracle._real_score(task, events)
+            assert score == 50.0
+            mock_sim.assert_called_once()
+
+    def test_real_score_playwright_unavailable(self):
+        """When playwright ImportError occurs, fall back to simulate."""
+        import builtins
+
+        real_import = builtins.__import__
+
+        def mock_import(name, *args, **kwargs):
+            if name == "playwright.sync_api":
+                raise ImportError("no playwright")
+            return real_import(name, *args, **kwargs)
+
+        with (
+            patch(
+                "mas_eval.oracle.web_arena.check_playwright", return_value=(True, "ok")
+            ),
+            patch.object(self.oracle, "_simulate_score", return_value=40.0) as mock_sim,
+            patch("builtins.__import__", side_effect=mock_import),
+        ):
+            task = self.oracle.list_tasks()[0]
+            events = [
+                {
+                    "action": {
+                        "type": "tool_call",
+                        "tool_id": "web_fetch",
+                        "input": {"url": "http://example.com"},
+                    }
+                }
+            ]
+            score = self.oracle._real_score(task, events)
+            assert score == 40.0
+            mock_sim.assert_called_once()
+
+    def test_real_score_page_error(self):
+        """When page.goto fails, fall back to simulate."""
+        with (
+            patch(
+                "mas_eval.oracle.web_arena.check_playwright", return_value=(True, "ok")
+            ),
+            patch.object(self.oracle, "_simulate_score", return_value=35.0) as mock_sim,
+        ):
+            mock_pw = MagicMock()
+            mock_browser = MagicMock()
+            mock_page = MagicMock()
+            mock_page.goto.side_effect = Exception("timeout")
+            mock_browser.new_page.return_value = mock_page
+            mock_pw.return_value.__enter__.return_value.chromium.launch.return_value = (
+                mock_browser
+            )
+
+            import builtins
+
+            real_import = builtins.__import__
+
+            def mock_import(name, *args, **kwargs):
+                if name == "playwright.sync_api":
+                    mod = MagicMock()
+                    mod.sync_playwright = mock_pw
+                    return mod
+                return real_import(name, *args, **kwargs)
+
+            with patch("builtins.__import__", side_effect=mock_import):
+                task = self.oracle.list_tasks()[0]
+                events = [
+                    {
+                        "action": {
+                            "type": "tool_call",
+                            "tool_id": "web_fetch",
+                            "input": {"url": "http://example.com"},
+                        }
+                    }
+                ]
+                score = self.oracle._real_score(task, events)
+                assert score == 35.0
+                mock_sim.assert_called_once()
+
+    def test_score_calls_real_score_when_pw_available(self):
+        """Cover score() calling _real_score when playwright is available."""
+        with (
+            patch(
+                "mas_eval.oracle.web_arena.check_playwright", return_value=(True, "ok")
+            ),
+            patch.object(self.oracle, "_real_score", return_value=75.0) as mock_real,
+        ):
+            task = self.oracle.list_tasks()[0]
+            traj = {
+                "events": [
+                    {
+                        "action": {
+                            "type": "tool_call",
+                            "tool_id": "web_search",
+                            "input": {"query": "test"},
+                        }
+                    }
+                ]
+            }
+            score = self.oracle.score(task, traj)
+            assert score == 75.0
+            mock_real.assert_called_once()
+
+    def test_real_score_no_nav_events_with_pw_import(self):
+        """Cover _real_score no-nav-events path with playwright import mocked."""
+        with (
+            patch(
+                "mas_eval.oracle.web_arena.check_playwright", return_value=(True, "ok")
+            ),
+            patch.object(self.oracle, "_simulate_score", return_value=60.0) as mock_sim,
+        ):
+            mock_pw = MagicMock()
+            import builtins
+
+            real_import = builtins.__import__
+
+            def mock_import(name, *args, **kwargs):
+                if name == "playwright.sync_api":
+                    mod = MagicMock()
+                    mod.sync_playwright = mock_pw
+                    return mod
+                return real_import(name, *args, **kwargs)
+
+            with patch("builtins.__import__", side_effect=mock_import):
+                task = self.oracle.list_tasks()[0]
+                events = [
+                    {"action": {"type": "tool_call", "tool_id": "bash", "input": {}}}
+                ]
+                score = self.oracle._real_score(task, events)
+                assert score == 60.0
+                mock_sim.assert_called_once()
+
+    def test_real_score_successful_check(self):
+        """Cover _real_score success path with _check_page_success returning True."""
+        with patch(
+            "mas_eval.oracle.web_arena.check_playwright", return_value=(True, "ok")
+        ):
+            mock_pw = MagicMock()
+            mock_browser = MagicMock()
+            mock_page = MagicMock()
+            mock_page.goto.return_value = None
+            mock_page.locator.return_value.first.count.return_value = 1
+            mock_browser.new_page.return_value = mock_page
+            mock_pw.return_value.__enter__.return_value.chromium.launch.return_value = (
+                mock_browser
+            )
+
+            import builtins
+
+            real_import = builtins.__import__
+
+            def mock_import(name, *args, **kwargs):
+                if name == "playwright.sync_api":
+                    mod = MagicMock()
+                    mod.sync_playwright = mock_pw
+                    return mod
+                return real_import(name, *args, **kwargs)
+
+            with patch("builtins.__import__", side_effect=mock_import):
+                task = self.oracle.list_tasks()[0]
+                events = [
+                    {
+                        "action": {
+                            "type": "tool_call",
+                            "tool_id": "web_fetch",
+                            "input": {"url": "http://example.com/shop"},
+                        }
+                    }
+                ]
+                score = self.oracle._real_score(task, events)
+                assert score == 100.0

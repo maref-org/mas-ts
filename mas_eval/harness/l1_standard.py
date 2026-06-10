@@ -23,6 +23,19 @@ logger = logging.getLogger(__name__)
 
 
 def run_l1_standard(card, tasks=None):
+    """Run L1 Standard evaluation (D1-D3 fully, ~30 min).
+
+    Aggregates compliance (D1), single-agent (D2), and multi-agent (D3) scores
+    into an overall score with verdict.
+
+    Args:
+    card: Agent card dict.
+    tasks: Optional list of task dicts for D2.
+
+    Returns:
+    Dict with keys: level, name, elapsed_seconds, score, grade, verdict,
+    domain_scores, domains, findings.
+    """
     start = time.time()
     d1 = run_d1(card)
     d2 = run_d2(card, tasks or [])
@@ -52,6 +65,20 @@ def run_l1_standard(card, tasks=None):
 
 
 def run_l1_with_oracle(card, oracle_name, task_id=None, mock_trajectory=None):
+    """Run L1 Standard evaluation with an executable oracle.
+
+    Uses an oracle benchmark to generate golden trajectories for D2 scoring.
+
+    Args:
+    card: Agent card dict.
+    oracle_name: Registered oracle name (e.g. "tau-bench").
+    task_id: Optional specific oracle task ID.
+    mock_trajectory: Optional agent trajectory for comparison.
+
+    Returns:
+    Dict with keys: level, name, elapsed_seconds, score, grade, verdict,
+    domain_scores, domains, findings.
+    """
     start = time.time()
     d1 = run_d1(card)
     d2 = run_d2_with_oracle(card, oracle_name, task_id, mock_trajectory)

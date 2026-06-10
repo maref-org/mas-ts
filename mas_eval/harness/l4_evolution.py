@@ -16,6 +16,15 @@ logger = logging.getLogger(__name__)
 
 
 def run_l4_evolution():
+    """Run L4 Evolution evaluation (D5 lifecycle, multi-day).
+
+    Full D5 lifecycle: chaos engineering, drift detection, reflection loop,
+    and convergence cycles with persistence across sessions.
+
+    Returns:
+    Dict with keys: level, name, elapsed_seconds, score, grade, verdict,
+    domain_scores, domains, findings.
+    """
     start = time.time()
     d5 = run_d5()
 

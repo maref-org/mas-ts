@@ -60,13 +60,17 @@ Extends v1.1 with optional fields:
 | `mas_eval/harness/l4_evolution.py` | D5 lifecycle runner |
 | `mas_eval/scoring/elo.py` | Pairwise Elo rating system |
 | `mas_eval/scoring/absolute.py` | Absolute scoring, grading, verdict |
-| `tests/` | 24 test files, 646+ tests |
+| `tests/` | 31 test files, 806+ tests |
+| `.github/workflows/test.yml` | pytest + ruff + coverage gate (80%→85%) with `--durations=10` |
+| `.github/workflows/security-scan.yml` | TruffleHog + bandit SAST + pip-audit dependency scan |
+| `.github/workflows/type-check.yml` | mypy strict type checking |
+| `docs/api-contracts.md` | CLI + Python API contract documentation |
 
 ## Testing
 
 ```bash
 # Run all tests
-pytest tests/ -v
+pytest tests/ -v           # 806 tests
 
 # Run specific domain
 pytest tests/test_d5_robustness.py -v

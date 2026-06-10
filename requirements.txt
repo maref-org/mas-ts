@@ -1,6 +1,13 @@
-jsonschema>=4.21.0
-numpy>=1.26.0
+# MAS-TS-001 Evaluation Harness — Runtime Dependencies
+# Auto-synced from pyproject.toml. DO NOT EDIT MANUALLY.
+
+jsonschema>=4.20
+numpy>=1.24
 pyyaml>=6.0
-requests>=2.31.0
-rich>=13.0.0
-argcomplete>=3.0.0
+requests>=2.31
+rich>=13.0
+argcomplete>=3.0
+tenacity>=8.0
+
+# Optional: scipy>=1.10 (for D5 drift detection)
+# Install with: pip install -e ".[ml]"

@@ -15,7 +15,7 @@
     "agent": {
       "agent_id": "urn:agent:demo:travel:travel-planner-01",
       "role": "planner",
-      "card_version": "1.1",
+      "card_version": "1.2",
       "data_residency": "SG",
       "model_backend": "qwen2.5-72b-instruct"
     },
@@ -39,7 +39,7 @@
     "agent": {
       "agent_id": "urn:agent:demo:travel:travel-planner-01",
       "role": "planner",
-      "card_version": "1.1",
+      "card_version": "1.2",
       "data_residency": "SG",
       "model_backend": "qwen2.5-72b-instruct"
     },
@@ -75,7 +75,7 @@
     "agent": {
       "agent_id": "urn:agent:demo:travel:travel-planner-01",
       "role": "planner",
-      "card_version": "1.1",
+      "card_version": "1.2",
       "data_residency": "SG",
       "model_backend": "qwen2.5-72b-instruct"
     },
@@ -111,7 +111,7 @@
     "agent": {
       "agent_id": "urn:agent:demo:travel:travel-planner-01",
       "role": "planner",
-      "card_version": "1.1",
+      "card_version": "1.2",
       "data_residency": "SG",
       "model_backend": "qwen2.5-72b-instruct"
     },

@@ -1,5 +1,5 @@
 {
-  "card_version": "1.1",
+  "card_version": "1.2",
   "agent_id": "urn:agent:demo:research:research-assistant-01",
   "name": "Research Assistant",
   "description": "Performs web research and synthesizes reports",

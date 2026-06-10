@@ -30,14 +30,14 @@ jobs:
         run: ruff check mas_eval/ --statistics
 
       - name: Test with pytest
-        run: pytest tests/ -v --tb=short --cov=mas_eval --cov-report=term-missing
+        run: pytest tests/ -v --tb=short --durations=10 --cov=mas_eval --cov-report=term-missing
 
       - name: Check coverage
         run: |
           COV=$(python -m coverage report --format=total 2>/dev/null || echo "0")
           echo "Coverage: $COV%"
-          if [ "$(echo "$COV < 80" | bc)" -eq 1 ]; then
-            echo "::error::Coverage $COV% below threshold 80%"
+          if [ "$(echo "$COV < 85" | bc)" -eq 1 ]; then
+            echo "::error::Coverage $COV% below threshold 85%"
             exit 1
           fi
           echo "✅ Coverage $COV% meets threshold"

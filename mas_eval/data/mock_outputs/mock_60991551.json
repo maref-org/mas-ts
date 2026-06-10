@@ -23,7 +23,7 @@
       "agent": {
         "agent_id": "urn:agent:mock:default:mock-agent",
         "role": "worker",
-        "card_version": "1.1",
+        "card_version": "1.2",
         "data_residency": "LOCAL",
         "model_backend": "mock-llm"
       },
@@ -54,7 +54,7 @@
       "agent": {
         "agent_id": "urn:agent:mock:default:mock-agent",
         "role": "worker",
-        "card_version": "1.1",
+        "card_version": "1.2",
         "data_residency": "LOCAL",
         "model_backend": "mock-llm"
       },
@@ -105,7 +105,7 @@
       "agent": {
         "agent_id": "urn:agent:mock:default:mock-agent",
         "role": "worker",
-        "card_version": "1.1",
+        "card_version": "1.2",
         "data_residency": "LOCAL",
         "model_backend": "mock-llm"
       },

@@ -1,5 +1,5 @@
 {
-  "card_version": "1.1",
+  "card_version": "1.2",
   "agent_id": "urn:agent:anthropic:claude-code:claude-code-1-0",
   "name": "Claude Code",
   "description": "Anthropic's agentic coding CLI tool. Supports multi-agent orchestration, MCP protocol, file-based memory, remote bridge control, and 30+ built-in tools for software engineering tasks.",

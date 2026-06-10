@@ -19,6 +19,12 @@ ELO_CONFIDENCE_Z = 1.96
 
 
 class EloRating:
+    """Pairwise Elo rating system for agent capability comparison.
+
+    Supports contestant management, match recording with score-margin-aware
+    K-factors, and leaderboard generation with confidence intervals.
+    """
+
     def __init__(self, initial_elo=ELO_INITIAL, k=ELO_K):
         self.ratings = {}
         self.match_counts = {}
@@ -27,6 +33,11 @@ class EloRating:
         self.k = k
 
     def add_contestant(self, name):
+        """Register a contestant with the initial Elo rating.
+
+        Args:
+        name: Contestant identifier string.
+        """
         if name not in self.ratings:
             self.ratings[name] = self.initial_elo
             self.match_counts[name] = 0
@@ -35,6 +46,17 @@ class EloRating:
         return 1.0 / (1.0 + 10.0 ** ((rating_b - rating_a) / 400.0))
 
     def record_match(self, name_a, name_b, score_a, score_b):
+        """Record a match between two contestants and update ratings.
+
+        Uses score-difference-aware K-factor: larger margins cause larger
+        rating adjustments. Handles ties (0.5/0.5) and wins (1.0/0.0).
+
+        Args:
+        name_a: First contestant identifier.
+        name_b: Second contestant identifier.
+        score_a: First contestant's evaluation score.
+        score_b: Second contestant's evaluation score.
+        """
         self.add_contestant(name_a)
         self.add_contestant(name_b)
 
@@ -75,12 +97,39 @@ class EloRating:
         )
 
     def get_rating(self, name):
+        """Get the current Elo rating for a contestant.
+
+        Args:
+        name: Contestant identifier.
+
+        Returns:
+        Current Elo rating (float), or initial_elo if contestant unknown.
+        """
         return self.ratings.get(name, self.initial_elo)
 
     def get_matches(self, name):
+        """Get the match count for a contestant.
+
+        Args:
+        name: Contestant identifier.
+
+        Returns:
+        Number of recorded matches (int), or 0 if contestant unknown.
+        """
         return self.match_counts.get(name, 0)
 
     def confidence_interval(self, name):
+        """Compute 95% confidence interval for a contestant's rating.
+
+        Requires at least ELO_MIN_MATCHES matches for meaningful statistics.
+
+        Args:
+        name: Contestant identifier.
+
+        Returns:
+        Dict with keys "rating", "matches", "ci_lower", "ci_upper",
+        or None if insufficient matches.
+        """
         n = self.match_counts.get(name, 0)
         if n < ELO_MIN_MATCHES:
             return None
@@ -94,6 +143,15 @@ class EloRating:
         }
 
     def leaderboard(self, min_matches=0):
+        """Generate a ranked leaderboard of contestants by Elo rating.
+
+        Args:
+        min_matches: Minimum match count for inclusion (default 0).
+
+        Returns:
+        List of dicts sorted by elo descending, each with keys:
+        rank, name, elo, matches.
+        """
         entries = []
         for name, rating in self.ratings.items():
             if self.match_counts.get(name, 0) >= min_matches:
@@ -111,6 +169,7 @@ class EloRating:
         return entries
 
     def clear(self):
+        """Reset all ratings, match counts, and history."""
         self.ratings.clear()
         self.match_counts.clear()
         self.match_history.clear()

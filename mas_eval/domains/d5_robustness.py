@@ -1052,8 +1052,8 @@ def _score_convergence(cv=None):
     return round(score, 1), findings
 
 
-def run_d5_part1(ce=None, dd=None, card=None):
-    ce = ce or ChaosEngine(seed=42)
+def run_d5_part1(ce=None, dd=None, card=None, seed=42):
+    ce = ce or ChaosEngine(seed=seed)
     dd = dd or DriftDetector()
 
     chaos_score, chaos_findings = _score_chaos(ce, card)
@@ -1104,8 +1104,19 @@ def run_d5_part2(ra=None, cv=None):
     }
 
 
-def run_d5(ce=None, dd=None, card=None):
-    p1 = run_d5_part1(ce, dd, card)
+def run_d5(ce=None, dd=None, card=None, seed=42):
+    """Run D5 evaluation: chaos engineering + drift detection + reflection + convergence.
+
+    Args:
+        ce: Optional ChaosEngine instance (created with seed if None).
+        dd: Optional DriftDetector instance.
+        card: Optional agent card dict.
+        seed: Random seed for deterministic chaos injection (default 42).
+
+    Returns:
+        Dict with domain, score, subscores, findings.
+    """
+    p1 = run_d5_part1(ce, dd, card, seed=seed)
     p2 = run_d5_part2()
 
     d5_score = (

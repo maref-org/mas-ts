@@ -1,5 +1,5 @@
 {
-  "card_version": "1.1",
+  "card_version": "1.2",
   "agent_id": "urn:agent:maref:multi-agent:maref-0-28-0-rc",
   "name": "MAREF",
   "description": "Multi-Agent Recursive Evolution Framework - Agent Governance OS with six-layer governance architecture, 5991 tests, and comprehensive security framework",

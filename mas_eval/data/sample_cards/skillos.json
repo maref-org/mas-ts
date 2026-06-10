@@ -1,5 +1,5 @@
 {
-  "card_version": "1.1",
+  "card_version": "1.2",
   "agent_id": "urn:agent:skillos:skill-execution:skillos-1-0-0",
   "name": "SkillOS",
   "description": "Skill Execution Kernel with 5/25/70 Distribution - AI skill platform with 55+ skills covering AI workflows, content creation, and development tools",

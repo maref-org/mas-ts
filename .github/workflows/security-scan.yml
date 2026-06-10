@@ -19,3 +19,31 @@ jobs:
         uses: trufflesecurity/trufflehog@v3.82.0
         with:
           extra_args: --results=verified
+
+  sast-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install bandit
+        run: pip install bandit
+      - name: Bandit SAST scan
+        run: bandit -r mas_eval/ -c pyproject.toml -f sarif -o bandit-results.sarif || true
+
+  dependency-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install pip-audit
+        run: pip install pip-audit
+      - name: Audit dependencies (requirements.txt)
+        run: pip-audit --requirement requirements.txt || true
+      - name: Audit dependencies (project scan)
+        run: pip-audit . || true

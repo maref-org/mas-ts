@@ -26,6 +26,18 @@ L0_STAGES = [
 
 
 def run_l0_fast_screen(card, tasks=None):
+    """Run the L0 Fast-Screen CI gate (5 stages, <5 min).
+
+    Evaluates an agent card across 5 stages: card_validation, constitution_check,
+    mock_tasks, agent_spawn, and traffic_light. Uses zero LLM tokens.
+
+    Args:
+    card: Agent card dict.
+    tasks: Optional list of task dicts for mock task stage.
+
+    Returns:
+    Dict with keys: level, name, elapsed_seconds, timeout, status, stages, summary.
+    """
     start = time.time()
     stages = []
 

@@ -81,8 +81,8 @@ python mas_full_run.py --card <card.json> --level all   # runs L0 → L1 → L2 
 ## Test
 
 ```bash
-pytest tests/ -v           # 122 tests
-pytest --cov               # 60% coverage
+pytest tests/ -v           # 806 tests
+pytest --cov               # 94% coverage
 ```
 
 ## Docs

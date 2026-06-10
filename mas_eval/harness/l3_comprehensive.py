@@ -24,6 +24,18 @@ logger = logging.getLogger(__name__)
 
 
 def run_l3_comprehensive(card, tasks=None):
+    """Run L3 Comprehensive evaluation (D1-D5, ~1 day).
+
+    Full evaluation across all 5 domains including robustness (D5).
+
+    Args:
+    card: Agent card dict.
+    tasks: Optional list of task dicts for D2.
+
+    Returns:
+    Dict with keys: level, name, elapsed_seconds, score, grade, verdict,
+    domain_scores, domains, findings.
+    """
     start = time.time()
     d1 = run_d1(card)
     d2 = run_d2(card, tasks or [])

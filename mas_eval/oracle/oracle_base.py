@@ -101,7 +101,7 @@ class OracleRegistry:
         oracle = OracleRegistry.get("my-bench")
     """
 
-    _oracles = {}
+    _oracles: dict = {}
 
     @classmethod
     def register(cls, oracle):

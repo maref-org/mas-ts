@@ -43,6 +43,9 @@ lint.ignore = ["E501"]
 [tool.mypy]
 ignore_missing_imports = true
 
+[tool.bandit]
+skips = ["B101", "B105", "B110", "B311", "B404", "B603", "B607"]
+
 [tool.coverage.run]
 source = ["mas_eval"]
 

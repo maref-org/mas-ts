@@ -15,7 +15,7 @@
     "agent": {
       "agent_id": "urn:agent:demo:research:research-assistant-01",
       "role": "worker",
-      "card_version": "1.1",
+      "card_version": "1.2",
       "data_residency": "CN",
       "model_backend": "deepseek-chat-v3"
     },
@@ -39,7 +39,7 @@
     "agent": {
       "agent_id": "urn:agent:demo:research:research-assistant-01",
       "role": "worker",
-      "card_version": "1.1",
+      "card_version": "1.2",
       "data_residency": "CN",
       "model_backend": "deepseek-chat-v3"
     },
@@ -75,7 +75,7 @@
     "agent": {
       "agent_id": "urn:agent:demo:research:research-assistant-01",
       "role": "worker",
-      "card_version": "1.1",
+      "card_version": "1.2",
       "data_residency": "CN",
       "model_backend": "deepseek-chat-v3"
     },

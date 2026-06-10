@@ -2,8 +2,10 @@
 # SPDX-License-Identifier: Apache-2.0
 """Tests for MAS-TS-001 v3.0 Oracle Base Framework (Phase 1)."""
 
+import subprocess
 import sys
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -506,3 +508,98 @@ class TestEnvDetection:
             ok, msg = summary[key]
             assert isinstance(ok, bool)
             assert isinstance(msg, str)
+
+    def test_check_docker_binary_not_found(self):
+        with patch("mas_eval.oracle.env.shutil.which", return_value=None):
+            ok, msg = check_docker()
+            assert ok is False
+            assert "not found" in msg
+
+    def test_check_docker_ps_success(self):
+        mock_result = MagicMock(returncode=0, stdout="", stderr="")
+        with (
+            patch("mas_eval.oracle.env.shutil.which", return_value="/usr/bin/docker"),
+            patch("mas_eval.oracle.env.subprocess.run", return_value=mock_result),
+        ):
+            ok, msg = check_docker()
+            assert ok is True
+            assert "accessible" in msg
+
+    def test_check_docker_file_not_found(self):
+        with (
+            patch("mas_eval.oracle.env.shutil.which", return_value="/usr/bin/docker"),
+            patch("mas_eval.oracle.env.subprocess.run", side_effect=FileNotFoundError),
+        ):
+            ok, msg = check_docker()
+            assert ok is False
+            assert "not found" in msg
+
+    def test_check_docker_timeout(self):
+        with (
+            patch("mas_eval.oracle.env.shutil.which", return_value="/usr/bin/docker"),
+            patch(
+                "mas_eval.oracle.env.subprocess.run",
+                side_effect=subprocess.TimeoutExpired("docker ps", 10),
+            ),
+        ):
+            ok, msg = check_docker()
+            assert ok is False
+            assert "timed out" in msg
+
+    def test_check_docker_os_error(self):
+        with (
+            patch("mas_eval.oracle.env.shutil.which", return_value="/usr/bin/docker"),
+            patch(
+                "mas_eval.oracle.env.subprocess.run", side_effect=OSError("conn err")
+            ),
+        ):
+            ok, msg = check_docker()
+            assert ok is False
+            assert "error" in msg
+
+    def test_check_playwright_installed(self):
+        with patch.dict("sys.modules", {"playwright": MagicMock()}):
+            ok, msg = check_playwright()
+            assert ok is True
+            assert "installed" in msg
+
+    def test_check_stress_ng_binary_not_found(self):
+        with patch("mas_eval.oracle.env.shutil.which", return_value=None):
+            ok, msg = check_stress_ng()
+            assert ok is False
+            assert "not found" in msg
+
+    def test_check_stress_ng_success(self):
+        mock_result = MagicMock(returncode=0, stdout="stress-ng 0.16.0\n", stderr="")
+        with (
+            patch(
+                "mas_eval.oracle.env.shutil.which", return_value="/usr/bin/stress-ng"
+            ),
+            patch("mas_eval.oracle.env.subprocess.run", return_value=mock_result),
+        ):
+            ok, msg = check_stress_ng()
+            assert ok is True
+            assert "available" in msg
+
+    def test_check_stress_ng_exit_error(self):
+        mock_result = MagicMock(returncode=1, stdout="", stderr="error msg")
+        with (
+            patch(
+                "mas_eval.oracle.env.shutil.which", return_value="/usr/bin/stress-ng"
+            ),
+            patch("mas_eval.oracle.env.subprocess.run", return_value=mock_result),
+        ):
+            ok, msg = check_stress_ng()
+            assert ok is False
+            assert "error" in msg
+
+    def test_check_stress_ng_file_error(self):
+        with (
+            patch(
+                "mas_eval.oracle.env.shutil.which", return_value="/usr/bin/stress-ng"
+            ),
+            patch("mas_eval.oracle.env.subprocess.run", side_effect=FileNotFoundError),
+        ):
+            ok, msg = check_stress_ng()
+            assert ok is False
+            assert "failed" in msg

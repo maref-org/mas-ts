@@ -4,7 +4,7 @@
 
 import sys
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, str(Path(__file__).parent.parent.resolve()))
 
@@ -205,6 +205,14 @@ class TestTauBenchOracle:
         ok, msg = oracle.validate_environment()
         assert ok is False
         assert "not found" in msg
+
+    def test_load_tasks_file_missing(self):
+        oracle = TauBenchOracle()
+        oracle._tasks_cache = None
+        with patch("mas_eval.oracle.tau_bench.TASKS_FILE") as mock_file:
+            mock_file.exists.return_value = False
+            tasks = oracle._load_tasks()
+            assert tasks == []
 
 
 class TestTauBenchIntegration:

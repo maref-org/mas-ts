@@ -23,12 +23,24 @@ logger = logging.getLogger(__name__)
 
 
 class MultiModelRunner:
+    """Run multi-model evaluations across domains.
+
+    Manages a set of model configurations, executes domain evaluations
+    for each model, and aggregates results into a comparison matrix.
+    """
+
     def __init__(self, base_card, tasks=None):
         self.base_card = base_card
         self.tasks = tasks or []
         self.models = []
 
     def add_model(self, model_name, config=None):
+        """Add a single model configuration.
+
+        Args:
+        model_name: Model identifier (e.g. "claude-sonnet-4").
+        config: Optional dict with provider, deployment, etc.
+        """
         self.models.append(
             {
                 "name": model_name,
@@ -37,6 +49,14 @@ class MultiModelRunner:
         )
 
     def add_models(self, model_list):
+        """Add multiple model configurations from a list.
+
+        Each entry in the list may be a string (model name) or a dict
+        with "name" and optional "config" keys.
+
+        Args:
+        model_list: List of model specifications.
+        """
         for model in model_list:
             if isinstance(model, str):
                 self.add_model(model)
@@ -62,6 +82,15 @@ class MultiModelRunner:
         return card
 
     def run(self, domains=None):
+        """Run evaluations for all registered models.
+
+        Args:
+        domains: Optional list of domain names to evaluate (default all).
+
+        Returns:
+        List of result dicts, one per model, each containing the
+        domain evaluation results.
+        """
         domains = domains or ["d2", "d3"]
         results = []
 
@@ -147,6 +176,11 @@ class MultiModelRunner:
 
     @staticmethod
     def print_matrix(result):
+        """Print a formatted comparison matrix of all model results.
+
+        Args:
+        result: The result list returned by run().
+        """
         domains = result["domains_evaluated"]
 
         header = f"{'Model':<25}"

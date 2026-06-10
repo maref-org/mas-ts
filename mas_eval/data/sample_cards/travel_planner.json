@@ -1,5 +1,5 @@
 {
-  "card_version": "1.1",
+  "card_version": "1.2",
   "agent_id": "urn:agent:demo:travel:travel-planner-01",
   "name": "Travel Planner",
   "description": "Plans travel itineraries with flight search and booking",
