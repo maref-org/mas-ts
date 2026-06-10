@@ -1,0 +1,84 @@
+[
+  {
+    "task_id": "web-arena-shop-001",
+    "domain": "shopping",
+    "url": "https://example-shop.com",
+    "prompt": "Search for wireless headphones under $100 on the shopping site and find the top-rated product",
+    "expected_tools": ["web_fetch", "web_search"],
+    "expected_keywords": ["wireless headphones", "under 100", "top rated"],
+    "success_criteria": "product_page_reached",
+    "golden_trajectory": {
+      "events": [
+        {"action": {"type": "tool_call", "tool_id": "web_fetch", "input": {"url": "https://example-shop.com"}}, "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}},
+        {"action": {"type": "tool_call", "tool_id": "web_search", "input": {"query": "wireless headphones under $100"}}, "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}},
+        {"action": {"type": "tool_call", "tool_id": "web_fetch", "input": {"url": "https://example-shop.com/search?q=wireless+headphones"}}, "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}},
+        {"action": {"type": "task_complete", "result": "success", "tool_id": "", "input": {}}, "orchestration": {"routing_decision": null, "routing_reason": null}}
+      ]
+    }
+  },
+  {
+    "task_id": "web-arena-booking-001",
+    "domain": "travel",
+    "url": "https://example-booking.com",
+    "prompt": "Find hotels in Paris with free cancellation for 2 adults, check-in July 15-20, under $200 per night",
+    "expected_tools": ["web_fetch", "web_search"],
+    "expected_keywords": ["Paris hotels", "free cancellation", "July"],
+    "success_criteria": "search_results_shown",
+    "golden_trajectory": {
+      "events": [
+        {"action": {"type": "tool_call", "tool_id": "web_fetch", "input": {"url": "https://example-booking.com"}}, "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}},
+        {"action": {"type": "tool_call", "tool_id": "web_search", "input": {"query": "hotels Paris free cancellation July 15-20 under 200"}}, "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}},
+        {"action": {"type": "tool_call", "tool_id": "web_fetch", "input": {"url": "https://example-booking.com/search?dest=Paris&dates=0715-0720"}}, "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}},
+        {"action": {"type": "task_complete", "result": "success", "tool_id": "", "input": {}}, "orchestration": {"routing_decision": null, "routing_reason": null}}
+      ]
+    }
+  },
+  {
+    "task_id": "web-arena-flight-001",
+    "domain": "travel",
+    "url": "https://example-flights.com",
+    "prompt": "Find round-trip flights from New York (JFK) to London (LHR) for September 10-20, economy class, non-stop only",
+    "expected_tools": ["web_fetch", "web_search"],
+    "expected_keywords": ["JFK LHR", "non-stop", "September", "round-trip"],
+    "success_criteria": "flight_results_shown",
+    "golden_trajectory": {
+      "events": [
+        {"action": {"type": "tool_call", "tool_id": "web_fetch", "input": {"url": "https://example-flights.com"}}, "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}},
+        {"action": {"type": "tool_call", "tool_id": "web_search", "input": {"query": "flights JFK to LHR September 10-20 non-stop economy"}}, "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}},
+        {"action": {"type": "tool_call", "tool_id": "web_fetch", "input": {"url": "https://example-flights.com/search?from=JFK&to=LHR&date=0910"}}, "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}},
+        {"action": {"type": "task_complete", "result": "success", "tool_id": "", "input": {}}, "orchestration": {"routing_decision": null, "routing_reason": null}}
+      ]
+    }
+  },
+  {
+    "task_id": "web-arena-wiki-001",
+    "domain": "research",
+    "url": "https://en.wikipedia.org",
+    "prompt": "Find the current population of Japan from Wikipedia and also find the population density per square km",
+    "expected_tools": ["web_fetch", "web_search"],
+    "expected_keywords": ["Japan population", "Wikipedia"],
+    "success_criteria": "information_found",
+    "golden_trajectory": {
+      "events": [
+        {"action": {"type": "tool_call", "tool_id": "web_search", "input": {"query": "Japan population Wikipedia"}}, "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}},
+        {"action": {"type": "tool_call", "tool_id": "web_fetch", "input": {"url": "https://en.wikipedia.org/wiki/Japan"}}, "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}},
+        {"action": {"type": "task_complete", "result": "success", "tool_id": "", "input": {}}, "orchestration": {"routing_decision": null, "routing_reason": null}}
+      ]
+    }
+  },
+  {
+    "task_id": "web-arena-form-001",
+    "domain": "form",
+    "url": "https://example-form.com",
+    "prompt": "Fill out the newsletter subscription form with name 'Alice', email 'alice@example.com', and select 'Technology' as interest category",
+    "expected_tools": ["web_fetch"],
+    "expected_keywords": ["newsletter", "subscribe", "Alice"],
+    "success_criteria": "form_submitted",
+    "golden_trajectory": {
+      "events": [
+        {"action": {"type": "tool_call", "tool_id": "web_fetch", "input": {"url": "https://example-form.com/newsletter"}}, "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}},
+        {"action": {"type": "task_complete", "result": "success", "tool_id": "", "input": {}}, "orchestration": {"routing_decision": null, "routing_reason": null}}
+      ]
+    }
+  }
+]

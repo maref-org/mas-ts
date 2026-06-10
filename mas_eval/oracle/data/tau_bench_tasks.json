@@ -1,0 +1,191 @@
+[
+  {
+    "task_id": "tau-bench-airline-001",
+    "domain": "airline",
+    "prompt": "Search for direct flights from Beijing to Shanghai on 2026-07-15 for one adult, economy class",
+    "expected_tools": ["web_search", "web_fetch"],
+    "expected_steps": 3,
+    "rubric": {
+      "tool_accuracy": 0.8,
+      "completion": 1.0
+    },
+    "golden_trajectory": {
+      "events": [
+        {
+          "action": {"type": "tool_call", "tool_id": "web_search", "input": {"query": "direct flights Beijing to Shanghai 2026-07-15 economy"}},
+          "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}
+        },
+        {
+          "action": {"type": "tool_call", "tool_id": "web_fetch", "input": {"url": "https://example.com/flights/PEK-SHA-20260715"}},
+          "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}
+        },
+        {
+          "action": {"type": "task_complete", "result": "success", "tool_id": "", "input": {}},
+          "orchestration": {"routing_decision": null, "routing_reason": null}
+        }
+      ]
+    }
+  },
+  {
+    "task_id": "tau-bench-hotel-001",
+    "domain": "hotel",
+    "prompt": "Find hotels in Tokyo with free WiFi and breakfast, budget under $200 per night, for July 20-25, 2026",
+    "expected_tools": ["web_search", "web_fetch"],
+    "expected_steps": 3,
+    "rubric": {
+      "tool_accuracy": 0.8,
+      "completion": 1.0
+    },
+    "golden_trajectory": {
+      "events": [
+        {
+          "action": {"type": "tool_call", "tool_id": "web_search", "input": {"query": "hotels Tokyo free WiFi breakfast under 200 USD July 2026"}},
+          "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}
+        },
+        {
+          "action": {"type": "tool_call", "tool_id": "web_fetch", "input": {"url": "https://example.com/hotels/tokyo-20260720"}},
+          "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}
+        },
+        {
+          "action": {"type": "task_complete", "result": "success", "tool_id": "", "input": {}},
+          "orchestration": {"routing_decision": null, "routing_reason": null}
+        }
+      ]
+    }
+  },
+  {
+    "task_id": "tau-bench-restaurant-001",
+    "domain": "restaurant",
+    "prompt": "Find Italian restaurants in New York City with outdoor seating, rated 4+ stars, for a party of 4 on Saturday evening",
+    "expected_tools": ["web_search"],
+    "expected_steps": 2,
+    "rubric": {
+      "tool_accuracy": 0.9,
+      "completion": 1.0
+    },
+    "golden_trajectory": {
+      "events": [
+        {
+          "action": {"type": "tool_call", "tool_id": "web_search", "input": {"query": "Italian restaurants NYC outdoor seating rated 4+ stars"}},
+          "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}
+        },
+        {
+          "action": {"type": "task_complete", "result": "success", "tool_id": "", "input": {}},
+          "orchestration": {"routing_decision": null, "routing_reason": null}
+        }
+      ]
+    }
+  },
+  {
+    "task_id": "tau-bench-weather-001",
+    "domain": "weather",
+    "prompt": "Get the 7-day weather forecast for London starting next Monday and determine if it's suitable for outdoor sightseeing",
+    "expected_tools": ["web_search", "web_fetch"],
+    "expected_steps": 3,
+    "rubric": {
+      "tool_accuracy": 0.8,
+      "completion": 1.0
+    },
+    "golden_trajectory": {
+      "events": [
+        {
+          "action": {"type": "tool_call", "tool_id": "web_search", "input": {"query": "London 7-day weather forecast next week"}},
+          "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}
+        },
+        {
+          "action": {"type": "tool_call", "tool_id": "web_fetch", "input": {"url": "https://example.com/weather/london-weekly"}},
+          "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}
+        },
+        {
+          "action": {"type": "task_complete", "result": "success", "tool_id": "", "input": {}},
+          "orchestration": {"routing_decision": null, "routing_reason": null}
+        }
+      ]
+    }
+  },
+  {
+    "task_id": "tau-bench-news-001",
+    "domain": "news",
+    "prompt": "Research the latest breakthroughs in quantum computing from 2026, summarize top 3 developments with sources",
+    "expected_tools": ["web_search", "web_fetch"],
+    "expected_steps": 4,
+    "rubric": {
+      "tool_accuracy": 0.85,
+      "completion": 1.0
+    },
+    "golden_trajectory": {
+      "events": [
+        {
+          "action": {"type": "tool_call", "tool_id": "web_search", "input": {"query": "quantum computing breakthroughs 2026"}},
+          "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}
+        },
+        {
+          "action": {"type": "tool_call", "tool_id": "web_fetch", "input": {"url": "https://example.com/news/quantum-2026-1"}},
+          "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}
+        },
+        {
+          "action": {"type": "tool_call", "tool_id": "web_fetch", "input": {"url": "https://example.com/news/quantum-2026-2"}},
+          "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}
+        },
+        {
+          "action": {"type": "task_complete", "result": "success", "tool_id": "", "input": {}},
+          "orchestration": {"routing_decision": null, "routing_reason": null}
+        }
+      ]
+    }
+  },
+  {
+    "task_id": "tau-bench-product-001",
+    "domain": "product",
+    "prompt": "Compare prices and features of the iPhone 16 Pro Max across 3 major retailers and recommend the best deal",
+    "expected_tools": ["web_search", "web_fetch"],
+    "expected_steps": 4,
+    "rubric": {
+      "tool_accuracy": 0.85,
+      "completion": 1.0
+    },
+    "golden_trajectory": {
+      "events": [
+        {
+          "action": {"type": "tool_call", "tool_id": "web_search", "input": {"query": "iPhone 16 Pro Max price comparison retailers 2026"}},
+          "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}
+        },
+        {
+          "action": {"type": "tool_call", "tool_id": "web_fetch", "input": {"url": "https://example.com/products/iphone16-pro-max-retailer1"}},
+          "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}
+        },
+        {
+          "action": {"type": "tool_call", "tool_id": "web_fetch", "input": {"url": "https://example.com/products/iphone16-pro-max-retailer2"}},
+          "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}
+        },
+        {
+          "action": {"type": "task_complete", "result": "success", "tool_id": "", "input": {}},
+          "orchestration": {"routing_decision": null, "routing_reason": null}
+        }
+      ]
+    }
+  },
+  {
+    "task_id": "tau-bench-schedule-001",
+    "domain": "schedule",
+    "prompt": "Find a suitable 1-hour meeting time for 3 participants across New York (EST), London (GMT), and Tokyo (JST) time zones on a weekday",
+    "expected_tools": ["web_search"],
+    "expected_steps": 2,
+    "rubric": {
+      "tool_accuracy": 0.9,
+      "completion": 1.0
+    },
+    "golden_trajectory": {
+      "events": [
+        {
+          "action": {"type": "tool_call", "tool_id": "web_search", "input": {"query": "time zone converter EST GMT JST meeting planner"}},
+          "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}
+        },
+        {
+          "action": {"type": "task_complete", "result": "success", "tool_id": "", "input": {}},
+          "orchestration": {"routing_decision": null, "routing_reason": null}
+        }
+      ]
+    }
+  }
+]

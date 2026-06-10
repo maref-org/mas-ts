@@ -1,0 +1,100 @@
+[
+  {
+    "task_id": "swe-bench-flask-001",
+    "repo": "synthetic/flask",
+    "problem_statement": "Fix Flask route to return 404 status code when resource is not found",
+    "file_path": "src/flask/app.py",
+    "expected_old_str": "return render_template('404.html')",
+    "expected_new_str": "return render_template('404.html'), 404",
+    "test_command": "pytest tests/test_routes.py -x -q",
+    "setup_commands": ["pip install -e ."],
+    "expected_tools": ["file_read", "file_edit", "bash"],
+    "golden_trajectory": {
+      "events": [
+        {"action": {"type": "tool_call", "tool_id": "file_read", "input": {"path": "src/flask/app.py"}}, "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}},
+        {"action": {"type": "tool_call", "tool_id": "file_edit", "input": {"path": "src/flask/app.py", "old_str": "return render_template('404.html')", "new_str": "return render_template('404.html'), 404"}}, "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}},
+        {"action": {"type": "tool_call", "tool_id": "bash", "input": {"command": "pytest tests/test_routes.py -x -q"}}, "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}},
+        {"action": {"type": "task_complete", "result": "success", "tool_id": "", "input": {}}, "orchestration": {"routing_decision": null, "routing_reason": null}}
+      ]
+    }
+  },
+  {
+    "task_id": "swe-bench-django-001",
+    "repo": "synthetic/django",
+    "problem_statement": "Fix Django model save to include validation before persisting",
+    "file_path": "src/django/db/models/base.py",
+    "expected_old_str": "def save(self, *args, **kwargs):\n    self._state.db = 'default'\n    super().save(*args, **kwargs)",
+    "expected_new_str": "def save(self, *args, **kwargs):\n    self.full_clean()\n    self._state.db = 'default'\n    super().save(*args, **kwargs)",
+    "test_command": "pytest tests/test_models.py -x -q",
+    "setup_commands": ["pip install -e ."],
+    "expected_tools": ["file_read", "file_edit", "bash", "grep"],
+    "golden_trajectory": {
+      "events": [
+        {"action": {"type": "tool_call", "tool_id": "file_read", "input": {"path": "src/django/db/models/base.py"}}, "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}},
+        {"action": {"type": "tool_call", "tool_id": "grep", "input": {"pattern": "def save"}}, "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}},
+        {"action": {"type": "tool_call", "tool_id": "file_edit", "input": {"path": "src/django/db/models/base.py", "old_str": "def save(self, *args, **kwargs):\n    self._state.db = 'default'\n    super().save(*args, **kwargs)", "new_str": "def save(self, *args, **kwargs):\n    self.full_clean()\n    self._state.db = 'default'\n    super().save(*args, **kwargs)"}}, "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}},
+        {"action": {"type": "tool_call", "tool_id": "bash", "input": {"command": "pytest tests/test_models.py -x -q"}}, "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}},
+        {"action": {"type": "task_complete", "result": "success", "tool_id": "", "input": {}}, "orchestration": {"routing_decision": null, "routing_reason": null}}
+      ]
+    }
+  },
+  {
+    "task_id": "swe-bench-pytest-001",
+    "repo": "synthetic/pytest",
+    "problem_statement": "Fix pytest assertion rewrite to handle byte string comparisons correctly",
+    "file_path": "src/_pytest/assertion/rewrite.py",
+    "expected_old_str": "if isinstance(left, str) and isinstance(right, str):",
+    "expected_new_str": "if isinstance(left, (str, bytes)) and isinstance(right, (str, bytes)):",
+    "test_command": "pytest tests/test_assertion.py -x -q",
+    "setup_commands": ["pip install -e ."],
+    "expected_tools": ["file_read", "file_edit", "bash", "grep"],
+    "golden_trajectory": {
+      "events": [
+        {"action": {"type": "tool_call", "tool_id": "grep", "input": {"pattern": "isinstance.*left.*str"}}, "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}},
+        {"action": {"type": "tool_call", "tool_id": "file_read", "input": {"path": "src/_pytest/assertion/rewrite.py"}}, "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}},
+        {"action": {"type": "tool_call", "tool_id": "file_edit", "input": {"path": "src/_pytest/assertion/rewrite.py", "old_str": "if isinstance(left, str) and isinstance(right, str):", "new_str": "if isinstance(left, (str, bytes)) and isinstance(right, (str, bytes)):"}}, "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}},
+        {"action": {"type": "tool_call", "tool_id": "bash", "input": {"command": "pytest tests/test_assertion.py -x -q"}}, "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}},
+        {"action": {"type": "task_complete", "result": "success", "tool_id": "", "input": {}}, "orchestration": {"routing_decision": null, "routing_reason": null}}
+      ]
+    }
+  },
+  {
+    "task_id": "swe-bench-pydantic-001",
+    "repo": "synthetic/pydantic",
+    "problem_statement": "Fix Pydantic field validator to accept Optional types for nested models",
+    "file_path": "src/pydantic/fields.py",
+    "expected_old_str": "if issubclass(annotation, BaseModel):",
+    "expected_new_str": "if getattr(annotation, '__origin__', None) is Union or issubclass(annotation, BaseModel):",
+    "test_command": "pytest tests/test_validators.py -x -q",
+    "setup_commands": ["pip install -e ."],
+    "expected_tools": ["file_read", "file_edit", "bash", "grep"],
+    "golden_trajectory": {
+      "events": [
+        {"action": {"type": "tool_call", "tool_id": "grep", "input": {"pattern": "issubclass.*BaseModel"}}, "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}},
+        {"action": {"type": "tool_call", "tool_id": "file_read", "input": {"path": "src/pydantic/fields.py"}}, "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}},
+        {"action": {"type": "tool_call", "tool_id": "file_edit", "input": {"path": "src/pydantic/fields.py", "old_str": "if issubclass(annotation, BaseModel):", "new_str": "if getattr(annotation, '__origin__', None) is Union or issubclass(annotation, BaseModel):"}}, "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}},
+        {"action": {"type": "tool_call", "tool_id": "bash", "input": {"command": "pytest tests/test_validators.py -x -q"}}, "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}},
+        {"action": {"type": "task_complete", "result": "success", "tool_id": "", "input": {}}, "orchestration": {"routing_decision": null, "routing_reason": null}}
+      ]
+    }
+  },
+  {
+    "task_id": "swe-bench-fastapi-001",
+    "repo": "synthetic/fastapi",
+    "problem_statement": "Fix FastAPI dependency override to support multiple dependencies with same return type",
+    "file_path": "src/fastapi/dependencies/utils.py",
+    "expected_old_str": "dependency_cache[call] = await call(**sub_values)",
+    "expected_new_str": "if call not in dependency_cache:\n    dependency_cache[call] = await call(**sub_values)\nreturn dependency_cache[call]",
+    "test_command": "pytest tests/test_deps.py -x -q",
+    "setup_commands": ["pip install -e ."],
+    "expected_tools": ["file_read", "file_edit", "bash"],
+    "golden_trajectory": {
+      "events": [
+        {"action": {"type": "tool_call", "tool_id": "file_read", "input": {"path": "src/fastapi/dependencies/utils.py"}}, "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}},
+        {"action": {"type": "tool_call", "tool_id": "file_edit", "input": {"path": "src/fastapi/dependencies/utils.py", "old_str": "dependency_cache[call] = await call(**sub_values)", "new_str": "if call not in dependency_cache:\n    dependency_cache[call] = await call(**sub_values)\nreturn dependency_cache[call]"}}, "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}},
+        {"action": {"type": "tool_call", "tool_id": "bash", "input": {"command": "pytest tests/test_deps.py -x -q"}}, "orchestration": {"routing_decision": "auto", "routing_reason": "capability_match"}},
+        {"action": {"type": "task_complete", "result": "success", "tool_id": "", "input": {}}, "orchestration": {"routing_decision": null, "routing_reason": null}}
+      ]
+    }
+  }
+]
