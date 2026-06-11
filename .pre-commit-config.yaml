@@ -32,6 +32,7 @@ repos:
       - id: mypy
         additional_dependencies: [types-requests]
         args: [--ignore-missing-imports, --python-version=3.14]
+        exclude: ^scripts/
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0

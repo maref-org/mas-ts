@@ -1,0 +1,964 @@
+{
+  "card_version": "2.0",
+  "agent_id": "urn:agent:maref:multi-agent:maref-0-28-0-rc",
+  "name": "MAREF",
+  "description": "Multi-Agent Recursive Evolution Framework - Agent Governance OS with six-layer governance architecture, 5991 tests, and comprehensive security framework",
+  "version": "0.28.0-rc",
+  "compliance": {
+    "data_residency": "CN",
+    "data_classification": "confidential",
+    "cross_border": false,
+    "model_backend_location": "CN",
+    "audit_trail_required": true
+  },
+  "model_backend": {
+    "provider": "dashscope",
+    "model": "qwen-max",
+    "deployment": "cloud",
+    "endpoint": "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
+  },
+  "capabilities": [
+    {
+      "skill_id": "bash",
+      "description": "Execute shell commands via subprocess with timeout controls",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string"
+          },
+          "timeout": {
+            "type": "integer"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "stdout": {
+            "type": "string"
+          },
+          "stderr": {
+            "type": "string"
+          },
+          "exit_code": {
+            "type": "integer"
+          }
+        }
+      },
+      "examples": [
+        "command: 'pytest tests/ -v'",
+        "command: 'ruff check src/'"
+      ],
+      "rate_limit": "60/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "file_read",
+      "description": "Read file contents from local filesystem",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string"
+          }
+        }
+      },
+      "examples": [
+        "path: '/src/maref/core.py'",
+        "path: '/AGENTS.md'"
+      ],
+      "rate_limit": "120/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "file_write",
+      "description": "Write new files or overwrite existing ones",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "examples": [
+        "path: '/src/maref/module.py', content: 'class Module: pass'"
+      ],
+      "rate_limit": "60/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "file_edit",
+      "description": "Edit existing files using search/replace blocks",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "old_str": {
+            "type": "string"
+          },
+          "new_str": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "examples": [
+        "path: '/src/maref/core.py', old_str: 'old_code', new_str: 'new_code'"
+      ],
+      "rate_limit": "60/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "glob",
+      "description": "Fast file pattern matching using glob patterns",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "pattern": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "files": {
+            "type": "array"
+          }
+        }
+      },
+      "examples": [
+        "pattern: '**/*.py'",
+        "pattern: 'tests/**/*.py'"
+      ],
+      "rate_limit": "120/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "grep",
+      "description": "Search file contents using ripgrep with regex support",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "pattern": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "matches": {
+            "type": "array"
+          }
+        }
+      },
+      "examples": [
+        "pattern: 'class.*Manager'",
+        "pattern: '@security_critical'"
+      ],
+      "rate_limit": "120/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "test_runner",
+      "description": "Execute pytest test suites with coverage reporting",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "test_path": {
+            "type": "string"
+          },
+          "coverage": {
+            "type": "boolean"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "passed": {
+            "type": "integer"
+          },
+          "failed": {
+            "type": "integer"
+          },
+          "coverage": {
+            "type": "number"
+          }
+        }
+      },
+      "examples": [
+        "test_path: 'tests/security/'",
+        "test_path: 'tests/' --cov"
+      ],
+      "rate_limit": "10/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "type_check",
+      "description": "Run mypy type checking on Python codebase",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "errors": {
+            "type": "array"
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "examples": [
+        "target: 'src/'",
+        "target: 'tests/'"
+      ],
+      "rate_limit": "10/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "lint",
+      "description": "Run ruff linter on Python code",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "issues": {
+            "type": "array"
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "examples": [
+        "target: 'src/maref/'",
+        "target: 'tests/'"
+      ],
+      "rate_limit": "10/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "governance_api",
+      "description": "Access MAREF governance API for state management",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "endpoint": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "payload": {
+            "type": "object"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "integer"
+          },
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "examples": [
+        "endpoint: '/api/v1/governance/state'"
+      ],
+      "rate_limit": "30/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "security_scan",
+      "description": "Run security scans and vulnerability assessments",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string"
+          },
+          "scan_type": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "findings": {
+            "type": "array"
+          },
+          "severity_counts": {
+            "type": "object"
+          }
+        }
+      },
+      "examples": [
+        "target: 'src/', scan_type: 'static'"
+      ],
+      "rate_limit": "5/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "agent_tool",
+      "description": "Launch sub-agents for parallel task execution within governance framework",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "task": {
+            "type": "string"
+          },
+          "subagent_type": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        }
+      },
+      "examples": [
+        "task: 'run security tests'",
+        "task: 'validate governance state'"
+      ],
+      "rate_limit": "5/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "trust_boundary",
+      "description": "Manage trust boundaries and cross-domain authorization",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "domain": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "authorized": {
+            "type": "boolean"
+          }
+        }
+      },
+      "examples": [
+        "action: 'check', domain: 'security'"
+      ],
+      "rate_limit": "30/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "audit_log",
+      "description": "Write and query audit logs with HMAC-SHA256 signatures",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "entry": {
+            "type": "object"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "log_id": {
+            "type": "string"
+          },
+          "entries": {
+            "type": "array"
+          }
+        }
+      },
+      "examples": [
+        "action: 'write', entry: {event: 'auth_check'}"
+      ],
+      "rate_limit": "60/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "mission_control",
+      "description": "Manage feature missions and validation contracts",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "mission_id": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "contract": {
+            "type": "object"
+          }
+        }
+      },
+      "examples": [
+        "action: 'create', mission_id: 'v0.28.0'"
+      ],
+      "rate_limit": "10/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "knowledge_vault",
+      "description": "Access knowledge vault for signals, KDPs, and patterns",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "topic": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string"
+          },
+          "patterns": {
+            "type": "array"
+          }
+        }
+      },
+      "examples": [
+        "action: 'search', topic: 'security_patterns'"
+      ],
+      "rate_limit": "30/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "tlaplus_verify",
+      "description": "Run TLA+ formal specification verification",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "spec": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "valid": {
+            "type": "boolean"
+          },
+          "counterexamples": {
+            "type": "array"
+          }
+        }
+      },
+      "examples": [
+        "spec: 'governance.tla'"
+      ],
+      "rate_limit": "5/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "drift_detection",
+      "description": "Detect distribution shifts in agent behavior",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "baseline": {
+            "type": "string"
+          },
+          "current": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "drift_detected": {
+            "type": "boolean"
+          },
+          "severity": {
+            "type": "string"
+          }
+        }
+      },
+      "examples": [
+        "baseline: 'v0.27.0', current: 'v0.28.0'"
+      ],
+      "rate_limit": "10/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "todo_write",
+      "description": "Create and manage structured task lists for tracking progress",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "todos": {
+            "type": "array"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "examples": [
+        "todos: [{content: 'Fix security issue', status: 'in_progress'}]"
+      ],
+      "rate_limit": "30/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "docker_build",
+      "description": "Build and manage Docker containers for MAREF deployment",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "tag": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "image_id": {
+            "type": "string"
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "examples": [
+        "action: 'build', tag: 'maref:latest'"
+      ],
+      "rate_limit": "5/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "worktree",
+      "description": "MAS-TS-001 standard tool — create and manage git worktree-based isolated execution environments for sub-agent session isolation",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "worktree_path": {
+            "type": "string"
+          },
+          "repo_path": {
+            "type": "string"
+          },
+          "branch": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "worktree_path",
+          "repo_path"
+        ]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "path": {
+            "type": "string"
+          }
+        }
+      },
+      "examples": [
+        "worktree_path: '/tmp/maref-wt-001', repo_path: '/maref'",
+        "worktree_path: '/tmp/maref-wt-002', repo_path: '/maref', branch: 'feature'"
+      ],
+      "rate_limit": "20/min",
+      "business_rule_version": "2026-05-31"
+    },
+    {
+      "skill_id": "memory",
+      "description": "MAS-TS-001 standard tool — cross-session memory store with save, load, delete operations for agent state persistence",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "save",
+              "load",
+              "delete",
+              "list"
+            ]
+          },
+          "key": {
+            "type": "string"
+          },
+          "value": {
+            "type": "object"
+          },
+          "ttl_seconds": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "action",
+          "key"
+        ]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "value": {
+            "type": "object"
+          },
+          "keys": {
+            "type": "array"
+          }
+        }
+      },
+      "examples": [
+        "action: 'save', key: 'governance_state', value: {phase: 'review'}",
+        "action: 'load', key: 'governance_state'"
+      ],
+      "rate_limit": "60/min",
+      "business_rule_version": "2026-05-31"
+    },
+    {
+      "skill_id": "cron",
+      "description": "MAS-TS-001 standard tool — cron-based task scheduling with execution tracking for recurring governance tasks",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "add",
+              "remove",
+              "list",
+              "enable",
+              "disable"
+            ]
+          },
+          "task_id": {
+            "type": "string"
+          },
+          "cron_expression": {
+            "type": "string"
+          },
+          "handler": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "tasks": {
+            "type": "array"
+          },
+          "next_run": {
+            "type": "string"
+          }
+        }
+      },
+      "examples": [
+        "action: 'add', cron_expression: '0 2 * * *', handler: 'nightly_security_scan'",
+        "action: 'list'"
+      ],
+      "rate_limit": "10/min",
+      "business_rule_version": "2026-05-31"
+    },
+    {
+      "skill_id": "task_management",
+      "description": "MAS-TS-001 standard tool — task lifecycle management with create, update, complete, track operations for MAS orchestration and chat storm detection",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "create",
+              "update",
+              "complete",
+              "list",
+              "cancel"
+            ]
+          },
+          "task_id": {
+            "type": "string"
+          },
+          "task": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "task": {
+            "type": "object"
+          },
+          "tasks": {
+            "type": "array"
+          }
+        }
+      },
+      "examples": [
+        "action: 'create', task: {name: 'validate_governance', priority: 'high'}",
+        "action: 'list'"
+      ],
+      "rate_limit": "30/min",
+      "business_rule_version": "2026-05-31"
+    },
+    {
+      "skill_id": "mcp_tool",
+      "description": "MAS-TS-001 standard tool — MCP (Model Context Protocol) interface for inter-agent communication and remote tool invocation via JSON-RPC 2.0",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "server": {
+            "type": "string"
+          },
+          "tool": {
+            "type": "string"
+          },
+          "input": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "server",
+          "tool"
+        ]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "result": {
+            "type": "object"
+          },
+          "is_error": {
+            "type": "boolean"
+          }
+        }
+      },
+      "examples": [
+        "server: 'a2a-gateway', tool: 'remote_agent.invoke'",
+        "server: 'coordinator', tool: 'task_delegate'"
+      ],
+      "rate_limit": "30/min",
+      "business_rule_version": "2026-05-31"
+    },
+    {
+      "skill_id": "bridge",
+      "description": "MAS-TS-001 standard tool — Remote bridge control interface for multi-session management and cross-agent coordination with session lifecycle support",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string",
+            "enum": [
+              "connect",
+              "disconnect",
+              "execute",
+              "status",
+              "list_sessions"
+            ]
+          },
+          "remote_url": {
+            "type": "string"
+          },
+          "session_id": {
+            "type": "string"
+          },
+          "params": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "command"
+        ]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "result": {
+            "type": "object"
+          },
+          "error": {
+            "type": "string"
+          }
+        }
+      },
+      "examples": [
+        "command: 'connect', remote_url: 'http://remote:8000'",
+        "command: 'execute', session_id: 'sess-001', params: {task: 'validate_governance'}"
+      ],
+      "rate_limit": "30/min",
+      "business_rule_version": "2026-05-31"
+    }
+  ],
+  "endpoints": {
+    "a2a": "http://localhost:8000/api/v1/a2a",
+    "mcp": "http://localhost:8000/api/v1/mcp",
+    "api": "http://localhost:8000/api/v1",
+    "gui": "http://localhost:3000"
+  },
+  "constitution": {
+    "envelope": {
+      "message_id": "urn:agent:maref:multi-agent:maref-0-28-0-rc-env-001",
+      "correlation_id": "urn:agent:maref:multi-agent:maref-0-28-0-rc-correlation-001",
+      "timestamp": "2026-06-11T00:00:00Z",
+      "sender": "urn:agent:maref:multi-agent:maref-0-28-0-rc"
+    },
+    "health_state": "HEALTHY",
+    "heartbeat_interval_seconds": 15
+  },
+  "authentication": {
+    "type": "APIKey",
+    "scopes": [
+      "governance:read",
+      "governance:write",
+      "security:scan",
+      "agent:spawn",
+      "audit:write"
+    ]
+  },
+  "dependencies": [
+    "python>=3.10",
+    "fastapi",
+    "pydantic",
+    "pytest",
+    "ruff",
+    "mypy",
+    "cryptography"
+  ],
+  "orchestration_hints": {
+    "preferred_role": "supervisor",
+    "parallel_safe": true,
+    "stateful": true
+  },
+  "schema_version": "2.0",
+  "vendor_id": "maref",
+  "agent_type": "cli",
+  "federation": {
+    "role": "secondary",
+    "trust_score": 0.5,
+    "allowed_mcp_servers": [],
+    "cross_border_policy": {
+      "data_residency": "CN",
+      "allowed_transfer_zones": [
+        "CN"
+      ],
+      "requires_approval": false
+    },
+    "federation_protocols": {
+      "a2a": {
+        "version": "0.3",
+        "enabled": false
+      },
+      "mcp": {
+        "version": "2025-03-26",
+        "enabled": true
+      }
+    }
+  }
+}

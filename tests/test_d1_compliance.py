@@ -16,8 +16,10 @@ from mas_eval.domains.d1_compliance import (
     check_capabilities_completeness,
     check_cross_border,
     check_dag_acyclicity,
+    check_data_cross_border_chain,
     check_data_residency,
     check_envelope,
+    check_federation_version_compat,
     check_health_state,
     check_heartbeat,
     check_prompt_rot,
@@ -412,3 +414,183 @@ def test_d1_conformance_blocked():
     result = run_d1(card)
     assert "NON-COMPLIANT" in result["conformance_verdict"]
     assert "blocked" in result["conformance_verdict"]
+
+
+def test_d1_cross_border_chain_no_policy():
+    card = dict(SAMPLE_CARD)
+    findings = check_data_cross_border_chain(card)
+    info = [f for f in findings if f["check"] == "1.11" and f["severity"] == "INFO"]
+    assert len(info) == 1
+    assert "No federation cross-border policy" in info[0]["detail"]
+
+
+def test_d1_cross_border_chain_valid():
+    card = dict(SAMPLE_CARD)
+    card["federation"] = {
+        "cross_border_policy": {
+            "data_residency": "US",
+            "allowed_transfer_zones": ["US", "EU"],
+            "requires_approval": True,
+        },
+    }
+    card["compliance"] = dict(card["compliance"])
+    card["compliance"]["cross_border"] = True
+    findings = check_data_cross_border_chain(card)
+    critical_high = [f for f in findings if f["severity"] in ("CRITICAL", "HIGH")]
+    assert len(critical_high) == 0, f"Unexpected findings: {critical_high}"
+
+
+def test_d1_cross_border_chain_residency_mismatch():
+    card = dict(SAMPLE_CARD)
+    card["federation"] = {
+        "cross_border_policy": {
+            "data_residency": "CN",
+            "allowed_transfer_zones": ["CN"],
+            "requires_approval": False,
+        },
+    }
+    card["compliance"] = dict(card["compliance"])
+    card["compliance"]["data_residency"] = "US"
+    findings = check_data_cross_border_chain(card)
+    critical = [f for f in findings if f["severity"] == "CRITICAL"]
+    assert any("mismatches" in f["detail"] for f in critical)
+
+
+def test_d1_cross_border_chain_enabled_without_foreign_zone():
+    card = dict(SAMPLE_CARD)
+    card["federation"] = {
+        "cross_border_policy": {
+            "data_residency": "US",
+            "allowed_transfer_zones": ["US"],
+            "requires_approval": False,
+        },
+    }
+    card["compliance"] = dict(card["compliance"])
+    card["compliance"]["cross_border"] = True
+    findings = check_data_cross_border_chain(card)
+    critical = [f for f in findings if f["severity"] == "CRITICAL"]
+    assert any("only contains current residency" in f["detail"] for f in critical)
+
+
+def test_d1_cross_border_chain_approval_missing():
+    card = dict(SAMPLE_CARD)
+    card["federation"] = {
+        "cross_border_policy": {
+            "data_residency": "US",
+            "allowed_transfer_zones": ["US", "EU"],
+            "requires_approval": False,
+        },
+    }
+    card["compliance"] = dict(card["compliance"])
+    card["compliance"]["cross_border"] = True
+    findings = check_data_cross_border_chain(card)
+    high = [f for f in findings if f["severity"] == "HIGH"]
+    assert any("approval" in f["detail"] for f in high)
+
+
+def test_d1_cross_border_chain_no_zones():
+    card = dict(SAMPLE_CARD)
+    card["federation"] = {
+        "cross_border_policy": {
+            "data_residency": "US",
+            "allowed_transfer_zones": [],
+            "requires_approval": False,
+        },
+    }
+    findings = check_data_cross_border_chain(card)
+    high = [f for f in findings if f["severity"] == "HIGH"]
+    assert any("no allowed transfer zones" in f["detail"] for f in high)
+
+
+def test_d1_federation_version_no_protocols():
+    card = dict(SAMPLE_CARD)
+    findings = check_federation_version_compat(card)
+    info = [f for f in findings if f["check"] == "1.12" and f["severity"] == "INFO"]
+    assert len(info) >= 1
+
+
+def test_d1_federation_version_valid_mcp():
+    card = dict(SAMPLE_CARD)
+    card["federation"] = {
+        "federation_protocols": {
+            "mcp": {"version": "2025-03-26", "enabled": True},
+        },
+    }
+    findings = check_federation_version_compat(card)
+    critical_high = [f for f in findings if f["severity"] in ("CRITICAL", "HIGH")]
+    assert len(critical_high) == 0
+
+
+def test_d1_federation_version_outdated_mcp():
+    card = dict(SAMPLE_CARD)
+    card["federation"] = {
+        "federation_protocols": {
+            "mcp": {"version": "2024-09-01", "enabled": True},
+        },
+    }
+    findings = check_federation_version_compat(card)
+    high = [f for f in findings if f["severity"] == "HIGH"]
+    assert any("outdated" in f["detail"] for f in high)
+
+
+def test_d1_federation_version_valid_a2a():
+    card = dict(SAMPLE_CARD)
+    card["federation"] = {
+        "federation_protocols": {
+            "a2a": {"version": "1.0", "enabled": True},
+        },
+    }
+    findings = check_federation_version_compat(card)
+    critical_high = [f for f in findings if f["severity"] in ("CRITICAL", "HIGH")]
+    assert len(critical_high) == 0
+
+
+def test_d1_federation_version_outdated_a2a():
+    card = dict(SAMPLE_CARD)
+    card["federation"] = {
+        "federation_protocols": {
+            "a2a": {"version": "0.2", "enabled": True},
+        },
+    }
+    findings = check_federation_version_compat(card)
+    high = [f for f in findings if f["severity"] == "HIGH"]
+    assert any("outdated" in f["detail"] for f in high)
+
+
+def test_d1_federation_version_disabled_protocol():
+    card = dict(SAMPLE_CARD)
+    card["federation"] = {
+        "federation_protocols": {
+            "mcp": {"version": "2024-09-01", "enabled": False},
+        },
+    }
+    findings = check_federation_version_compat(card)
+    critical_high = [f for f in findings if f["severity"] in ("CRITICAL", "HIGH")]
+    assert len(critical_high) == 0
+
+
+def test_d1_run_includes_new_checks():
+    result = run_d1(SAMPLE_CARD)
+    check_ids = {f["check"] for f in result["findings"]}
+    assert "1.11" in check_ids
+    assert "1.12" in check_ids
+
+
+def test_d1_full_compliant_with_federation():
+    card = dict(SAMPLE_CARD)
+    card["federation"] = {
+        "cross_border_policy": {
+            "data_residency": "US",
+            "allowed_transfer_zones": ["US", "EU"],
+            "requires_approval": True,
+        },
+        "federation_protocols": {
+            "a2a": {"version": "1.0", "enabled": True},
+            "mcp": {"version": "2025-03-26", "enabled": True},
+        },
+    }
+    card["compliance"] = dict(card["compliance"])
+    card["compliance"]["cross_border"] = True
+    result = run_d1(card)
+    assert result["score"] >= 90
+    assert result["conformance_verdict"] in ("COMPLIANT", "COMPLIANT-WITH-NOTES")

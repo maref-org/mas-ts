@@ -812,6 +812,326 @@ SECURITY_WEIGHTS = {
     "sast_scanning": 0.15,
 }
 
+FEDERATION_WEIGHTS = {
+    "trust_scorer": 0.20,
+    "vendor_diversity": 0.05,
+    "mcp_supply_chain": 0.10,
+}
+
+# --- Federation: TrustScorer ---
+
+
+class TrustScorer:
+    DIMENSION_WEIGHTS = {
+        "integrity": 0.25,
+        "consistency": 0.20,
+        "compliance": 0.25,
+        "responsiveness": 0.15,
+        "reputation": 0.15,
+    }
+
+    def __init__(self, trust_history=None, trust_score=None):
+        self.trust_history = trust_history or []
+        self.base_score = trust_score if trust_score is not None else 0.5
+
+    def score(self):
+        integrity = self._score_integrity()
+        consistency = self._score_consistency()
+        compliance = self._score_compliance()
+        responsiveness = self._score_responsiveness()
+        reputation = self._score_reputation()
+        return (
+            integrity * self.DIMENSION_WEIGHTS["integrity"]
+            + consistency * self.DIMENSION_WEIGHTS["consistency"]
+            + compliance * self.DIMENSION_WEIGHTS["compliance"]
+            + responsiveness * self.DIMENSION_WEIGHTS["responsiveness"]
+            + reputation * self.DIMENSION_WEIGHTS["reputation"]
+        )
+
+    def _score_integrity(self):
+        if not self.trust_history:
+            return self.base_score
+        scores = [h["score"] for h in self.trust_history]
+        if len(scores) < 2:
+            return scores[-1]
+        recent = scores[-3:] if len(scores) >= 3 else scores
+        return sum(recent) / len(recent)
+
+    def _score_consistency(self):
+        if len(self.trust_history) < 2:
+            return self.base_score
+        scores = [h["score"] for h in self.trust_history]
+        variance = max(scores) - min(scores)
+        return max(0, 1.0 - variance)
+
+    def _score_compliance(self):
+        if not self.trust_history:
+            return self.base_score
+        compliant = sum(1 for h in self.trust_history if h.get("source") == "oracle")
+        return min(1.0, compliant / max(len(self.trust_history), 1) * 2)
+
+    def _score_responsiveness(self):
+        if len(self.trust_history) < 2:
+            return self.base_score
+        import datetime
+
+        timestamps = []
+        for h in self.trust_history:
+            ts = h.get("timestamp")
+            if ts:
+                try:
+                    timestamps.append(datetime.datetime.fromisoformat(ts))
+                except (ValueError, TypeError):
+                    continue
+        if len(timestamps) < 2:
+            return self.base_score
+        intervals = [
+            (timestamps[i + 1] - timestamps[i]).total_seconds()
+            for i in range(len(timestamps) - 1)
+        ]
+        avg_interval = sum(intervals) / len(intervals)
+        if avg_interval <= 0:
+            return 1.0
+        return max(0, min(1.0, 3600 / (avg_interval + 3600)))
+
+    def _score_reputation(self):
+        return self.base_score
+
+    @staticmethod
+    def trust_transfer(source_score, depth, context_relevance=1.0):
+        depth_decay = {1: 1.0, 2: 0.7, 3: 0.4}
+        decay = depth_decay.get(depth, 0.1)
+        return source_score * decay * context_relevance
+
+
+def check_trust_score(card):
+    findings = []
+    fed = card.get("federation")
+    if fed is None:
+        return 0.0, [
+            {
+                "severity": "INFO",
+                "category": "trust_scorer",
+                "detail": "No federation config — trust score skipped",
+            }
+        ]
+
+    trust_score = fed.get("trust_score", 0.5)
+    trust_history = fed.get("trust_history", [])
+
+    ts = TrustScorer(trust_history=trust_history, trust_score=trust_score)
+    computed = ts.score()
+
+    score = computed * 100
+
+    trend = "stable"
+    if len(trust_history) >= 2:
+        sorted_h = sorted(trust_history, key=lambda h: h.get("timestamp", ""))
+        recent_scores = [h["score"] for h in sorted_h[-3:]]
+        if len(recent_scores) >= 2:
+            if recent_scores[-1] > recent_scores[0] * 1.05:
+                trend = "improving"
+            elif recent_scores[-1] < recent_scores[0] * 0.95:
+                trend = "declining"
+
+    depth = len(trust_history)
+    findings.append(
+        {
+            "severity": "INFO" if trend != "declining" else "WARNING",
+            "category": "trust_scorer",
+            "detail": f"Trust score {computed:.2f}/1.0 ({trend}, {depth} snapshots)",
+        }
+    )
+
+    trust_score_val = fed.get("trust_score", 0)
+    if trust_score_val > 0:
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "trust_scorer",
+                "detail": f"Reputation baseline: {trust_score_val}",
+            }
+        )
+
+    return round(score, 1), findings
+
+
+def check_vendor_diversity(cards):
+    findings = []
+    if not cards:
+        return 100.0, [
+            {
+                "severity": "INFO",
+                "category": "vendor_diversity",
+                "detail": "No cards — vendor diversity not evaluated",
+            }
+        ]
+
+    vendors = []
+    for c in cards:
+        vid = c.get("vendor_id")
+        if vid:
+            vendors.append(vid)
+        fed = c.get("federation", {})
+        if fed and isinstance(fed, dict):
+            fvid = fed.get("vendor_id")
+            if fvid:
+                vendors.append(fvid)
+
+    if not vendors:
+        return 0.0, [
+            {
+                "severity": "WARNING",
+                "category": "vendor_diversity",
+                "detail": "No vendor_id found on any card — HHI cannot be computed",
+            }
+        ]
+
+    n = len(vendors)
+    share_map = {}
+    for v in vendors:
+        share_map[v] = share_map.get(v, 0) + 1
+
+    hhi = sum((count / n * 100) ** 2 for count in share_map.values())
+    diversity_score = max(0, 100 * (1 - hhi / 10000))
+
+    unique_vendors = len(share_map)
+    findings.append(
+        {
+            "severity": "INFO",
+            "category": "vendor_diversity",
+            "detail": f"HHI={hhi:.0f}, diversity={diversity_score:.1f}/100, vendors={unique_vendors}",
+        }
+    )
+
+    if unique_vendors == 1:
+        findings.append(
+            {
+                "severity": "WARNING",
+                "category": "vendor_diversity",
+                "detail": "Single vendor — federation diversity at risk",
+            }
+        )
+    elif unique_vendors >= 3:
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "vendor_diversity",
+                "detail": f"Multi-vendor federation ({unique_vendors} vendors) — good diversity",
+            }
+        )
+
+    return round(diversity_score, 1), findings
+
+
+def check_mcp_supply_chain(card):
+    findings = []
+    fed = card.get("federation")
+    if fed is None:
+        return 0.0, [
+            {
+                "severity": "INFO",
+                "category": "mcp_supply_chain",
+                "detail": "No federation config — MCP supply chain skipped",
+            }
+        ]
+
+    if not isinstance(fed, dict):
+        return 0.0, [
+            {
+                "severity": "WARNING",
+                "category": "mcp_supply_chain",
+                "detail": "Federation config is not a dict — MCP supply chain skipped",
+            }
+        ]
+
+    allowed = fed.get("allowed_mcp_servers", [])
+    score = 0.0
+
+    if not allowed:
+        findings.append(
+            {
+                "severity": "CRITICAL",
+                "category": "mcp_supply_chain",
+                "detail": "No allowed MCP servers defined — supply chain open to any server",
+            }
+        )
+        return 0.0, findings
+
+    score += 30
+    findings.append(
+        {
+            "severity": "INFO",
+            "category": "mcp_supply_chain",
+            "detail": f"Allowed MCP servers defined ({len(allowed)}) — access control in place",
+        }
+    )
+
+    insecure = [
+        s
+        for s in allowed
+        if not s.startswith("https://") and not s.startswith("wss://")
+    ]
+    if insecure:
+        findings.append(
+            {
+                "severity": "HIGH",
+                "category": "mcp_supply_chain",
+                "detail": f"Insecure MCP server protocols: {', '.join(insecure)}",
+            }
+        )
+    else:
+        score += 30
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "mcp_supply_chain",
+                "detail": "All MCP servers use secure protocols (https/wss)",
+            }
+        )
+
+    if len(allowed) <= 3:
+        score += 20
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "mcp_supply_chain",
+                "detail": f"Limited MCP server surface ({len(allowed)} servers) — reduced attack surface",
+            }
+        )
+    elif len(allowed) > 10:
+        score += 5
+        findings.append(
+            {
+                "severity": "WARNING",
+                "category": "mcp_supply_chain",
+                "detail": f"Large MCP server whitelist ({len(allowed)} servers) — increased attack surface",
+            }
+        )
+    else:
+        score += 10
+
+    has_tls = any(
+        "tls" in s.lower()
+        or "mtls" in s.lower()
+        or "crt" in s.lower()
+        or "pem" in s.lower()
+        for s in allowed
+    )
+    if has_tls:
+        score += 20
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "mcp_supply_chain",
+                "detail": "TLS/mTLS certificates referenced in MCP server list",
+            }
+        )
+
+    score = min(100, score)
+    return round(score, 1), findings
+
+
 AUTH_TYPE_SCORES = {"mTLS": 100, "OAuth2": 85, "APIKey": 60, "None": 0}
 
 AUTH_TYPE_RISKS = {
@@ -1252,11 +1572,33 @@ def run_d4_security(card):
     }
 
 
-def run_d4(card):
+def run_d4(card, federation_cards=None):
     gov = run_d4_governance()
     sec = run_d4_security(card)
 
-    d4_score = gov["score"] * 0.50 + sec["score"] * 0.50
+    fed_cards = federation_cards if federation_cards else [card] if card else []
+
+    trust_result = check_trust_score(card)
+    trust_score_val = trust_result[0]
+    trust_findings = trust_result[1]
+
+    vendor_result = check_vendor_diversity(fed_cards)
+    vendor_score_val = vendor_result[0]
+    vendor_findings = vendor_result[1]
+
+    mcp_result = check_mcp_supply_chain(card)
+    mcp_score_val = mcp_result[0]
+    mcp_findings = mcp_result[1]
+
+    fed_findings = trust_findings + vendor_findings + mcp_findings
+
+    d4_score = (
+        gov["score"] * 0.50
+        + sec["score"] * 0.15
+        + trust_score_val * 0.20
+        + vendor_score_val * 0.05
+        + mcp_score_val * 0.10
+    )
 
     return {
         "domain": "D4",
@@ -1267,14 +1609,78 @@ def run_d4(card):
             "governance_detail": gov["subscores"],
             "security": sec["score"],
             "security_detail": sec["subscores"],
+            "trust": trust_score_val,
+            "vendor_diversity": vendor_score_val,
+            "mcp_supply_chain": mcp_score_val,
         },
         "governance": gov,
         "security": sec,
-        "findings": gov["findings"] + sec["findings"],
+        "federation": {
+            "trust_score": trust_score_val,
+            "vendor_diversity": vendor_score_val,
+            "mcp_supply_chain": mcp_score_val,
+            "findings": fed_findings,
+        },
+        "findings": gov["findings"] + sec["findings"] + fed_findings,
         "summary": {
-            "total_findings": len(gov["findings"]) + len(sec["findings"]),
+            "total_findings": len(gov["findings"])
+            + len(sec["findings"])
+            + len(fed_findings),
             "governance_score": gov["score"],
             "security_score": sec["score"],
+            "trust_score": trust_score_val,
+            "vendor_diversity": vendor_score_val,
+            "mcp_supply_chain": mcp_score_val,
             "d4_score": round(d4_score, 1),
+        },
+    }
+
+
+def run_d4_federation(cards):
+    all_findings = []
+    trust_scores = []
+    vendor_scores = []
+    mcp_scores = []
+
+    for card in cards:
+        trust_result = check_trust_score(card)
+        trust_scores.append(trust_result[0])
+        all_findings.extend(trust_result[1])
+
+        vendor_result = check_vendor_diversity(cards)
+        vendor_scores.append(vendor_result[0])
+        all_findings.extend(vendor_result[1])
+
+        mcp_result = check_mcp_supply_chain(card)
+        mcp_scores.append(mcp_result[0])
+        all_findings.extend(mcp_result[1])
+
+    avg_trust = sum(trust_scores) / max(len(trust_scores), 1)
+    avg_vendor = sum(vendor_scores) / max(len(vendor_scores), 1)
+    avg_mcp = sum(mcp_scores) / max(len(mcp_scores), 1)
+
+    fed_score = (
+        avg_trust * FEDERATION_WEIGHTS["trust_scorer"]
+        + avg_vendor * FEDERATION_WEIGHTS["vendor_diversity"]
+        + avg_mcp * FEDERATION_WEIGHTS["mcp_supply_chain"]
+    )
+
+    return {
+        "domain": "D4",
+        "component": "federation",
+        "name": "Federation (Trust + Vendor Diversity + MCP Supply Chain)",
+        "score": round(fed_score, 1),
+        "subscores": {
+            "trust": round(avg_trust, 1),
+            "vendor_diversity": round(avg_vendor, 1),
+            "mcp_supply_chain": round(avg_mcp, 1),
+        },
+        "findings": all_findings,
+        "summary": {
+            "total_findings": len(all_findings),
+            "agents_scored": len(cards),
+            "avg_trust_score": round(avg_trust, 1),
+            "avg_vendor_diversity": round(avg_vendor, 1),
+            "avg_mcp_supply_chain": round(avg_mcp, 1),
         },
     }

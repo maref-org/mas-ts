@@ -594,6 +594,210 @@ def _score_persistence(card):
     return round(score, 1), findings
 
 
+def _is_federation_card(card):
+    return card.get("federation") is not None
+
+
+def check_federation_compatibility(card):
+    findings = []
+    fed = card.get("federation") or {}
+    protocols = fed.get("federation_protocols") or {}
+
+    if not protocols:
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "federation_compat",
+                "detail": "No federation protocols declared — compatibility not assessed",
+            }
+        )
+        return 0, findings
+
+    score = 0.0
+    any_enabled = False
+
+    mcp = protocols.get("mcp") or {}
+    a2a = protocols.get("a2a") or {}
+
+    if mcp.get("enabled") and mcp.get("version", ""):
+        any_enabled = True
+        mcp_ver = mcp["version"]
+        if mcp_ver >= "2024-10-01":
+            score += 5
+            findings.append(
+                {
+                    "severity": "INFO",
+                    "category": "federation_compat",
+                    "detail": f"MCP v{mcp_ver} compatible with federation topology",
+                }
+            )
+        else:
+            findings.append(
+                {
+                    "severity": "WARNING",
+                    "category": "federation_compat",
+                    "detail": f"MCP v{mcp_ver} outdated — federation topology risk",
+                }
+            )
+
+    if a2a.get("enabled") and a2a.get("version", ""):
+        any_enabled = True
+        a2a_ver = a2a["version"]
+        if a2a_ver >= "0.3":
+            score += 5
+            findings.append(
+                {
+                    "severity": "INFO",
+                    "category": "federation_compat",
+                    "detail": f"A2A v{a2a_ver} compatible with federation topology",
+                }
+            )
+        else:
+            findings.append(
+                {
+                    "severity": "WARNING",
+                    "category": "federation_compat",
+                    "detail": f"A2A v{a2a_ver} outdated — federation topology risk",
+                }
+            )
+
+    if any_enabled and not findings:
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "federation_compat",
+                "detail": "Federation protocol topology is compatible",
+            }
+        )
+
+    if not any_enabled:
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "federation_compat",
+                "detail": "No federation protocols enabled — compatibility not assessed",
+            }
+        )
+
+    return round(score, 1), findings
+
+
+def check_role_conflicts(card):
+    findings = []
+    fed = card.get("federation") or {}
+    role = fed.get("role")
+    hints = card.get("orchestration_hints") or {}
+    preferred_role = hints.get("preferred_role")
+
+    if not role:
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "federation_role",
+                "detail": "No federation role declared — role conflict not assessed",
+            }
+        )
+        return 0, findings
+
+    score = 0.0
+    ROLE_COMPAT = {
+        "primary": ("supervisor", "planner"),
+        "secondary": ("worker", "validator"),
+        "observer": (),
+    }
+
+    compatible_roles = ROLE_COMPAT.get(role, ())
+    if preferred_role and compatible_roles:
+        if preferred_role in compatible_roles:
+            score += 5
+            findings.append(
+                {
+                    "severity": "INFO",
+                    "category": "federation_role",
+                    "detail": f"Federation role '{role}' matches orchestration role '{preferred_role}'",
+                }
+            )
+        else:
+            findings.append(
+                {
+                    "severity": "WARNING",
+                    "category": "federation_role",
+                    "detail": f"Federation role '{role}' conflicts with "
+                    f"orchestration role '{preferred_role}'",
+                }
+            )
+
+    return round(score, 1), findings
+
+
+def check_permission_propagation(card):
+    findings = []
+    fed = card.get("federation") or {}
+    allowed_servers = fed.get("allowed_mcp_servers") or []
+    declared_tools = {cap["skill_id"] for cap in card.get("capabilities", [])}
+
+    if not allowed_servers:
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "federation_permissions",
+                "detail": "No MCP server whitelist — permission not assessed",
+            }
+        )
+        return 0, findings
+
+    score = 0.0
+    has_mcp_tool = "mcp_tool" in declared_tools
+    has_bridge = "bridge" in declared_tools
+
+    if has_mcp_tool:
+        score += 3
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "federation_permissions",
+                "detail": f"MCP tool declared with {len(allowed_servers)} allowed server(s)",
+            }
+        )
+    else:
+        findings.append(
+            {
+                "severity": "WARNING",
+                "category": "federation_permissions",
+                "detail": "MCP whitelist declared but no mcp_tool capability",
+            }
+        )
+
+    if len(allowed_servers) <= 5:
+        score += 2
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "federation_permissions",
+                "detail": f"Principle of least privilege: {len(allowed_servers)} MCP server(s)",
+            }
+        )
+    else:
+        findings.append(
+            {
+                "severity": "WARNING",
+                "category": "federation_permissions",
+                "detail": f"Broad MCP access: {len(allowed_servers)} servers — review need",
+            }
+        )
+
+    if has_bridge:
+        findings.append(
+            {
+                "severity": "WARNING",
+                "category": "federation_permissions",
+                "detail": "Bridge tool + MCP whitelist — permission propagation risk",
+            }
+        )
+
+    return round(score, 1), findings
+
+
 def run_d3(card, tasks=None, golden_trajectory=None):
     spawn_score, spawn_findings = _score_spawn(card, golden_trajectory)
     protocol_score, protocol_findings = _score_protocol(card)
@@ -620,6 +824,18 @@ def run_d3(card, tasks=None, golden_trajectory=None):
         + persistence_score * 0.10
     )
 
+    fed_compat_score = 0
+    role_score = 0
+    perm_score = 0
+    if _is_federation_card(card):
+        fed_compat_score, fed_findings = check_federation_compatibility(card)
+        role_score, role_findings = check_role_conflicts(card)
+        perm_score, perm_findings = check_permission_propagation(card)
+        all_findings.extend(fed_findings + role_findings + perm_findings)
+        d3_score += fed_compat_score * 0.05 + role_score * 0.05 + perm_score * 0.05
+
+    d3_score = min(100, d3_score)
+
     return {
         "domain": "D3",
         "name": "Multi-Agent Collaboration",
@@ -631,6 +847,9 @@ def run_d3(card, tasks=None, golden_trajectory=None):
             "isolation": isolation_score,
             "conflict": conflict_score,
             "persistence": persistence_score,
+            "federation_compat": fed_compat_score,
+            "federation_role": role_score,
+            "federation_permissions": perm_score,
         },
         "findings": all_findings,
         "summary": {
@@ -644,5 +863,6 @@ def run_d3(card, tasks=None, golden_trajectory=None):
             "stateful": card.get("orchestration_hints", {}).get("stateful", False),
             "has_a2a": bool(card.get("endpoints", {}).get("a2a")),
             "has_mcp": bool(card.get("endpoints", {}).get("mcp")),
+            "federation_role": (card.get("federation") or {}).get("role", "none"),
         },
     }

@@ -1,0 +1,251 @@
+{
+  "card_version": "2.0",
+  "agent_id": "urn:agent:openai:codex:codex-5-2",
+  "name": "OpenAI Codex",
+  "description": "OpenAI's agentic coding platform. Centralized multi-agent orchestration with ChatGPT agent mode, skills plugin system, computer use, and SaaS deployment via Sites. Codex app on macOS with parallel agent invocation.",
+  "version": "5.2.0",
+  "compliance": {
+    "data_residency": "US",
+    "data_classification": "confidential",
+    "cross_border": true,
+    "model_backend_location": "US",
+    "audit_trail_required": true
+  },
+  "constitution": {
+    "envelope": {
+      "message_id": "codex-env-001",
+      "correlation_id": "codex-correlation-001",
+      "timestamp": "2026-06-11T00:00:00Z",
+      "sender": "urn:agent:openai:codex:codex-5-2"
+    },
+    "health_state": "HEALTHY",
+    "heartbeat_interval_seconds": 30,
+    "message_format": {
+      "version": "codex-internal-1.0",
+      "supported_transports": [
+        "http",
+        "websocket"
+      ],
+      "max_payload_bytes": 1048576
+    }
+  },
+  "model_backend": {
+    "provider": "openai",
+    "model": "gpt-5.2-codex",
+    "deployment": "cloud",
+    "endpoint": "https://api.openai.com/v1"
+  },
+  "capabilities": [
+    {
+      "skill_id": "code_generation",
+      "description": "Generate and edit code across languages with context-aware completions",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "task": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "explanation": {
+            "type": "string"
+          }
+        }
+      },
+      "examples": [
+        "task: 'implement a REST API in Python'"
+      ],
+      "rate_limit": "unlimited",
+      "business_rule_version": "2026-06-01"
+    },
+    {
+      "skill_id": "agent_mode",
+      "description": "Multi-agent orchestration with parallel sub-agents, task scheduling, and computer use",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "task": {
+            "type": "string"
+          },
+          "subagent_type": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "result": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "examples": [
+        "task: 'research and write report'"
+      ],
+      "rate_limit": "40/mo (Plus) / 400/mo (Pro)",
+      "business_rule_version": "2026-06-01"
+    },
+    {
+      "skill_id": "computer_use",
+      "description": "Visual browser interaction, file navigation, and desktop automation",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "target": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "screenshot": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "examples": [
+        "action: 'navigate_to_url'"
+      ],
+      "rate_limit": "10/min",
+      "business_rule_version": "2026-06-01"
+    },
+    {
+      "skill_id": "skills_plugin",
+      "description": "Codex skills system with SKILL.md, implicit/explicit invocation, repo/user/admin scopes",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "skill_name": {
+            "type": "string"
+          },
+          "context": {
+            "type": "object"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        }
+      },
+      "examples": [
+        "skill_name: 'code-review'"
+      ],
+      "rate_limit": "30/min",
+      "business_rule_version": "2026-06-01"
+    },
+    {
+      "skill_id": "sites_deploy",
+      "description": "Build and deploy websites, dashboards, and web apps hosted by OpenAI",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "project": {
+            "type": "object"
+          },
+          "env_vars": {
+            "type": "object"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "deploy_status": {
+            "type": "string"
+          }
+        }
+      },
+      "examples": [
+        "project: {name: 'dashboard', type: 'nextjs'}"
+      ],
+      "rate_limit": "5/min",
+      "business_rule_version": "2026-06-01"
+    }
+  ],
+  "endpoints": {
+    "mcp": "https://api.openai.com/v1/mcp"
+  },
+  "authentication": {
+    "type": "APIKey",
+    "scopes": [
+      "code:read",
+      "code:write",
+      "agent:spawn",
+      "computer:use",
+      "deploy:write"
+    ]
+  },
+  "dependencies": [
+    "openai-api",
+    "nodejs",
+    "python3",
+    "git",
+    "browser-runtime"
+  ],
+  "orchestration_hints": {
+    "preferred_role": "supervisor",
+    "parallel_safe": true,
+    "stateful": true
+  },
+  "governance": {
+    "state_machine_version": "openai-internal-v1",
+    "circuit_breaker": {
+      "enabled": false
+    },
+    "oscillation_detection": {
+      "enabled": false
+    }
+  },
+  "schema_version": "2.0",
+  "vendor_id": "openai",
+  "agent_type": "cli",
+  "federation": {
+    "role": "secondary",
+    "trust_score": 0.5,
+    "allowed_mcp_servers": [],
+    "cross_border_policy": {
+      "data_residency": "US",
+      "allowed_transfer_zones": [
+        "US"
+      ],
+      "requires_approval": true
+    },
+    "federation_protocols": {
+      "a2a": {
+        "version": "0.3",
+        "enabled": false
+      },
+      "mcp": {
+        "version": "2025-03-26",
+        "enabled": true
+      }
+    }
+  }
+}

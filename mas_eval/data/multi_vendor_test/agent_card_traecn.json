@@ -1,0 +1,250 @@
+{
+  "card_version": "2.0",
+  "agent_id": "urn:agent:bytedance:trae-cn:trae-cn-1-0",
+  "name": "Trae CN",
+  "description": "ByteDance's AI-native IDE with built-in coding agent. Supports MCP protocol, custom skills system, constitution-based governance rules, and multi-agent coordination via .trae/ configuration. Deep integration with Chinese AI ecosystem (Doubao, Tongyi Qianwen).",
+  "version": "1.0.0",
+  "compliance": {
+    "data_residency": "CN",
+    "data_classification": "confidential",
+    "cross_border": false,
+    "model_backend_location": "CN",
+    "audit_trail_required": true
+  },
+  "constitution": {
+    "envelope": {
+      "message_id": "trae-env-001",
+      "correlation_id": "trae-correlation-001",
+      "timestamp": "2026-06-11T00:00:00Z",
+      "sender": "urn:agent:bytedance:trae-cn:trae-cn-1-0"
+    },
+    "health_state": "HEALTHY",
+    "heartbeat_interval_seconds": 30,
+    "message_format": {
+      "version": "mcp-2024",
+      "supported_transports": [
+        "stdio",
+        "http"
+      ],
+      "max_payload_bytes": 524288
+    }
+  },
+  "model_backend": {
+    "provider": "bytedance+alibaba",
+    "model": "doubao-pro+qwen-max",
+    "deployment": "cloud",
+    "endpoint": "https://api.bytedance.com/v1/chat"
+  },
+  "capabilities": [
+    {
+      "skill_id": "code_completion",
+      "description": "AI-powered code completion with context-aware suggestions across multiple languages",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "file_path": {
+            "type": "string"
+          },
+          "cursor_position": {
+            "type": "integer"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "suggestions": {
+            "type": "array"
+          },
+          "confidence": {
+            "type": "number"
+          }
+        }
+      },
+      "examples": [
+        "file_path: '/src/index.ts'"
+      ],
+      "rate_limit": "unlimited",
+      "business_rule_version": "2026-06-01"
+    },
+    {
+      "skill_id": "agent_chat",
+      "description": "Conversational agent interface with code generation, refactoring, and debugging",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "context": {
+            "type": "object"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "response": {
+            "type": "string"
+          },
+          "actions": {
+            "type": "array"
+          }
+        }
+      },
+      "examples": [
+        "message: 'refactor this function to use async/await'"
+      ],
+      "rate_limit": "60/min",
+      "business_rule_version": "2026-06-01"
+    },
+    {
+      "skill_id": "mcp_tool",
+      "description": "MCP protocol tool invocation with native IDE integration",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "server": {
+            "type": "string"
+          },
+          "tool": {
+            "type": "string"
+          },
+          "input": {
+            "type": "object"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "result": {
+            "type": "object"
+          },
+          "is_error": {
+            "type": "boolean"
+          }
+        }
+      },
+      "examples": [
+        "server: 'filesystem', tool: 'read'"
+      ],
+      "rate_limit": "30/min",
+      "business_rule_version": "2026-06-01"
+    },
+    {
+      "skill_id": "constitution_enforcement",
+      "description": "Constitution-based governance rules with remote verification and security redlines",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "target_repo": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "allowed": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "examples": [
+        "action: 'git_push'"
+      ],
+      "rate_limit": "60/min",
+      "business_rule_version": "2026-06-01"
+    },
+    {
+      "skill_id": "skill_system",
+      "description": "Custom skills management via .trae/skills/ directory with SKILL.md format",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "skill_name": {
+            "type": "string"
+          },
+          "parameters": {
+            "type": "object"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        }
+      },
+      "examples": [
+        "skill_name: 'github-automation'"
+      ],
+      "rate_limit": "20/min",
+      "business_rule_version": "2026-06-01"
+    }
+  ],
+  "authentication": {
+    "type": "APIKey",
+    "scopes": [
+      "code:read",
+      "code:write",
+      "agent:chat",
+      "mcp:invoke"
+    ]
+  },
+  "dependencies": [
+    "bytedance-api",
+    "git",
+    "nodejs",
+    "python3",
+    "mcp-protocol"
+  ],
+  "orchestration_hints": {
+    "preferred_role": "worker",
+    "parallel_safe": false,
+    "stateful": true
+  },
+  "governance": {
+    "state_machine_version": "trae-governance-v1",
+    "circuit_breaker": {
+      "enabled": false
+    },
+    "oscillation_detection": {
+      "enabled": false
+    }
+  },
+  "schema_version": "2.0",
+  "vendor_id": "bytedance",
+  "agent_type": "ide",
+  "federation": {
+    "role": "secondary",
+    "trust_score": 0.5,
+    "allowed_mcp_servers": [],
+    "cross_border_policy": {
+      "data_residency": "CN",
+      "allowed_transfer_zones": [
+        "CN"
+      ],
+      "requires_approval": false
+    },
+    "federation_protocols": {
+      "a2a": {
+        "version": "0.3",
+        "enabled": false
+      },
+      "mcp": {
+        "version": "2025-03-26",
+        "enabled": true
+      }
+    }
+  }
+}

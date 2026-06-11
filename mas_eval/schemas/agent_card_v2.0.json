@@ -1,0 +1,481 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MAS-TS-001 Agent Card v2.0",
+  "description": "Agent Card schema for MAS-TS-001 v4.0 Federation Edition — extends v1.2 with federation, governance, and vendor fields",
+  "type": "object",
+  "required": [
+    "card_version",
+    "agent_id",
+    "name",
+    "version",
+    "compliance",
+    "constitution",
+    "model_backend",
+    "capabilities",
+    "authentication"
+  ],
+  "properties": {
+    "card_version": {
+      "type": "string",
+      "description": "Card format version (1.2 or 2.0)"
+    },
+    "schema_version": {
+      "type": "string",
+      "const": "2.0",
+      "description": "Schema version identifier for routing"
+    },
+    "agent_id": {
+      "type": "string",
+      "pattern": "^urn:agent:[a-z0-9-]+:[a-z0-9-]+:[a-z0-9_-]+$",
+      "description": "URN-format agent identifier"
+    },
+    "vendor_id": {
+      "type": "string",
+      "description": "Vendor identifier for cross-vendor federation scoring"
+    },
+    "agent_type": {
+      "type": "string",
+      "enum": ["cli", "ide", "api", "daemon"],
+      "description": "Agent deployment type for capability profiling"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+",
+      "description": "Semantic versioning"
+    },
+    "compliance": {
+      "type": "object",
+      "required": [
+        "data_residency",
+        "data_classification",
+        "cross_border",
+        "model_backend_location",
+        "audit_trail_required"
+      ],
+      "properties": {
+        "data_residency": {
+          "type": "string",
+          "enum": ["CN", "US", "EU", "SG", "OTHER", "LOCAL"],
+          "description": "Physical data storage region"
+        },
+        "data_classification": {
+          "type": "string",
+          "enum": ["public", "internal", "confidential", "restricted"]
+        },
+        "cross_border": {
+          "type": "boolean",
+          "description": "Whether data crosses borders"
+        },
+        "model_backend_location": {
+          "type": "string",
+          "enum": ["CN", "US", "EU", "SG", "OTHER", "LOCAL"],
+          "description": "Physical deployment location of LLM backend"
+        },
+        "audit_trail_required": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "constitution": {
+      "type": "object",
+      "description": "OpenClaw Constitution compliance fields (Article 15-A, 27, 28)",
+      "required": [
+        "envelope",
+        "health_state",
+        "heartbeat_interval_seconds"
+      ],
+      "properties": {
+        "envelope": {
+          "type": "object",
+          "description": "Message envelope fields per Article 15-A",
+          "required": [
+            "message_id",
+            "correlation_id",
+            "timestamp",
+            "sender"
+          ],
+          "properties": {
+            "message_id": {
+              "type": "string",
+              "description": "Unique message identifier (UUID or ULID)"
+            },
+            "correlation_id": {
+              "type": "string",
+              "description": "Correlation ID for tracing message chains"
+            },
+            "timestamp": {
+              "type": "string",
+              "format": "date-time",
+              "description": "ISO 8601 timestamp of message creation"
+            },
+            "sender": {
+              "type": "string",
+              "description": "Sender agent ID"
+            },
+            "protocol": {
+              "type": "string",
+              "enum": ["json-rpc-2.0", "a2a-v0.3", "mcp-2024"],
+              "description": "Optional: communication protocol identifier"
+            }
+          },
+          "additionalProperties": false
+        },
+        "health_state": {
+          "type": "string",
+          "enum": ["STARTING", "HEALTHY", "DEGRADED", "DEAD"],
+          "description": "Agent health state per Article 27"
+        },
+        "heartbeat_interval_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 300,
+          "description": "Heartbeat interval per Article 28"
+        },
+        "stale_node_timeout_seconds": {
+          "type": "integer",
+          "minimum": 10,
+          "description": "Timeout after which a non-responding node is stale"
+        },
+        "message_format": {
+          "type": "object",
+          "description": "Message format audit requirements",
+          "properties": {
+            "version": {
+              "type": "string",
+              "description": "Message format version"
+            },
+            "supported_transports": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": ["stdio", "sse", "websocket", "http", "grpc", "ipc"]
+              },
+              "description": "Supported transport protocols"
+            },
+            "max_payload_bytes": {
+              "type": "integer",
+              "minimum": 1024,
+              "description": "Maximum payload size in bytes"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "model_backend": {
+      "type": "object",
+      "required": ["provider", "model", "deployment", "endpoint"],
+      "properties": {
+        "provider": {
+          "type": "string",
+          "minLength": 1
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1
+        },
+        "deployment": {
+          "type": "string",
+          "enum": ["local", "cloud", "hybrid"]
+        },
+        "endpoint": {
+          "type": "string",
+          "format": "uri",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "capabilities": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["skill_id", "description", "input_schema", "output_schema", "examples"],
+        "properties": {
+          "skill_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "input_schema": {
+            "type": "object"
+          },
+          "output_schema": {
+            "type": "object"
+          },
+          "examples": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "rate_limit": {
+            "type": "string"
+          },
+          "business_rule_version": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "description": "Date format YYYY-MM-DD for prompt rot detection"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "endpoints": {
+      "type": "object",
+      "properties": {
+        "a2a": {
+          "type": "string",
+          "format": "uri"
+        },
+        "mcp": {
+          "type": "string",
+          "format": "uri"
+        }
+      },
+      "additionalProperties": true
+    },
+    "authentication": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["OAuth2", "APIKey", "mTLS", "None"]
+        },
+        "scopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "federation": {
+      "type": "object",
+      "description": "Federation-specific fields for multi-agent cross-vendor evaluation",
+      "properties": {
+        "role": {
+          "type": "string",
+          "enum": ["primary", "secondary", "observer"],
+          "description": "Agent role in federation topology"
+        },
+        "trust_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Initial/reputation-based trust score (0-1)"
+        },
+        "trust_history": {
+          "type": "array",
+          "description": "Historical trust score snapshots for trend analysis",
+          "items": {
+            "type": "object",
+            "required": ["timestamp", "score", "source"],
+            "properties": {
+              "timestamp": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "score": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "source": {
+                "type": "string",
+                "description": "Source of trust evaluation (self, peer, oracle)"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "allowed_mcp_servers": {
+          "type": "array",
+          "description": "Whitelist of MCP server IDs this agent may interact with",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "cross_border_policy": {
+          "type": "object",
+          "description": "Data transfer policy for cross-border federation",
+          "required": ["data_residency", "allowed_transfer_zones", "requires_approval"],
+          "properties": {
+            "data_residency": {
+              "type": "string",
+              "enum": ["CN", "US", "EU", "SG", "OTHER", "LOCAL"]
+            },
+            "allowed_transfer_zones": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": ["CN", "US", "EU", "SG", "OTHER", "LOCAL"]
+              },
+              "uniqueItems": true,
+              "description": "Jurisdictions to which data may be transferred"
+            },
+            "requires_approval": {
+              "type": "boolean",
+              "description": "Whether cross-border transfers require human approval"
+            }
+          },
+          "additionalProperties": false
+        },
+        "federation_protocols": {
+          "type": "object",
+          "description": "Federation protocol versions and enablement",
+          "properties": {
+            "a2a": {
+              "type": "object",
+              "properties": {
+                "version": {
+                  "type": "string",
+                  "description": "A2A protocol version"
+                },
+                "enabled": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": false
+            },
+            "mcp": {
+              "type": "object",
+              "properties": {
+                "version": {
+                  "type": "string",
+                  "description": "MCP protocol version"
+                },
+                "enabled": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "governance": {
+      "type": "object",
+      "description": "Governance configuration for D4 assessment — extends v1.2",
+      "properties": {
+        "state_machine_version": {
+          "type": "string",
+          "description": "Version of the state machine implementation"
+        },
+        "circuit_breaker": {
+          "type": "object",
+          "description": "Circuit breaker configuration",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "threshold": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Consecutive failures before circuit opens"
+            },
+            "cooldown_seconds": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Cooldown period in half-open state"
+            }
+          },
+          "additionalProperties": false
+        },
+        "oscillation_detection": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "window_size": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Number of state transitions to analyze for oscillation"
+            }
+          },
+          "additionalProperties": false
+        },
+        "cost_model": {
+          "type": "object",
+          "description": "Cost governance configuration for D5.7",
+          "properties": {
+            "max_tokens_per_hour": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Maximum token consumption per hour"
+            },
+            "max_cost_per_run": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Maximum cost per evaluation run in USD"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "dependencies": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "orchestration_hints": {
+      "type": "object",
+      "properties": {
+        "preferred_role": {
+          "type": "string",
+          "enum": ["planner", "worker", "supervisor", "validator"]
+        },
+        "parallel_safe": {
+          "type": "boolean"
+        },
+        "stateful": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": true
+    },
+    "message_format": {
+      "type": "object",
+      "description": "Message format specification (protocol + transport)",
+      "properties": {
+        "protocol": {
+          "type": "string",
+          "description": "Communication protocol identifier"
+        },
+        "transport": {
+          "type": "string",
+          "description": "Transport layer specification"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": true
+}

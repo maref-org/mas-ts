@@ -13,16 +13,34 @@ from mas_eval.harness.l3_comprehensive import run_l3_comprehensive
 from mas_eval.harness.l4_evolution import run_l4_evolution
 
 SAMPLE_CARD = {
-    "agent_id": "test-agent-001",
+    "card_version": "1.2",
+    "agent_id": "urn:agent:test:test:harness-001",
     "name": "TestAgent",
     "version": "1.0.0",
-    "schema_version": "v1.2",
-    "card_version": "1.2",
-    "provider": "test",
-    "model": "gpt-4",
-    "deployment": "cloud",
-    "endpoint": "https://api.example.com/v1/chat",
-    "model_backend": {"endpoint": "https://api.example.com/v1", "location": "US"},
+    "compliance": {
+        "data_residency": "US",
+        "data_classification": "internal",
+        "cross_border": False,
+        "model_backend_location": "US",
+        "audit_trail_required": True,
+    },
+    "constitution": {
+        "envelope": {
+            "message_id": "msg-harness-001",
+            "correlation_id": "corr-harness-001",
+            "timestamp": "2026-06-11T00:00:00Z",
+            "sender": "urn:agent:test:test:harness-001",
+        },
+        "health_state": "HEALTHY",
+        "heartbeat_interval_seconds": 30,
+        "stale_node_timeout_seconds": 60,
+    },
+    "model_backend": {
+        "provider": "test",
+        "model": "claude-sonnet-4",
+        "deployment": "cloud",
+        "endpoint": "https://api.anthropic.com/v1/messages",
+    },
     "capabilities": [
         {
             "skill_id": "bash",
@@ -90,18 +108,6 @@ SAMPLE_CARD = {
         },
     ],
     "authentication": {"type": "OAuth2", "scopes": ["read", "write"]},
-    "compliance": {
-        "data_residency": "US",
-        "cross_border_transfer": False,
-        "audit_trail_required": True,
-        "end_user_identification": True,
-        "model_backend_location": "US",
-    },
-    "constitution": {
-        "envelope": {"version": "1.0", "jurisdiction": "US-CA"},
-        "health_state": "healthy",
-        "heartbeat_interval_seconds": 15,
-    },
     "endpoints": {"a2a": "https://a2a.example.com", "mcp": "https://mcp.example.com"},
     "dependencies": ["git", "nodejs"],
     "orchestration_hints": {

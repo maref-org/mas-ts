@@ -51,7 +51,9 @@ Extends v1.1 with optional fields:
 | `mas_eval/domains/d1_compliance.py` | 10-check static compliance (schema, residency, constitution, DAG) |
 | `mas_eval/domains/d2_single_agent.py` | Model quality, tool coverage, task completion, E2E scenarios |
 | `mas_eval/domains/d3_multi_agent.py` | Spawn, protocol, orchestration, isolation, conflict, persistence |
-| `mas_eval/domains/d4_governance_security.py` | StateMachine, CircuitBreaker, Oscillation, Audit, Security scoring |
+| `mas_eval/domains/d4_governance_security.py` | StateMachine, CircuitBreaker, Oscillation, Audit, Security scoring, TrustScorer, vendor diversity, MCP supply chain |
+| `mas_eval/schemas/agent_card_v2.0.json` | Federation-extended agent card schema (v2.0) |
+| `scripts/migrate_agent_card.py` | v1.2→v2.0 card migration tool |
 | `mas_eval/domains/d5_robustness.py` | ChaosEngine, DriftDetector, ReflectiveAgent, ConvergenceVerifier |
 | `mas_eval/harness/l0_fast_screen.py` | 5-stage CI gate runner |
 | `mas_eval/harness/l1_standard.py` | D1-D3 aggregation |
@@ -60,7 +62,7 @@ Extends v1.1 with optional fields:
 | `mas_eval/harness/l4_evolution.py` | D5 lifecycle runner |
 | `mas_eval/scoring/elo.py` | Pairwise Elo rating system |
 | `mas_eval/scoring/absolute.py` | Absolute scoring, grading, verdict |
-| `tests/` | 31 test files, 806+ tests |
+| `tests/` | 34 test files, 997+ tests |
 | `.github/workflows/test.yml` | pytest + ruff + coverage gate (80%→85%) with `--durations=10` |
 | `.github/workflows/security-scan.yml` | TruffleHog + bandit SAST + pip-audit dependency scan |
 | `.github/workflows/type-check.yml` | mypy strict type checking |
@@ -70,7 +72,7 @@ Extends v1.1 with optional fields:
 
 ```bash
 # Run all tests
-pytest tests/ -v           # 806 tests
+pytest tests/ -v           # 997 tests
 
 # Run specific domain
 pytest tests/test_d5_robustness.py -v
@@ -111,15 +113,15 @@ Score: C1×0.35 + C2×0.35 + C3×0.30
 
 每次提交前应确认：
 
-- [ ] 无 T3/T2 级内容（路径/Key/IP/时间戳）
-- [ ] `git remote -v` 为授权远程
-- [ ] pre-push hook 已就位
-- [ ] CI: pytest 通过
-- [ ] MCP 工具含 `api_version`（第十五条）
-- [ ] 跨边界 MCP 消息含 `trace_id`/`timestamp`/`source_agent`（第十五-A条）
-- [ ] 跨边界 MCP 调用有 `FAIL_MODE` 降级（第七条）
-- [ ] MCP 服务器代码位于正确归属目录（第八条）
-- [ ] 进入 Track B 前经过叙事转化（第九条）
-- [ ] 不含 T3 级内容（第十一条）
-- [ ] Agent 已注册、心跳健康（第二十六~二十八条）
-- [ ] 宪法引用路径正确（第三十二条）
+- [x] 无 T3/T2 级内容（路径/Key/IP/时间戳）— rg 扫描零命中
+- [x] `git remote -v` 为授权远程 — 无远程（仅本地）
+- [x] pre-push hook 已就位
+- [x] CI: pytest 通过 — 997 passed, 0 failed
+- [ ] MCP 工具含 `api_version`（第十五条）— 不适用
+- [ ] 跨边界 MCP 消息含 `trace_id`/`timestamp`/`source_agent`（第十五-A条）— 不适用
+- [ ] 跨边界 MCP 调用有 `FAIL_MODE` 降级（第七条）— 不适用
+- [ ] MCP 服务器代码位于正确归属目录（第八条）— 不适用
+- [ ] 进入 Track B 前经过叙事转化（第九条）— 不适用
+- [x] 不含 T3 级内容（第十一条）— 已扫描确认
+- [ ] Agent 已注册、心跳健康（第二十六~二十八条）— 不适用
+- [ ] 宪法引用路径正确（第三十二条）— AGENTS.md 引用路径正确

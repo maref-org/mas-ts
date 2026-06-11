@@ -73,6 +73,18 @@ D1_CHECKS = [
         "deduction": 5,
     },
     {"id": "1.10", "name": "dag_acyclicity", "severity": "HIGH", "deduction": 15},
+    {
+        "id": "1.11",
+        "name": "cross_border_chain",
+        "severity": "CRITICAL",
+        "deduction": 25,
+    },
+    {
+        "id": "1.12",
+        "name": "federation_version_compat",
+        "severity": "HIGH",
+        "deduction": 15,
+    },
 ]
 
 ENDPOINT_REGION_DB = {}
@@ -85,7 +97,8 @@ if ENDPOINT_YAML.exists():
             ep_config = yaml.safe_load(f)
         for region, domains in ep_config.get("regions", {}).items():
             for domain in domains:
-                ENDPOINT_REGION_DB[domain] = region
+                if isinstance(domain, str):
+                    ENDPOINT_REGION_DB[domain] = region
     except Exception:
         pass
 
@@ -138,7 +151,7 @@ def _resolve_endpoint_region(endpoint):
 def check_schema(card, schema_path=None):
     findings = []
     if not schema_path:
-        return findings
+        schema_path = Path(__file__).parent.parent / "schemas" / "agent_card_v1.2.json"
     schema_path = Path(schema_path)
     if not schema_path.exists():
         findings.append(
@@ -508,6 +521,172 @@ def check_dag_acyclicity(card):
     return findings
 
 
+def check_data_cross_border_chain(card):
+    findings = []
+    fed = card.get("federation") or {}
+    policy = fed.get("cross_border_policy") or {}
+    compliance = card.get("compliance") or {}
+
+    if not policy:
+        findings.append(
+            {
+                "check": "1.11",
+                "severity": "INFO",
+                "detail": "No federation cross-border policy declared",
+            }
+        )
+        return findings
+
+    card_residency = compliance.get("data_residency")
+    policy_residency = policy.get("data_residency")
+    if card_residency and policy_residency and card_residency != policy_residency:
+        findings.append(
+            {
+                "check": "1.11",
+                "severity": "CRITICAL",
+                "detail": f"Cross-border policy residency {policy_residency} "
+                f"mismatches compliance residency {card_residency}",
+            }
+        )
+
+    zones = policy.get("allowed_transfer_zones") or []
+    if not zones:
+        findings.append(
+            {
+                "check": "1.11",
+                "severity": "HIGH",
+                "detail": "Cross-border policy has no allowed transfer zones",
+            }
+        )
+
+    is_cross_border = compliance.get("cross_border", False)
+    if is_cross_border and policy_residency:
+        has_foreign_zone = any(z != policy_residency for z in zones)
+        if not has_foreign_zone:
+            findings.append(
+                {
+                    "check": "1.11",
+                    "severity": "CRITICAL",
+                    "detail": f"Cross-border enabled but allowed_transfer_zones {zones} "
+                    f"only contains current residency {policy_residency}",
+                }
+            )
+
+    requires_approval = policy.get("requires_approval", False)
+    if is_cross_border and has_foreign_zone and not requires_approval:
+        findings.append(
+            {
+                "check": "1.11",
+                "severity": "HIGH",
+                "detail": "Cross-border transfer enabled without requiring approval",
+            }
+        )
+
+    if not findings:
+        findings.append(
+            {
+                "check": "1.11",
+                "severity": "INFO",
+                "detail": f"Cross-border chain valid: {policy_residency} → {zones}",
+            }
+        )
+    return findings
+
+
+def check_federation_version_compat(card):
+    findings = []
+    fed = card.get("federation") or {}
+    protocols = fed.get("federation_protocols") or {}
+
+    if not protocols:
+        findings.append(
+            {
+                "check": "1.12",
+                "severity": "INFO",
+                "detail": "No federation protocols declared",
+            }
+        )
+        return findings
+
+    KNOWN_MCP_VERSIONS = {"2025-03-26", "2024-11-05", "2024-10-01"}
+    KNOWN_A2A_VERSIONS = {"1.0", "0.3"}
+    MIN_MCP_VERSION = "2024-10-01"
+    MIN_A2A_VERSION = "0.3"
+
+    mcp = protocols.get("mcp") or {}
+    if mcp:
+        mcp_ver = mcp.get("version", "")
+        mcp_enabled = mcp.get("enabled", True)
+        if mcp_enabled and mcp_ver:
+            if mcp_ver in KNOWN_MCP_VERSIONS:
+                findings.append(
+                    {
+                        "check": "1.12",
+                        "severity": "INFO",
+                        "detail": f"MCP protocol version {mcp_ver} is compatible",
+                    }
+                )
+            elif mcp_ver < MIN_MCP_VERSION:
+                findings.append(
+                    {
+                        "check": "1.12",
+                        "severity": "HIGH",
+                        "detail": f"MCP version {mcp_ver} is outdated "
+                        f"(minimum: {MIN_MCP_VERSION})",
+                    }
+                )
+            else:
+                findings.append(
+                    {
+                        "check": "1.12",
+                        "severity": "INFO",
+                        "detail": f"MCP version {mcp_ver} is newer than known versions",
+                    }
+                )
+
+    a2a = protocols.get("a2a") or {}
+    if a2a:
+        a2a_ver = a2a.get("version", "")
+        a2a_enabled = a2a.get("enabled", False)
+        if a2a_enabled and a2a_ver:
+            if a2a_ver in KNOWN_A2A_VERSIONS:
+                findings.append(
+                    {
+                        "check": "1.12",
+                        "severity": "INFO",
+                        "detail": f"A2A protocol version {a2a_ver} is compatible",
+                    }
+                )
+            elif a2a_ver < MIN_A2A_VERSION:
+                findings.append(
+                    {
+                        "check": "1.12",
+                        "severity": "HIGH",
+                        "detail": f"A2A version {a2a_ver} is outdated "
+                        f"(minimum: {MIN_A2A_VERSION})",
+                    }
+                )
+            else:
+                findings.append(
+                    {
+                        "check": "1.12",
+                        "severity": "INFO",
+                        "detail": f"A2A version {a2a_ver} is newer than known versions",
+                    }
+                )
+
+    if not findings:
+        findings.append(
+            {
+                "check": "1.12",
+                "severity": "INFO",
+                "detail": "Federation protocols not in use",
+            }
+        )
+
+    return findings
+
+
 def run_d1(card, schema_path=None):
     findings = []
     findings.extend(check_schema(card, schema_path))
@@ -520,6 +699,8 @@ def run_d1(card, schema_path=None):
     findings.extend(check_prompt_rot(card))
     findings.extend(check_capabilities_completeness(card))
     findings.extend(check_dag_acyclicity(card))
+    findings.extend(check_data_cross_border_chain(card))
+    findings.extend(check_federation_version_compat(card))
 
     score = 100.0
     for f in findings:

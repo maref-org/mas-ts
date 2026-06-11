@@ -325,6 +325,10 @@ class TestD4Full:
     def test_d4_score_composition(self):
         result = run_d4(SECURE_CARD)
         expected = (
-            result["governance"]["score"] * 0.50 + result["security"]["score"] * 0.50
+            result["governance"]["score"] * 0.50
+            + result["security"]["score"] * 0.15
+            + result["subscores"].get("trust", 0) * 0.20
+            + result["subscores"].get("vendor_diversity", 0) * 0.05
+            + result["subscores"].get("mcp_supply_chain", 0) * 0.10
         )
         assert abs(result["score"] - expected) < 0.1

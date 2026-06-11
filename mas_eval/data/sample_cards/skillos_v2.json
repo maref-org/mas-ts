@@ -1,0 +1,1206 @@
+{
+  "card_version": "2.0",
+  "agent_id": "urn:agent:skillos:skill-execution:skillos-1-0-0",
+  "name": "SkillOS",
+  "description": "Skill Execution Kernel with 5/25/70 Distribution - AI skill platform with 55+ skills covering AI workflows, content creation, and development tools",
+  "version": "1.0.0",
+  "compliance": {
+    "data_residency": "CN",
+    "data_classification": "public",
+    "cross_border": false,
+    "model_backend_location": "CN",
+    "audit_trail_required": false
+  },
+  "model_backend": {
+    "provider": "multi-tier",
+    "model": "gemma-4/deepseek-v3/moonshot-v1-128k",
+    "deployment": "hybrid",
+    "endpoint": "https://api.moonshot.cn/v1/chat/completions"
+  },
+  "capabilities": [
+    {
+      "skill_id": "bash",
+      "description": "Execute shell commands via subprocess",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "stdout": {
+            "type": "string"
+          },
+          "stderr": {
+            "type": "string"
+          },
+          "exit_code": {
+            "type": "integer"
+          }
+        }
+      },
+      "examples": [
+        "command: 'pytest tests/ -v'",
+        "command: 'uv run skill'"
+      ],
+      "rate_limit": "60/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "file_read",
+      "description": "Read file contents from local filesystem",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string"
+          }
+        }
+      },
+      "examples": [
+        "path: '/skillos/kernel/__init__.py'"
+      ],
+      "rate_limit": "120/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "file_write",
+      "description": "Write new files or overwrite existing ones",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "examples": [
+        "path: '/skillos/skills/new-skill/SKILL.md'"
+      ],
+      "rate_limit": "60/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "file_edit",
+      "description": "Edit existing files using search/replace blocks",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "old_str": {
+            "type": "string"
+          },
+          "new_str": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "examples": [
+        "path: '/skillos/kernel/entry_kernel.py'"
+      ],
+      "rate_limit": "60/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "glob",
+      "description": "Fast file pattern matching using glob patterns",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "pattern": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "files": {
+            "type": "array"
+          }
+        }
+      },
+      "examples": [
+        "pattern: 'skills/**/*.md'"
+      ],
+      "rate_limit": "120/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "grep",
+      "description": "Search file contents using ripgrep with regex support",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "pattern": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "matches": {
+            "type": "array"
+          }
+        }
+      },
+      "examples": [
+        "pattern: 'class.*Kernel'"
+      ],
+      "rate_limit": "120/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "entry_kernel",
+      "description": "Entry kernel with 20/80 human-AI routing for task classification",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "task": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "route": {
+            "type": "string"
+          },
+          "complexity": {
+            "type": "number"
+          }
+        }
+      },
+      "examples": [
+        "task: 'create a marketing plan'"
+      ],
+      "rate_limit": "30/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "skill_kernel",
+      "description": "Skill lifecycle management - load, execute, cache skills",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "skill_name": {
+            "type": "string"
+          },
+          "context": {
+            "type": "object"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        }
+      },
+      "examples": [
+        "skill_name: 'brainstorming'"
+      ],
+      "rate_limit": "30/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "agent_scheduler",
+      "description": "Multi-model agent scheduler with Byzantine consensus for task routing",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "task_complexity": {
+            "type": "number"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "assigned_model": {
+            "type": "string"
+          },
+          "estimated_cost": {
+            "type": "number"
+          }
+        }
+      },
+      "examples": [
+        "task_complexity: 0.7"
+      ],
+      "rate_limit": "10/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "session_manager",
+      "description": "Conversation session lifecycle management",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "session_id": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "session": {
+            "type": "object"
+          }
+        }
+      },
+      "examples": [
+        "action: 'create'",
+        "action: 'close'"
+      ],
+      "rate_limit": "30/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "model_router",
+      "description": "Route tasks to appropriate model tier (FREE/LOW/MEDIUM/HIGH)",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "task": {
+            "type": "string"
+          },
+          "budget": {
+            "type": "number"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "model_tier": {
+            "type": "string"
+          },
+          "model_name": {
+            "type": "string"
+          }
+        }
+      },
+      "examples": [
+        "task: 'write code'",
+        "budget: 0.01"
+      ],
+      "rate_limit": "30/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "byzantine_consensus",
+      "description": "3-model Byzantine consensus for controversial tasks",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "task": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "consensus": {
+            "type": "string"
+          },
+          "agreement_score": {
+            "type": "number"
+          }
+        }
+      },
+      "examples": [
+        "task: 'evaluate this design'"
+      ],
+      "rate_limit": "5/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "skill_registry",
+      "description": "Register and discover skills from the skill library",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "skill_path": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "skills": {
+            "type": "array"
+          }
+        }
+      },
+      "examples": [
+        "action: 'list'",
+        "action: 'register'"
+      ],
+      "rate_limit": "10/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "identity_client",
+      "description": "Protocol identity client for skill ecosystem authentication",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "identity": {
+            "type": "object"
+          }
+        }
+      },
+      "examples": [
+        "action: 'authenticate'"
+      ],
+      "rate_limit": "10/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "matcher_client",
+      "description": "Protocol matcher client for skill-task matching",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "task": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "matched_skills": {
+            "type": "array"
+          }
+        }
+      },
+      "examples": [
+        "task: 'generate UI'"
+      ],
+      "rate_limit": "10/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "settlement_client",
+      "description": "Protocol settlement client for skill execution billing",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "skill_name": {
+            "type": "string"
+          },
+          "cost": {
+            "type": "number"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "settlement_id": {
+            "type": "string"
+          }
+        }
+      },
+      "examples": [
+        "skill_name: 'ui-ux-pro-max'"
+      ],
+      "rate_limit": "10/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "test_runner",
+      "description": "Execute pytest test suites with coverage reporting",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "test_path": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "passed": {
+            "type": "integer"
+          },
+          "failed": {
+            "type": "integer"
+          }
+        }
+      },
+      "examples": [
+        "test_path: 'tests/'"
+      ],
+      "rate_limit": "10/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "agent_tool",
+      "description": "Launch sub-agents for parallel skill execution",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "task": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        }
+      },
+      "examples": [
+        "task: 'run multiple skills in parallel'"
+      ],
+      "rate_limit": "5/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "todo_write",
+      "description": "Create and manage structured task lists for tracking skill execution",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "todos": {
+            "type": "array"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "examples": [
+        "todos: [{content: 'Execute skill', status: 'in_progress'}]"
+      ],
+      "rate_limit": "30/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "web_search",
+      "description": "Search the internet for skill execution context",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "results": {
+            "type": "array"
+          }
+        }
+      },
+      "examples": [
+        "query: 'best practices for skill design'"
+      ],
+      "rate_limit": "10/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "web_fetch",
+      "description": "Fetch and parse web page content with intelligent content extraction",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "extract_mode": {
+            "type": "string",
+            "enum": [
+              "full",
+              "article",
+              "links",
+              "metadata"
+            ]
+          },
+          "max_length": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "url"
+        ]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "links": {
+            "type": "array"
+          }
+        }
+      },
+      "examples": [
+        "url: 'https://example.com/article', extract_mode: 'article'",
+        "url: 'https://docs.example.com', extract_mode: 'metadata'"
+      ],
+      "rate_limit": "30/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "session_isolation",
+      "description": "Execute skills in isolated worktree/sandbox environments with resource limits",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "session_id": {
+            "type": "string"
+          },
+          "command": {
+            "type": "string"
+          },
+          "resource_limits": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "session_id",
+          "command"
+        ]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "stdout": {
+            "type": "string"
+          },
+          "stderr": {
+            "type": "string"
+          },
+          "exit_code": {
+            "type": "integer"
+          }
+        }
+      },
+      "examples": [
+        "session_id: 'abc123', command: 'pytest tests/'",
+        "session_id: 'xyz789', command: 'npm run build'"
+      ],
+      "rate_limit": "20/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "state_persistence",
+      "description": "Persist and restore cross-session state and task memory with TTL support",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "save",
+              "load",
+              "delete"
+            ]
+          },
+          "session_id": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "value": {
+            "type": "object"
+          },
+          "ttl_seconds": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "action",
+          "session_id",
+          "key"
+        ]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "value": {
+            "type": "object"
+          }
+        }
+      },
+      "examples": [
+        "action: 'save', session_id: 'abc123', key: 'context'",
+        "action: 'load', session_id: 'abc123', key: 'context'"
+      ],
+      "rate_limit": "60/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "task_scheduler",
+      "description": "Schedule and execute tasks using cron expressions with execution tracking",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "add",
+              "remove",
+              "list",
+              "enable",
+              "disable"
+            ]
+          },
+          "task_id": {
+            "type": "string"
+          },
+          "cron_expression": {
+            "type": "string"
+          },
+          "handler": {
+            "type": "string"
+          },
+          "params": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "tasks": {
+            "type": "array"
+          },
+          "next_run": {
+            "type": "string"
+          }
+        }
+      },
+      "examples": [
+        "action: 'add', cron_expression: '0 9 * * 1', handler: 'weekly_report'",
+        "action: 'list'"
+      ],
+      "rate_limit": "10/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "remote_bridge",
+      "description": "Remote API control interface for bridging and command execution with session management",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string",
+            "enum": [
+              "skill_execute",
+              "session_create",
+              "session_close",
+              "state_query",
+              "bridge_connect",
+              "bridge_disconnect"
+            ]
+          },
+          "session_id": {
+            "type": "string"
+          },
+          "params": {
+            "type": "object"
+          },
+          "timeout": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "command"
+        ]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "result": {
+            "type": "object"
+          },
+          "error": {
+            "type": "string"
+          }
+        }
+      },
+      "examples": [
+        "command: 'skill_execute', params: {skill_name: 'brainstorming'}",
+        "command: 'bridge_connect', params: {remote_url: 'http://remote:8000'}"
+      ],
+      "rate_limit": "30/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "worktree",
+      "description": "Create and manage git worktree-based isolated execution environments for session isolation",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "worktree_path": {
+            "type": "string"
+          },
+          "repo_path": {
+            "type": "string"
+          },
+          "branch": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "worktree_path",
+          "repo_path"
+        ]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "path": {
+            "type": "string"
+          }
+        }
+      },
+      "examples": [
+        "worktree_path: '/tmp/worktree-001', repo_path: '/project'",
+        "worktree_path: '/tmp/worktree-002', repo_path: '/project', branch: 'feature-1'"
+      ],
+      "rate_limit": "20/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "memory",
+      "description": "Cross-session memory store with save, load, delete operations and TTL support",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "save",
+              "load",
+              "delete",
+              "list"
+            ]
+          },
+          "key": {
+            "type": "string"
+          },
+          "value": {
+            "type": "object"
+          },
+          "ttl_seconds": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "action",
+          "key"
+        ]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "value": {
+            "type": "object"
+          },
+          "keys": {
+            "type": "array"
+          }
+        }
+      },
+      "examples": [
+        "action: 'save', key: 'context', value: {query: 'test'}",
+        "action: 'load', key: 'context'"
+      ],
+      "rate_limit": "60/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "cron",
+      "description": "Cron-based task scheduling with execution tracking and recurring task management",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "add",
+              "remove",
+              "list",
+              "enable",
+              "disable"
+            ]
+          },
+          "task_id": {
+            "type": "string"
+          },
+          "cron_expression": {
+            "type": "string"
+          },
+          "handler": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "tasks": {
+            "type": "array"
+          },
+          "next_run": {
+            "type": "string"
+          }
+        }
+      },
+      "examples": [
+        "action: 'add', cron_expression: '0 9 * * 1', handler: 'weekly_report'",
+        "action: 'list'"
+      ],
+      "rate_limit": "10/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "task_management",
+      "description": "Task lifecycle management with create, update, complete, and track operations",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "create",
+              "update",
+              "complete",
+              "list",
+              "cancel"
+            ]
+          },
+          "task_id": {
+            "type": "string"
+          },
+          "task": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "task": {
+            "type": "object"
+          },
+          "tasks": {
+            "type": "array"
+          }
+        }
+      },
+      "examples": [
+        "action: 'create', task: {name: 'build', priority: 'high'}",
+        "action: 'list'"
+      ],
+      "rate_limit": "30/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "bridge",
+      "description": "Bridge control interface for remote session management and multi-agent coordination",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string",
+            "enum": [
+              "connect",
+              "disconnect",
+              "execute",
+              "status",
+              "list_sessions"
+            ]
+          },
+          "remote_url": {
+            "type": "string"
+          },
+          "session_id": {
+            "type": "string"
+          },
+          "params": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "command"
+        ]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "result": {
+            "type": "object"
+          },
+          "error": {
+            "type": "string"
+          }
+        }
+      },
+      "examples": [
+        "command: 'connect', remote_url: 'http://remote:8000'",
+        "command: 'execute', session_id: 'sess-001', params: {task: 'build'}"
+      ],
+      "rate_limit": "30/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "mcp_tool",
+      "description": "MAS-TS-001 standard MCP (Model Context Protocol) tool interface for inter-agent communication and remote tool invocation via JSON-RPC 2.0",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "server": {
+            "type": "string"
+          },
+          "tool": {
+            "type": "string"
+          },
+          "input": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "server",
+          "tool"
+        ]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "result": {
+            "type": "object"
+          },
+          "is_error": {
+            "type": "boolean"
+          }
+        }
+      },
+      "examples": [
+        "server: 'a2a-gateway', tool: 'remote_agent.invoke'",
+        "server: 'coordinator', tool: 'task_delegate'"
+      ],
+      "rate_limit": "30/min",
+      "business_rule_version": "2026-05-31"
+    },
+    {
+      "skill_id": "lsp",
+      "description": "Language Server Protocol integration for code analysis, go-to-definition, references, and diagnostics",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "diagnostics",
+              "references",
+              "definition",
+              "rename"
+            ]
+          },
+          "file": {
+            "type": "string"
+          },
+          "line": {
+            "type": "integer"
+          },
+          "column": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "action",
+          "file"
+        ]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "diagnostics": {
+            "type": "array"
+          },
+          "locations": {
+            "type": "array"
+          }
+        }
+      },
+      "examples": [
+        "action: 'diagnostics', file: 'kernel/entry_kernel.py'",
+        "action: 'references', file: 'types.py', line: 10"
+      ],
+      "rate_limit": "20/min",
+      "business_rule_version": "2026-05-31"
+    }
+  ],
+  "endpoints": {
+    "a2a": "http://localhost:8000/api/v1/a2a",
+    "mcp": "http://localhost:8000/api/v1/mcp",
+    "api": "http://localhost:8000/api/v1"
+  },
+  "constitution": {
+    "envelope": {
+      "message_id": "urn:agent:skillos:skill-execution:skillos-1-0-0-env-001",
+      "correlation_id": "urn:agent:skillos:skill-execution:skillos-1-0-0-correlation-001",
+      "timestamp": "2026-06-11T00:00:00Z",
+      "sender": "urn:agent:skillos:skill-execution:skillos-1-0-0"
+    },
+    "health_state": "HEALTHY",
+    "heartbeat_interval_seconds": 20
+  },
+  "authentication": {
+    "type": "APIKey",
+    "scopes": [
+      "skill:read",
+      "skill:execute",
+      "session:manage",
+      "model:route"
+    ]
+  },
+  "dependencies": [
+    "python>=3.11",
+    "PyYAML>=6.0",
+    "pytest>=8.0"
+  ],
+  "orchestration_hints": {
+    "preferred_role": "worker",
+    "parallel_safe": true,
+    "stateful": true
+  },
+  "schema_version": "2.0",
+  "vendor_id": "skillos",
+  "agent_type": "cli",
+  "federation": {
+    "role": "secondary",
+    "trust_score": 0.5,
+    "allowed_mcp_servers": [],
+    "cross_border_policy": {
+      "data_residency": "CN",
+      "allowed_transfer_zones": [
+        "CN"
+      ],
+      "requires_approval": false
+    },
+    "federation_protocols": {
+      "a2a": {
+        "version": "0.3",
+        "enabled": false
+      },
+      "mcp": {
+        "version": "2025-03-26",
+        "enabled": true
+      }
+    }
+  }
+}

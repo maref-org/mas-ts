@@ -183,12 +183,13 @@ def run_model_quality(card):
         return 50.0, findings
 
 
-def run_tool_coverage(card):
+def run_tool_coverage(card, core_tools=None):
     findings = []
+    core_tools = core_tools or CORE_TOOLS
     declared_tools = {cap["skill_id"] for cap in card.get("capabilities", [])}
 
-    core_coverage = len(declared_tools & CORE_TOOLS) / len(CORE_TOOLS)
-    missing_core = CORE_TOOLS - declared_tools
+    core_coverage = len(declared_tools & core_tools) / len(core_tools)
+    missing_core = core_tools - declared_tools
     if missing_core:
         findings.append(
             {
@@ -203,7 +204,7 @@ def run_tool_coverage(card):
         {
             "severity": "INFO",
             "category": "tool_coverage",
-            "detail": f"Core: {core_coverage * 100:.0f}% ({len(declared_tools & CORE_TOOLS)}/{len(CORE_TOOLS)}), Advanced: {advanced_coverage * 100:.0f}% ({len(declared_tools & ADVANCED_TOOLS)}/{len(ADVANCED_TOOLS)})",
+            "detail": f"Core: {core_coverage * 100:.0f}% ({len(declared_tools & core_tools)}/{len(core_tools)}), Advanced: {advanced_coverage * 100:.0f}% ({len(declared_tools & ADVANCED_TOOLS)}/{len(ADVANCED_TOOLS)})",
         }
     )
 
@@ -393,9 +394,9 @@ def run_e2e_scenarios(card):
     return round(e2e_score, 1), findings
 
 
-def run_d2(card, golden_trajectory=None, mock_trajectory=None):
+def run_d2(card, golden_trajectory=None, mock_trajectory=None, core_tools=None):
     model_score, model_findings = run_model_quality(card)
-    tool_score, tool_findings = run_tool_coverage(card)
+    tool_score, tool_findings = run_tool_coverage(card, core_tools)
     task_score, task_findings = run_task_completion(
         card, golden_trajectory, mock_trajectory
     )

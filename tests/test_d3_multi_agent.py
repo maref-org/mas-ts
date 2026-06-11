@@ -240,6 +240,9 @@ class TestD3:
             "isolation",
             "conflict",
             "persistence",
+            "federation_compat",
+            "federation_role",
+            "federation_permissions",
         }
 
     def test_d3_minimal(self):

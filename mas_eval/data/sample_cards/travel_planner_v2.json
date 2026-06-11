@@ -1,0 +1,137 @@
+{
+  "card_version": "2.0",
+  "agent_id": "urn:agent:demo:travel:travel-planner-01",
+  "name": "Travel Planner",
+  "description": "Plans travel itineraries with flight search and booking",
+  "version": "1.2.0",
+  "compliance": {
+    "data_residency": "SG",
+    "data_classification": "internal",
+    "cross_border": false,
+    "model_backend_location": "SG",
+    "audit_trail_required": true
+  },
+  "model_backend": {
+    "provider": "local",
+    "model": "qwen2.5-72b-instruct",
+    "deployment": "local",
+    "endpoint": "http://localhost:8000/v1"
+  },
+  "capabilities": [
+    {
+      "skill_id": "search_flight",
+      "description": "Search for flights between cities",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "origin": {
+            "type": "string"
+          },
+          "dest": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "flights": {
+            "type": "array"
+          }
+        }
+      },
+      "examples": [
+        "origin: 'CAN', dest: 'SHA'"
+      ],
+      "rate_limit": "20/min",
+      "business_rule_version": "2026-05-08"
+    },
+    {
+      "skill_id": "book_ticket",
+      "description": "Book a flight ticket",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "flight_no": {
+            "type": "string"
+          },
+          "passenger": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "booking_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "examples": [
+        "flight_no: 'CZ3101', passenger: 'Zhang San'"
+      ],
+      "rate_limit": "5/min",
+      "business_rule_version": "2026-05-08"
+    }
+  ],
+  "endpoints": {
+    "a2a": "https://travel.example.com/a2a",
+    "mcp": "https://travel.example.com/mcp/sse"
+  },
+  "authentication": {
+    "type": "OAuth2",
+    "scopes": [
+      "flight:search",
+      "flight:book"
+    ]
+  },
+  "dependencies": [
+    "search_flight",
+    "book_ticket"
+  ],
+  "orchestration_hints": {
+    "preferred_role": "planner",
+    "parallel_safe": true,
+    "stateful": true
+  },
+  "schema_version": "2.0",
+  "vendor_id": "demo",
+  "agent_type": "cli",
+  "constitution": {
+    "envelope": {
+      "message_id": "urn:agent:demo:travel:travel-planner-01-env-001",
+      "correlation_id": "urn:agent:demo:travel:travel-planner-01-correlation-001",
+      "timestamp": "2026-06-11T00:00:00Z",
+      "sender": "urn:agent:demo:travel:travel-planner-01"
+    },
+    "health_state": "HEALTHY",
+    "heartbeat_interval_seconds": 30,
+    "stale_node_timeout_seconds": 60
+  },
+  "federation": {
+    "role": "secondary",
+    "trust_score": 0.5,
+    "allowed_mcp_servers": [],
+    "cross_border_policy": {
+      "data_residency": "SG",
+      "allowed_transfer_zones": [
+        "SG"
+      ],
+      "requires_approval": false
+    },
+    "federation_protocols": {
+      "a2a": {
+        "version": "0.3",
+        "enabled": false
+      },
+      "mcp": {
+        "version": "2025-03-26",
+        "enabled": true
+      }
+    }
+  }
+}

@@ -1,0 +1,327 @@
+{
+  "card_version": "2.0",
+  "agent_id": "urn:agent:opencode:cli:opencode-0-9",
+  "name": "OpenCode",
+  "description": "Open-source CLI-based coding agent. Supports MCP protocol, AGENTS.md project context, sub-agent dispatch, and tool orchestration. Designed for open ecosystem integration with multiple MCP servers and skills.",
+  "version": "0.9.0",
+  "compliance": {
+    "data_residency": "LOCAL",
+    "data_classification": "internal",
+    "cross_border": false,
+    "model_backend_location": "LOCAL",
+    "audit_trail_required": true
+  },
+  "constitution": {
+    "envelope": {
+      "message_id": "opencode-env-001",
+      "correlation_id": "opencode-correlation-001",
+      "timestamp": "2026-06-11T00:00:00Z",
+      "sender": "urn:agent:opencode:cli:opencode-0-9"
+    },
+    "health_state": "HEALTHY",
+    "heartbeat_interval_seconds": 60,
+    "message_format": {
+      "version": "mcp-2024",
+      "supported_transports": [
+        "stdio",
+        "http"
+      ],
+      "max_payload_bytes": 524288
+    }
+  },
+  "model_backend": {
+    "provider": "openai+anthropic+deepseek",
+    "model": "multi-model",
+    "deployment": "hybrid",
+    "endpoint": "https://api.opencode.ai/v1"
+  },
+  "capabilities": [
+    {
+      "skill_id": "bash",
+      "description": "Execute shell commands with timeout and output capture",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string"
+          },
+          "timeout": {
+            "type": "integer"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "stdout": {
+            "type": "string"
+          },
+          "stderr": {
+            "type": "string"
+          },
+          "exit_code": {
+            "type": "integer"
+          }
+        }
+      },
+      "examples": [
+        "command: 'npm test'"
+      ],
+      "rate_limit": "60/min",
+      "business_rule_version": "2026-06-01"
+    },
+    {
+      "skill_id": "file_read",
+      "description": "Read file contents from local filesystem with offset/limit",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "integer"
+          },
+          "limit": {
+            "type": "integer"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string"
+          },
+          "lines": {
+            "type": "integer"
+          }
+        }
+      },
+      "examples": [
+        "path: '/src/main.ts'"
+      ],
+      "rate_limit": "120/min",
+      "business_rule_version": "2026-06-01"
+    },
+    {
+      "skill_id": "file_edit",
+      "description": "Edit files using search/replace blocks",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "old_str": {
+            "type": "string"
+          },
+          "new_str": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "diff": {
+            "type": "string"
+          }
+        }
+      },
+      "examples": [
+        "path: '/src/app.ts', old_str: 'foo()', new_str: 'bar()'"
+      ],
+      "rate_limit": "60/min",
+      "business_rule_version": "2026-06-01"
+    },
+    {
+      "skill_id": "mcp_tool",
+      "description": "Call tools via Model Context Protocol with multiple transport types",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "server": {
+            "type": "string"
+          },
+          "tool": {
+            "type": "string"
+          },
+          "input": {
+            "type": "object"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "result": {
+            "type": "object"
+          },
+          "is_error": {
+            "type": "boolean"
+          }
+        }
+      },
+      "examples": [
+        "server: 'github', tool: 'create_issue'"
+      ],
+      "rate_limit": "30/min",
+      "business_rule_version": "2026-06-01"
+    },
+    {
+      "skill_id": "task_management",
+      "description": "Create, update, list, and get persistent tasks",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "task_id": {
+            "type": "string"
+          },
+          "payload": {
+            "type": "object"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "task": {
+            "type": "object"
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "examples": [
+        "action: 'create', payload: {title: 'Implement auth'}"
+      ],
+      "rate_limit": "30/min",
+      "business_rule_version": "2026-06-01"
+    },
+    {
+      "skill_id": "subagent_dispatch",
+      "description": "Launch sub-agents for parallel or nested task execution",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "task": {
+            "type": "string"
+          },
+          "subagent_type": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "result": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "examples": [
+        "task: 'search codebase', subagent_type: 'explore'"
+      ],
+      "rate_limit": "5/min",
+      "business_rule_version": "2026-06-01"
+    },
+    {
+      "skill_id": "skill_invoke",
+      "description": "Invoke SKILL.md-based skills for specialized workflows",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "skill_name": {
+            "type": "string"
+          },
+          "context": {
+            "type": "object"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "result": {
+            "type": "string"
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "examples": [
+        "skill_name: 'debug'"
+      ],
+      "rate_limit": "10/min",
+      "business_rule_version": "2026-06-01"
+    }
+  ],
+  "authentication": {
+    "type": "APIKey",
+    "scopes": [
+      "code:read",
+      "code:write",
+      "bash:execute",
+      "agent:spawn"
+    ]
+  },
+  "dependencies": [
+    "openai-api",
+    "anthropic-api",
+    "deepseek-api",
+    "git",
+    "nodejs"
+  ],
+  "orchestration_hints": {
+    "preferred_role": "worker",
+    "parallel_safe": true,
+    "stateful": false
+  },
+  "governance": {
+    "state_machine_version": "opencode-simple-v1",
+    "circuit_breaker": {
+      "enabled": false
+    },
+    "oscillation_detection": {
+      "enabled": false
+    }
+  },
+  "schema_version": "2.0",
+  "vendor_id": "opencode",
+  "agent_type": "daemon",
+  "federation": {
+    "role": "secondary",
+    "trust_score": 0.5,
+    "allowed_mcp_servers": [],
+    "cross_border_policy": {
+      "data_residency": "LOCAL",
+      "allowed_transfer_zones": [
+        "LOCAL"
+      ],
+      "requires_approval": false
+    },
+    "federation_protocols": {
+      "a2a": {
+        "version": "0.3",
+        "enabled": false
+      },
+      "mcp": {
+        "version": "2025-03-26",
+        "enabled": true
+      }
+    }
+  }
+}
