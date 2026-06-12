@@ -8,6 +8,8 @@ import pytest
 
 from mas_eval.domains.d5_robustness import (
     CRITIQUE_CATEGORIES,
+    FEDERATION_FAULT_WEIGHTS,
+    FEDERATION_FAULTS,
     INFRA_FAULTS,
     LLM_FAULTS,
     QUALITY_DIMS,
@@ -103,6 +105,53 @@ class TestChaosEngine:
             result = ce.inject(fault)
             assert result["domain"] == "llm"
             assert result["fault"] == fault
+
+    def test_all_federation_faults_known(self):
+        ce = ChaosEngine(seed=42)
+        for fault in FEDERATION_FAULTS:
+            result = ce.inject(fault)
+            assert result["domain"] == "federation"
+            assert result["fault"] == fault
+
+    def test_federation_fault_count(self):
+        assert len(FEDERATION_FAULTS) == 5
+
+    def test_federation_fault_weights_sum(self):
+        total = sum(FEDERATION_FAULT_WEIGHTS.values())
+        assert abs(total - 1.0) < 0.01
+
+    def test_federation_healing_rate_empty(self):
+        ce = ChaosEngine(seed=42)
+        assert ce.federation_healing_rate() == 0.0
+
+    def test_federation_healing_rate_all_success(self):
+        ce = ChaosEngine(seed=42)
+        for fault in FEDERATION_FAULTS:
+            ce.record_healing(fault, True)
+        assert ce.federation_healing_rate() == 1.0
+
+    def test_federation_healing_rate_mixed(self):
+        ce = ChaosEngine(seed=42)
+        ce.record_healing("mcp_disconnect", True)
+        ce.record_healing("a2a_timeout", False)
+        ce.record_healing("gossip_partition", True)
+        assert ce.federation_healing_rate() == 2.0 / 3.0
+
+    def test_federation_healing_not_mixed_with_infra(self):
+        ce = ChaosEngine(seed=42)
+        ce.record_healing("mcp_disconnect", False)
+        ce.record_healing("network_partition", True)
+        assert ce.federation_healing_rate() == 0.0
+        assert ce.infra_healing_rate() == 1.0
+
+    def test_federation_faults_in_scoring(self):
+        ce = ChaosEngine(seed=42)
+        for fault in FEDERATION_FAULTS:
+            for scenario in range(3):
+                ce.inject(fault, scenario)
+                ce.record_healing(fault, True)
+        rate = ce.federation_healing_rate()
+        assert rate == 1.0
 
     def test_unknown_fault(self):
         ce = ChaosEngine(seed=42)

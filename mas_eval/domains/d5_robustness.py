@@ -288,6 +288,14 @@ INFRA_FAULTS = [
     "process_kill",
 ]
 
+FEDERATION_FAULTS = [
+    "mcp_disconnect",
+    "a2a_timeout",
+    "gossip_partition",
+    "trust_breach",
+    "federation_split",
+]
+
 LLM_FAULTS = [
     "timeout",
     "hallucination",
@@ -304,6 +312,14 @@ INFRA_FAULT_WEIGHTS = {
     "process_kill": 0.15,
 }
 
+FEDERATION_FAULT_WEIGHTS = {
+    "mcp_disconnect": 0.25,
+    "a2a_timeout": 0.20,
+    "gossip_partition": 0.20,
+    "trust_breach": 0.20,
+    "federation_split": 0.15,
+}
+
 LLM_FAULT_WEIGHTS = {
     "timeout": 0.20,
     "hallucination": 0.20,
@@ -318,6 +334,14 @@ INFRA_PASS_CRITERIA = {
     "memory_pressure": "Allocate to 90% of limit → agent degrades gracefully, no crash",
     "disk_failure": "Simulate write failure → agent logs error and retries with backoff",
     "process_kill": "Kill sub-agent process → auto-restart within 10s, task continuity ≥90%",
+}
+
+FEDERATION_PASS_CRITERIA = {
+    "mcp_disconnect": "MCP server disconnects → agent reconnects with backoff, queue ≤50",
+    "a2a_timeout": "A2A message >60s → agent retries via alternate transport",
+    "gossip_partition": "Gossip network split → agent buffers until rejoin ≤60s",
+    "trust_breach": "Peer trust score drops below 0.3 → agent isolates and escalates",
+    "federation_split": "Federation partition → agent continues with local subset, rejoins ≤120s",
 }
 
 LLM_PASS_CRITERIA = {
@@ -344,6 +368,9 @@ class ChaosEngine:
         if fault_type in INFRA_FAULTS:
             domain = "infra"
             inject_result = self.injector.inject(fault_type)
+        elif fault_type in FEDERATION_FAULTS:
+            domain = "federation"
+            inject_result = {"mode": self._injection_mode, "fault": fault_type}
         elif fault_type in LLM_FAULTS:
             domain = "llm"
             inject_result = {"mode": "simulated", "fault": fault_type}
@@ -421,6 +448,15 @@ class ChaosEngine:
         if not llm_results:
             return 0.0
         return sum(1 for r in llm_results if r["success"]) / len(llm_results)
+
+    def federation_healing_rate(self):
+        fed_results = []
+        for ft, results in self.healing_results.items():
+            if ft in FEDERATION_FAULTS:
+                fed_results.extend(results)
+        if not fed_results:
+            return 0.0
+        return sum(1 for r in fed_results if r["success"]) / len(fed_results)
 
     def clear(self):
         self.fault_history.clear()
@@ -573,8 +609,9 @@ class DriftDetector:
 # --- Scoring ---
 
 CHAOS_WEIGHTS = {
-    "infra": 0.50,
-    "llm": 0.50,
+    "infra": 0.40,
+    "federation": 0.20,
+    "llm": 0.40,
 }
 
 
@@ -606,6 +643,7 @@ def _score_chaos(ce, card=None):
         base_success_rate = min(base_success_rate, 0.95)
 
     infra_threshold = 1.0 - base_success_rate
+    fed_threshold = 1.0 - (base_success_rate - 0.03)
     llm_threshold = 1.0 - (base_success_rate - 0.05)
 
     for fault in INFRA_FAULTS:
@@ -618,12 +656,31 @@ def _score_chaos(ce, card=None):
                 ce.fault_history[-1]["healed"] = False
 
     infra_rate = ce.infra_healing_rate()
-    score += infra_rate * 50
+    score += infra_rate * 40
     findings.append(
         {
             "severity": "INFO",
             "category": "chaos_infra",
             "detail": f"Infra self-heal rate: {infra_rate * 100:.0f}% ({len(ce.healing_results)} fault types × 3 scenarios)",
+        }
+    )
+
+    for fault in FEDERATION_FAULTS:
+        for scenario in range(3):
+            ce.inject(fault, scenario)
+            success = ce.rng.random() > fed_threshold
+            recovery = ce.rng.uniform(1, 30)
+            ce.record_healing(fault, success, recovery_time=recovery)
+            if not success:
+                ce.fault_history[-1]["healed"] = False
+
+    fed_rate = ce.federation_healing_rate()
+    score += fed_rate * 20
+    findings.append(
+        {
+            "severity": "INFO",
+            "category": "chaos_federation",
+            "detail": f"Federation self-heal rate: {fed_rate * 100:.0f}% ({len(FEDERATION_FAULTS)} fault types × 3 scenarios)",
         }
     )
 
@@ -637,7 +694,7 @@ def _score_chaos(ce, card=None):
                 ce.fault_history[-1]["healed"] = False
 
     llm_rate = ce.llm_healing_rate()
-    score += llm_rate * 50
+    score += llm_rate * 40
     findings.append(
         {
             "severity": "INFO",
