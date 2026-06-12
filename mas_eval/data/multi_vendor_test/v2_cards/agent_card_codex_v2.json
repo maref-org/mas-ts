@@ -233,7 +233,9 @@
     "cross_border_policy": {
       "data_residency": "US",
       "allowed_transfer_zones": [
-        "US"
+        "US",
+        "CN",
+        "EU"
       ],
       "requires_approval": true
     },

@@ -1,0 +1,232 @@
+{
+  "claude_code": {
+    "agent": "claude_code",
+    "score": 100,
+    "overall_passed": true,
+    "findings": [
+      {
+        "check": "1.1",
+        "severity": "HIGH",
+        "detail": "Schema file not found: mas_eval/mas_eval/schemas/agent_card_v1.2.json"
+      },
+      {
+        "check": "1.4",
+        "severity": "INFO",
+        "detail": "All required envelope fields present (message_id, correlation_id, timestamp, sender)"
+      },
+      {
+        "check": "1.5",
+        "severity": "INFO",
+        "detail": "Health state registered: HEALTHY"
+      },
+      {
+        "check": "1.6",
+        "severity": "INFO",
+        "detail": "Heartbeat interval: 30s"
+      },
+      {
+        "check": "1.7",
+        "severity": "INFO",
+        "detail": "Authentication type: APIKey"
+      },
+      {
+        "check": "1.9",
+        "severity": "WARNING",
+        "detail": "Core tool coverage 38% (<50%), missing: file_write, glob, grep, web_fetch, web_search"
+      },
+      {
+        "check": "1.10",
+        "severity": "INFO",
+        "detail": "Tool dependency graph is acyclic"
+      }
+    ]
+  },
+  "codex": {
+    "agent": "codex",
+    "score": 100,
+    "overall_passed": true,
+    "findings": [
+      {
+        "check": "1.1",
+        "severity": "HIGH",
+        "detail": "Schema file not found: mas_eval/mas_eval/schemas/agent_card_v1.2.json"
+      },
+      {
+        "check": "1.4",
+        "severity": "INFO",
+        "detail": "All required envelope fields present (message_id, correlation_id, timestamp, sender)"
+      },
+      {
+        "check": "1.5",
+        "severity": "INFO",
+        "detail": "Health state registered: HEALTHY"
+      },
+      {
+        "check": "1.6",
+        "severity": "INFO",
+        "detail": "Heartbeat interval: 30s"
+      },
+      {
+        "check": "1.7",
+        "severity": "INFO",
+        "detail": "Authentication type: APIKey"
+      },
+      {
+        "check": "1.9",
+        "severity": "WARNING",
+        "detail": "Core tool coverage 0% (<50%), missing: bash, file_edit, file_read, file_write, glob, grep, web_fetch, web_search"
+      },
+      {
+        "check": "1.10",
+        "severity": "INFO",
+        "detail": "Tool dependency graph is acyclic"
+      }
+    ]
+  },
+  "cursor": {
+    "agent": "cursor",
+    "score": 100,
+    "overall_passed": true,
+    "findings": [
+      {
+        "check": "1.1",
+        "severity": "HIGH",
+        "detail": "Schema file not found: mas_eval/mas_eval/schemas/agent_card_v1.2.json"
+      },
+      {
+        "check": "1.4",
+        "severity": "INFO",
+        "detail": "All required envelope fields present (message_id, correlation_id, timestamp, sender)"
+      },
+      {
+        "check": "1.5",
+        "severity": "INFO",
+        "detail": "Health state registered: HEALTHY"
+      },
+      {
+        "check": "1.6",
+        "severity": "INFO",
+        "detail": "Heartbeat interval: 30s"
+      },
+      {
+        "check": "1.7",
+        "severity": "INFO",
+        "detail": "Authentication type: APIKey"
+      },
+      {
+        "check": "1.9",
+        "severity": "WARNING",
+        "detail": "Core tool coverage 0% (<50%), missing: bash, file_edit, file_read, file_write, glob, grep, web_fetch, web_search"
+      },
+      {
+        "check": "1.10",
+        "severity": "INFO",
+        "detail": "Tool dependency graph is acyclic"
+      }
+    ]
+  },
+  "opencode": {
+    "agent": "opencode",
+    "score": 100,
+    "overall_passed": true,
+    "findings": [
+      {
+        "check": "1.1",
+        "severity": "HIGH",
+        "detail": "Schema file not found: mas_eval/mas_eval/schemas/agent_card_v1.2.json"
+      },
+      {
+        "check": "1.4",
+        "severity": "INFO",
+        "detail": "All required envelope fields present (message_id, correlation_id, timestamp, sender)"
+      },
+      {
+        "check": "1.5",
+        "severity": "INFO",
+        "detail": "Health state registered: HEALTHY"
+      },
+      {
+        "check": "1.6",
+        "severity": "INFO",
+        "detail": "Heartbeat interval: 60s"
+      },
+      {
+        "check": "1.7",
+        "severity": "INFO",
+        "detail": "Authentication type: APIKey"
+      },
+      {
+        "check": "1.9",
+        "severity": "WARNING",
+        "detail": "Core tool coverage 38% (<50%), missing: file_write, glob, grep, web_fetch, web_search"
+      },
+      {
+        "check": "1.10",
+        "severity": "INFO",
+        "detail": "Tool dependency graph is acyclic"
+      }
+    ]
+  },
+  "traecn": {
+    "agent": "traecn",
+    "score": 100,
+    "overall_passed": true,
+    "findings": [
+      {
+        "check": "1.1",
+        "severity": "HIGH",
+        "detail": "Schema file not found: mas_eval/mas_eval/schemas/agent_card_v1.2.json"
+      },
+      {
+        "check": "1.4",
+        "severity": "INFO",
+        "detail": "All required envelope fields present (message_id, correlation_id, timestamp, sender)"
+      },
+      {
+        "check": "1.5",
+        "severity": "INFO",
+        "detail": "Health state registered: HEALTHY"
+      },
+      {
+        "check": "1.6",
+        "severity": "INFO",
+        "detail": "Heartbeat interval: 30s"
+      },
+      {
+        "check": "1.7",
+        "severity": "INFO",
+        "detail": "Authentication type: APIKey"
+      },
+      {
+        "check": "1.9",
+        "severity": "WARNING",
+        "detail": "Core tool coverage 0% (<50%), missing: bash, file_edit, file_read, file_write, glob, grep, web_fetch, web_search"
+      },
+      {
+        "check": "1.10",
+        "severity": "INFO",
+        "detail": "Tool dependency graph is acyclic"
+      }
+    ]
+  },
+  "card_version": "2.0",
+  "schema_version": "2.0",
+  "vendor_id": "unknown",
+  "agent_type": "cli",
+  "federation": {
+    "role": "secondary",
+    "trust_score": 0.5,
+    "allowed_mcp_servers": [],
+    "cross_border_policy": null,
+    "federation_protocols": {
+      "a2a": {
+        "version": "0.3",
+        "enabled": false
+      },
+      "mcp": {
+        "version": "2025-03-26",
+        "enabled": true
+      }
+    }
+  }
+}
