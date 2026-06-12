@@ -94,3 +94,7 @@ task_plan.md
 
 # Local governance config (internal Athena references, not for publish)
 athena-governance.jsonc
+
+# Federation scan auto-generated results
+mas_eval/data/multi_vendor_test/*_results.json
+mas_eval/data/multi_vendor_test/v2_cards/*_results.json

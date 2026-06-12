@@ -151,7 +151,15 @@ def _resolve_endpoint_region(endpoint):
 def check_schema(card, schema_path=None):
     findings = []
     if not schema_path:
-        schema_path = Path(__file__).parent.parent / "schemas" / "agent_card_v1.2.json"
+        ver = card.get("schema_version", card.get("card_version", "1.2"))
+        if ver == "2.0":
+            schema_path = (
+                Path(__file__).parent.parent / "schemas" / "agent_card_v2.0.json"
+            )
+        else:
+            schema_path = (
+                Path(__file__).parent.parent / "schemas" / "agent_card_v1.2.json"
+            )
     schema_path = Path(schema_path)
     if not schema_path.exists():
         findings.append(

@@ -1,0 +1,259 @@
+{
+  "card_version": "2.0",
+  "agent_id": "urn:agent:anysphere:cursor:cursor-0-46",
+  "name": "Cursor",
+  "description": "AI-native IDE by Anysphere. Features multi-model agent orchestration with Composer/Agent modes, MCP protocol integration, .cursorrules project context, and YOLO/Plan modes. Strong GitHub Copilot integration and multi-file editing capabilities.",
+  "version": "0.46.0",
+  "compliance": {
+    "data_residency": "US",
+    "data_classification": "internal",
+    "cross_border": true,
+    "model_backend_location": "US",
+    "audit_trail_required": true
+  },
+  "constitution": {
+    "envelope": {
+      "message_id": "cursor-env-001",
+      "correlation_id": "cursor-correlation-001",
+      "timestamp": "2026-06-11T00:00:00Z",
+      "sender": "urn:agent:anysphere:cursor:cursor-0-46"
+    },
+    "health_state": "HEALTHY",
+    "heartbeat_interval_seconds": 30,
+    "message_format": {
+      "version": "mcp-2024",
+      "supported_transports": [
+        "stdio",
+        "sse"
+      ],
+      "max_payload_bytes": 262144
+    }
+  },
+  "model_backend": {
+    "provider": "openai+anthropic+google",
+    "model": "multi-model (claude-sonnet-4+gpt-4o+gpt-5)",
+    "deployment": "cloud",
+    "endpoint": "https://api.anthropic.com/v1"
+  },
+  "capabilities": [
+    {
+      "skill_id": "composer",
+      "description": "Multi-file editing with context-aware agent orchestration across the entire codebase",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "task": {
+            "type": "string"
+          },
+          "files": {
+            "type": "array"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "changes": {
+            "type": "array"
+          },
+          "summary": {
+            "type": "string"
+          }
+        }
+      },
+      "examples": [
+        "task: 'add authentication to the API'"
+      ],
+      "rate_limit": "unlimited",
+      "business_rule_version": "2026-06-01"
+    },
+    {
+      "skill_id": "agent_orchestration",
+      "description": "Agent mode with planning, execution, and self-healing capabilities",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "plan",
+              "agent",
+              "yolo"
+            ]
+          },
+          "task": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "plan": {
+            "type": "object"
+          },
+          "result": {
+            "type": "string"
+          }
+        }
+      },
+      "examples": [
+        "mode: 'agent', task: 'debug the failing test'"
+      ],
+      "rate_limit": "60/min",
+      "business_rule_version": "2026-06-01"
+    },
+    {
+      "skill_id": "mcp_tool",
+      "description": "MCP protocol tool invocation with IDE-level integration and .cursorrules governance",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "server": {
+            "type": "string"
+          },
+          "tool": {
+            "type": "string"
+          },
+          "input": {
+            "type": "object"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "result": {
+            "type": "object"
+          },
+          "is_error": {
+            "type": "boolean"
+          }
+        }
+      },
+      "examples": [
+        "server: 'github', tool: 'list_issues'"
+      ],
+      "rate_limit": "30/min",
+      "business_rule_version": "2026-06-01"
+    },
+    {
+      "skill_id": "multi_model_router",
+      "description": "Route tasks to optimal model based on complexity (small/large/huGE)",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "task": {
+            "type": "string"
+          },
+          "complexity": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "model": {
+            "type": "string"
+          },
+          "result": {
+            "type": "string"
+          }
+        }
+      },
+      "examples": [
+        "complexity: 'small'"
+      ],
+      "rate_limit": "60/min",
+      "business_rule_version": "2026-06-01"
+    },
+    {
+      "skill_id": "inline_edit",
+      "description": "Precise inline code editing with diff preview and undo support",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "instructions": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "diff": {
+            "type": "string"
+          },
+          "applied": {
+            "type": "boolean"
+          }
+        }
+      },
+      "examples": [
+        "file: '/src/utils.ts', instructions: 'convert to arrow function'"
+      ],
+      "rate_limit": "120/min",
+      "business_rule_version": "2026-06-01"
+    }
+  ],
+  "authentication": {
+    "type": "APIKey",
+    "scopes": [
+      "code:read",
+      "code:write",
+      "mcp:invoke",
+      "agent:orchestrate"
+    ]
+  },
+  "dependencies": [
+    "openai-api",
+    "anthropic-api",
+    "google-api",
+    "git",
+    "nodejs",
+    "mcp-protocol"
+  ],
+  "orchestration_hints": {
+    "preferred_role": "worker",
+    "parallel_safe": true,
+    "stateful": true
+  },
+  "governance": {
+    "state_machine_version": "cursor-simple-v1",
+    "circuit_breaker": {
+      "enabled": false
+    },
+    "oscillation_detection": {
+      "enabled": false
+    }
+  },
+  "schema_version": "2.0",
+  "vendor_id": "anysphere",
+  "agent_type": "ide",
+  "federation": {
+    "role": "secondary",
+    "trust_score": 0.5,
+    "allowed_mcp_servers": [],
+    "cross_border_policy": {
+      "data_residency": "US",
+      "allowed_transfer_zones": [
+        "US"
+      ],
+      "requires_approval": true
+    },
+    "federation_protocols": {
+      "a2a": {
+        "version": "0.3",
+        "enabled": false
+      },
+      "mcp": {
+        "version": "2025-03-26",
+        "enabled": true
+      }
+    }
+  }
+}

@@ -1,0 +1,370 @@
+{
+  "card_version": "2.0",
+  "agent_id": "urn:agent:anthropic:claude-code:claude-code-1-0",
+  "name": "Claude Code (Anthropic)",
+  "description": "Anthropic's agentic coding CLI tool. Supports multi-agent orchestration, MCP protocol, file-based memory, remote bridge control, and 30+ built-in tools. Used as the primary development agent for the MAREF governance ecosystem.",
+  "version": "1.0.0",
+  "compliance": {
+    "data_residency": "US",
+    "data_classification": "confidential",
+    "cross_border": true,
+    "model_backend_location": "US",
+    "audit_trail_required": true
+  },
+  "constitution": {
+    "envelope": {
+      "message_id": "claude-code-env-001",
+      "correlation_id": "claude-code-correlation-001",
+      "timestamp": "2026-06-11T00:00:00Z",
+      "sender": "urn:agent:anthropic:claude-code:claude-code-1-0"
+    },
+    "health_state": "HEALTHY",
+    "heartbeat_interval_seconds": 30,
+    "message_format": {
+      "version": "mcp-2024",
+      "supported_transports": [
+        "stdio",
+        "http",
+        "sse"
+      ],
+      "max_payload_bytes": 524288
+    }
+  },
+  "model_backend": {
+    "provider": "anthropic",
+    "model": "claude-sonnet-4-20250514",
+    "deployment": "cloud",
+    "endpoint": "https://api.anthropic.com/v1/messages"
+  },
+  "capabilities": [
+    {
+      "skill_id": "bash",
+      "description": "Execute shell commands with sandboxing and timeout controls",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string"
+          },
+          "timeout": {
+            "type": "integer"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "stdout": {
+            "type": "string"
+          },
+          "stderr": {
+            "type": "string"
+          },
+          "exit_code": {
+            "type": "integer"
+          }
+        }
+      },
+      "examples": [
+        "command: 'npm test'"
+      ],
+      "rate_limit": "60/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "file_read",
+      "description": "Read file contents from local filesystem",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "integer"
+          },
+          "limit": {
+            "type": "integer"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string"
+          },
+          "lines": {
+            "type": "integer"
+          }
+        }
+      },
+      "examples": [
+        "path: '/src/main.ts'"
+      ],
+      "rate_limit": "120/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "file_edit",
+      "description": "Edit files using search/replace blocks with diff preview",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "old_str": {
+            "type": "string"
+          },
+          "new_str": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "diff": {
+            "type": "string"
+          }
+        }
+      },
+      "examples": [
+        "path: '/src/app.ts', old_str: 'foo()', new_str: 'bar()'"
+      ],
+      "rate_limit": "60/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "tool_orchestration",
+      "description": "Orchestrate 30+ built-in tools and MCP servers for complex multi-step workflows",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "plan": {
+            "type": "array"
+          },
+          "context": {
+            "type": "object"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "results": {
+            "type": "array"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "examples": [
+        "plan: [{tool: 'grep', input: {pattern: 'TODO'}}]"
+      ],
+      "rate_limit": "30/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "skill_invoke",
+      "description": "Invoke SKILL.md-based skills for specialized workflows (batch, debug, loop, stuck, verify)",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "skill_name": {
+            "type": "string"
+          },
+          "context": {
+            "type": "object"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "result": {
+            "type": "string"
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "examples": [
+        "skill_name: 'debug'"
+      ],
+      "rate_limit": "10/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "memory",
+      "description": "File-based typed memory system with MEMORY.md entrypoint and topic files",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "read",
+              "write",
+              "search"
+            ]
+          },
+          "topic": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string"
+          },
+          "entries": {
+            "type": "array"
+          }
+        }
+      },
+      "examples": [
+        "action: 'read', topic: 'project'"
+      ],
+      "rate_limit": "60/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "bridge",
+      "description": "Remote control bridge for multi-session management with JWT auth",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "session_id": {
+            "type": "string"
+          },
+          "config": {
+            "type": "object"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "session": {
+            "type": "object"
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "examples": [
+        "action: 'create_session', config: {mode: 'worktree'}"
+      ],
+      "rate_limit": "10/min",
+      "business_rule_version": "2026-05-01"
+    },
+    {
+      "skill_id": "agent_tool",
+      "description": "Launch sub-agents for parallel or nested task execution",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "task": {
+            "type": "string"
+          },
+          "subagent_type": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "result": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "examples": [
+        "task: 'search for auth patterns', subagent_type: 'search'"
+      ],
+      "rate_limit": "5/min",
+      "business_rule_version": "2026-05-01"
+    }
+  ],
+  "endpoints": {
+    "a2a": "https://api.anthropic.com/v1/agents",
+    "mcp": "https://api.anthropic.com/v1/mcp"
+  },
+  "authentication": {
+    "type": "APIKey",
+    "scopes": [
+      "code:read",
+      "code:write",
+      "bash:execute",
+      "web:search",
+      "agent:spawn"
+    ]
+  },
+  "dependencies": [
+    "anthropic-api",
+    "git",
+    "nodejs",
+    "typescript",
+    "ripgrep",
+    "mcp-protocol"
+  ],
+  "orchestration_hints": {
+    "preferred_role": "supervisor",
+    "parallel_safe": true,
+    "stateful": true
+  },
+  "governance": {
+    "state_machine_version": "claude-simple-v1",
+    "circuit_breaker": {
+      "enabled": false
+    },
+    "oscillation_detection": {
+      "enabled": false
+    }
+  },
+  "schema_version": "2.0",
+  "vendor_id": "anthropic",
+  "agent_type": "cli",
+  "federation": {
+    "role": "secondary",
+    "trust_score": 0.5,
+    "allowed_mcp_servers": [],
+    "cross_border_policy": {
+      "data_residency": "US",
+      "allowed_transfer_zones": [
+        "US"
+      ],
+      "requires_approval": true
+    },
+    "federation_protocols": {
+      "a2a": {
+        "version": "0.3",
+        "enabled": false
+      },
+      "mcp": {
+        "version": "2025-03-26",
+        "enabled": true
+      }
+    }
+  }
+}

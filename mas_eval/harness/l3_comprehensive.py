@@ -23,7 +23,7 @@ from mas_eval.scoring.absolute import (
 logger = logging.getLogger(__name__)
 
 
-def run_l3_comprehensive(card, tasks=None):
+def run_l3_comprehensive(card, tasks=None, federation_cards=None):
     """Run L3 Comprehensive evaluation (D1-D5, ~1 day).
 
     Full evaluation across all 5 domains including robustness (D5).
@@ -31,6 +31,7 @@ def run_l3_comprehensive(card, tasks=None):
     Args:
     card: Agent card dict.
     tasks: Optional list of task dicts for D2.
+    federation_cards: Optional list of agent cards for cross-agent federation scoring.
 
     Returns:
     Dict with keys: level, name, elapsed_seconds, score, grade, verdict,
@@ -40,7 +41,7 @@ def run_l3_comprehensive(card, tasks=None):
     d1 = run_d1(card)
     d2 = run_d2(card, tasks or [])
     d3 = run_d3(card)
-    d4 = run_d4(card)
+    d4 = run_d4(card, federation_cards=federation_cards)
     d5 = run_d5()
 
     d1_score = score_domain(d1["score"], d1.get("findings"))

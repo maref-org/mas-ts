@@ -23,7 +23,7 @@ from mas_eval.scoring.absolute import (
 logger = logging.getLogger(__name__)
 
 
-def run_l2_deep(card, tasks=None):
+def run_l2_deep(card, tasks=None, federation_cards=None):
     """Run L2 Deep evaluation (D1-D4, ~2 hours).
 
     Adds governance and security (D4) on top of L1 for deeper analysis.
@@ -31,6 +31,7 @@ def run_l2_deep(card, tasks=None):
     Args:
     card: Agent card dict.
     tasks: Optional list of task dicts for D2.
+    federation_cards: Optional list of agent cards for cross-agent federation scoring.
 
     Returns:
     Dict with keys: level, name, elapsed_seconds, score, grade, verdict,
@@ -40,7 +41,7 @@ def run_l2_deep(card, tasks=None):
     d1 = run_d1(card)
     d2 = run_d2(card, tasks or [])
     d3 = run_d3(card)
-    d4 = run_d4(card)
+    d4 = run_d4(card, federation_cards=federation_cards)
 
     d1_score = score_domain(d1["score"], d1.get("findings"))
     d2_score = score_domain(d2["score"], d2.get("findings"))
@@ -74,7 +75,9 @@ def run_l2_deep(card, tasks=None):
     }
 
 
-def run_l2_with_oracle(card, oracle_name, task_id=None, mock_trajectory=None):
+def run_l2_with_oracle(
+    card, oracle_name, task_id=None, mock_trajectory=None, federation_cards=None
+):
     """Run L2 Deep evaluation with an executable oracle.
 
     Uses an oracle benchmark for D2 golden trajectory generation alongside D1/D3/D4.
@@ -84,6 +87,7 @@ def run_l2_with_oracle(card, oracle_name, task_id=None, mock_trajectory=None):
     oracle_name: Registered oracle name.
     task_id: Optional specific oracle task ID.
     mock_trajectory: Optional agent trajectory for comparison.
+    federation_cards: Optional list of agent cards for cross-agent federation scoring.
 
     Returns:
     Dict with keys: level, name, elapsed_seconds, score, grade, verdict,
@@ -93,7 +97,7 @@ def run_l2_with_oracle(card, oracle_name, task_id=None, mock_trajectory=None):
     d1 = run_d1(card)
     d2 = run_d2_with_oracle(card, oracle_name, task_id, mock_trajectory)
     d3 = run_d3(card)
-    d4 = run_d4(card)
+    d4 = run_d4(card, federation_cards=federation_cards)
 
     d1_score = score_domain(d1["score"], d1.get("findings"))
     d2_score = score_domain(d2["score"], d2.get("findings"))
