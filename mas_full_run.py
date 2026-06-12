@@ -27,6 +27,19 @@ import argcomplete
 
 sys.path.insert(0, str(Path(__file__).parent.resolve()))
 from mas_eval import __version__ as VERSION
+from mas_eval.domains.d1_compliance import (
+    run_d1,
+)
+from mas_eval.domains.d3_multi_agent import (
+    run_d3,
+)
+from mas_eval.domains.d4_governance_security import (
+    check_mcp_supply_chain,
+    check_trust_score,
+    check_vendor_diversity,
+    run_d4,
+    run_d4_federation,
+)
 from mas_eval.harness.l0_fast_screen import run_l0_fast_screen
 from mas_eval.harness.l1_standard import run_l1_standard
 from mas_eval.harness.l2_deep import run_l2_deep
@@ -192,6 +205,88 @@ def print_report(report):
     print("=" * 70 + "\n")
 
 
+def run_multi_vendor(card_paths, level, output_path):
+    """Run federation evaluation across multiple vendor agent cards."""
+    cards = {}
+    for path_str in card_paths:
+        p = Path(path_str)
+        if p.is_dir():
+            for f in sorted(p.glob("*.json")):
+                if "agent_card" not in f.name:
+                    continue
+                cards[f.stem] = load_card(str(f))
+        else:
+            cards[p.stem] = load_card(path_str)
+
+    logger.info("Multi-vendor federation scan: %d cards loaded", len(cards))
+    for name in cards:
+        logger.info(
+            "  - %s: %s",
+            name,
+            cards[name].get("vendor_id", cards[name].get("agent_id", "?")),
+        )
+
+    results = {}
+    for name, card in cards.items():
+        d1 = run_d1(card)
+        d3 = run_d3(card)
+        d4 = run_d4(card)
+        trust_s, trust_f = check_trust_score(card)
+        mcp_s, mcp_f = check_mcp_supply_chain(card)
+        results[name] = {
+            "d1": {"score": d1["score"], "verdict": d1["conformance_verdict"]},
+            "d3": {"score": d3["score"]},
+            "d4": {"score": d4["score"]},
+            "trust_score": trust_s,
+            "mcp_score": mcp_s,
+        }
+
+    cards_list = list(cards.values())
+    fed = run_d4_federation(cards_list)
+    div_s, div_f = check_vendor_diversity(cards_list)
+
+    report = {
+        "standard": "MAS-TS-001",
+        "version": "v4.2",
+        "mode": "multi-vendor",
+        "evaluated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+        "agent_count": len(cards),
+        "agents": results,
+        "federation": {
+            "score": fed["score"],
+            "vendor_diversity": div_s,
+            "findings_count": len(fed["findings"]),
+        },
+    }
+
+    if output_path:
+        out = Path(output_path)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        with open(out, "w", encoding="utf-8") as f:
+            json.dump(report, f, indent=2, ensure_ascii=False)
+        logger.info("Multi-vendor report saved to %s", output_path)
+
+    print("\n" + "=" * 70)
+    print("  MAS-TS-001 Multi-Vendor Federation Report")
+    print("=" * 70)
+    print(f"  Agents: {len(cards)}")
+    print(f"  Evaluated: {report['evaluated_at']}")
+    print("-" * 70)
+    print(f"  {'Agent':<20} {'D1':>6} {'D3':>6} {'D4':>6} {'Trust':>6} {'MCP':>6}")
+    print(f"  {'-' * 54}")
+    for name, r in sorted(results.items()):
+        print(
+            f"  {name:<20} {r['d1']['score']:>5.1f} {r['d3']['score']:>5.1f} {r['d4']['score']:>5.1f} {r['trust_score']:>5.1f} {r['mcp_score']:>5.1f}"
+        )
+    print(f"  {'-' * 54}")
+    print(f"  Federation score:      {fed['score']:.1f}/100")
+    print(f"  Vendor diversity:      {div_s:.1f}/100")
+    print(f"  Total findings:        {len(fed['findings'])}")
+    print("=" * 70 + "\n")
+
+    return report
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="MAS-TS-001 Full-Run Evaluation Pipeline (L0-L4)"
@@ -211,11 +306,19 @@ def main():
         choices=["L0", "L1", "L2", "L3", "L4", "all"],
         help="Evaluation level (default: all)",
     )
-    parser.add_argument("--card", required=True, help="Agent Card JSON path")
+    parser.add_argument(
+        "--card", help="Agent Card JSON path (required unless --multi-vendor is used)"
+    )
     parser.add_argument("--tasks", help="Task definitions JSON path")
     parser.add_argument("--output", help="Save report to JSON file")
     parser.add_argument(
         "--source-dir", help="Agent source code directory for deeper analysis"
+    )
+    parser.add_argument(
+        "--multi-vendor",
+        nargs="+",
+        metavar="CARD_PATH",
+        help="Multi-vendor federation mode: evaluate multiple agent cards and run cross-agent analysis",
     )
     parser.add_argument(
         "--block",
@@ -225,6 +328,13 @@ def main():
     argcomplete.autocomplete(parser)
     args = parser.parse_args()
 
+    if args.multi_vendor:
+        return run_multi_vendor(args.multi_vendor, args.level, args.output)
+
+    if not args.card:
+        parser.error(
+            "--card is required (or use --multi-vendor for multi-agent federation evaluation)"
+        )
     card = load_card(args.card)
     tasks = load_tasks(args.tasks)
 

@@ -98,3 +98,5 @@ athena-governance.jsonc
 # Federation scan auto-generated results
 mas_eval/data/multi_vendor_test/*_results.json
 mas_eval/data/multi_vendor_test/v2_cards/*_results.json
+mas_eval/data/multi_vendor_test/v4_federation_scan_*.json
+reports/federation-scan.json

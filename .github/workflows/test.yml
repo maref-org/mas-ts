@@ -41,3 +41,15 @@ jobs:
             exit 1
           fi
           echo "✅ Coverage $COV% meets threshold"
+
+      - name: Run federation scan (multi-vendor CI gate)
+        run: |
+          echo "::group::Federation Scan"
+          python mas_full_run.py --multi-vendor mas_eval/data/multi_vendor_test/ --output reports/federation-scan.json
+          echo "::endgroup::"
+          CRIT=$(python3 -c "import json; r=json.load(open('reports/federation-scan.json')); print(sum(1 for a in r['agents'].values() if a['d1']['verdict']=='NON-COMPLIANT (blocked)'))")
+          if [ "$CRIT" -gt 0 ]; then
+            echo "::error::$CRIT agents are NON-COMPLIANT (blocked)"
+            exit 1
+          fi
+          echo "✅ All agents compliant"

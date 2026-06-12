@@ -227,7 +227,7 @@
   "agent_type": "ide",
   "federation": {
     "role": "secondary",
-    "trust_score": 0.5,
+    "trust_score": 0.72,
     "allowed_mcp_servers": [],
     "cross_border_policy": {
       "data_residency": "CN",
@@ -245,6 +245,23 @@
         "version": "2025-03-26",
         "enabled": true
       }
-    }
+    },
+    "trust_history": [
+      {
+        "timestamp": "2026-05-20T00:00:00Z",
+        "score": 0.65,
+        "source": "self"
+      },
+      {
+        "timestamp": "2026-06-01T00:00:00Z",
+        "score": 0.7,
+        "source": "oracle"
+      },
+      {
+        "timestamp": "2026-06-10T00:00:00Z",
+        "score": 0.72,
+        "source": "peer"
+      }
+    ]
   }
 }

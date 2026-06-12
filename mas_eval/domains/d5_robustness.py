@@ -256,6 +256,102 @@ class FaultInjector:
             pass
         return {"fault": "network_partition", "mode": "simulated"}
 
+    def inject_mcp_disconnect(self, host="127.0.0.1", port=9000):
+        try:
+            import socket
+
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(5)
+            sock.bind((host, port))
+            sock.listen(1)
+            conn, addr = sock.accept()
+            conn.close()
+            sock.close()
+            return {
+                "fault": "mcp_disconnect",
+                "mode": "real",
+                "detail": f"MCP server at {host}:{port} disconnected",
+            }
+        except Exception:
+            return {
+                "fault": "mcp_disconnect",
+                "mode": "simulated",
+                "detail": "MCP disconnection simulated",
+            }
+
+    def inject_a2a_timeout(self, host="127.0.0.1", port=9001):
+        try:
+            import socket
+
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(5)
+            sock.bind((host, port))
+            sock.listen(1)
+            conn, addr = sock.accept()
+            conn.settimeout(60)
+            conn.recv(1024)
+            conn.close()
+            sock.close()
+            return {
+                "fault": "a2a_timeout",
+                "mode": "real",
+                "detail": f"A2A connection at {host}:{port} timed out",
+            }
+        except Exception:
+            return {
+                "fault": "a2a_timeout",
+                "mode": "simulated",
+                "detail": "A2A timeout simulated",
+            }
+
+    def inject_gossip_partition(self, port_range="9002-9005"):
+        system = platform.system()
+        try:
+            if (
+                system == "Darwin"
+                and subprocess.run(
+                    [
+                        "sudo",
+                        "-n",
+                        "pfctl",
+                        "-t",
+                        "blocked_hosts",
+                        "-T",
+                        "add",
+                        port_range,
+                    ],
+                    capture_output=True,
+                    text=True,
+                ).returncode
+                == 0
+            ):
+                self._cleanup_handlers.append(
+                    lambda: subprocess.run(
+                        [
+                            "sudo",
+                            "pfctl",
+                            "-t",
+                            "blocked_hosts",
+                            "-T",
+                            "delete",
+                            port_range,
+                        ],
+                        capture_output=True,
+                    )
+                )
+                return {
+                    "fault": "gossip_partition",
+                    "mode": "real",
+                    "detail": f"Gossip ports {port_range} partitioned",
+                }
+        except Exception:
+            pass
+        return {
+            "fault": "gossip_partition",
+            "mode": "simulated",
+            "detail": "Gossip partition simulated",
+        }
+
     def inject(self, fault_type):
         injectors = {
             "network_partition": lambda: self.inject_network_partition(),
@@ -263,6 +359,9 @@ class FaultInjector:
             "memory_pressure": lambda: self.inject_memory_pressure(),
             "disk_failure": lambda: self.inject_disk_failure(),
             "process_kill": lambda: self.inject_process_kill(),
+            "mcp_disconnect": lambda: self.inject_mcp_disconnect(),
+            "a2a_timeout": lambda: self.inject_a2a_timeout(),
+            "gossip_partition": lambda: self.inject_gossip_partition(),
         }
         injector = injectors.get(fault_type)
         if injector:

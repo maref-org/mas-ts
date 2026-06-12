@@ -1,0 +1,728 @@
+{
+  "timestamp": "2026-06-11T14:13:50Z",
+  "results": {
+    "claude_code": {
+      "d1": {
+        "score": 20.0,
+        "conformance_verdict": "NON-COMPLIANT (blocked)",
+        "severity_counts": {
+          "total_findings": 10,
+          "critical": 3,
+          "high": 0,
+          "warning": 1,
+          "info": 6
+        },
+        "data_cross_border_chain": [
+          {
+            "check": "1.11",
+            "severity": "CRITICAL",
+            "detail": "Cross-border enabled but allowed_transfer_zones ['US'] only contains current residency US"
+          }
+        ],
+        "federation_version_compat": [
+          {
+            "check": "1.12",
+            "severity": "INFO",
+            "detail": "MCP protocol version 2025-03-26 is compatible"
+          }
+        ]
+      },
+      "d3": {
+        "score": 61.9,
+        "subscores": {
+          "spawn": 55.0,
+          "protocol": 79.0,
+          "orchestration": 53.3,
+          "isolation": 60.0,
+          "conflict": 65.0,
+          "persistence": 60.0,
+          "federation_compat": 5.0,
+          "federation_role": 0.0,
+          "federation_permissions": 0
+        },
+        "federation_compatibility": {
+          "score": 5.0,
+          "findings": [
+            {
+              "severity": "INFO",
+              "category": "federation_compat",
+              "detail": "MCP v2025-03-26 compatible with federation topology"
+            }
+          ]
+        },
+        "role_conflicts": {
+          "score": 0.0,
+          "findings": [
+            {
+              "severity": "WARNING",
+              "category": "federation_role",
+              "detail": "Federation role 'secondary' conflicts with orchestration role 'supervisor'"
+            }
+          ]
+        },
+        "permission_propagation": {
+          "score": 0,
+          "findings": [
+            {
+              "severity": "INFO",
+              "category": "federation_permissions",
+              "detail": "No MCP server whitelist — permission not assessed"
+            }
+          ]
+        }
+      },
+      "d4": {
+        "score": 64.3,
+        "verdict": "",
+        "trust_score": {
+          "score": 50.0,
+          "findings": [
+            {
+              "severity": "INFO",
+              "category": "trust_scorer",
+              "detail": "Trust score 0.50/1.0 (stable, 0 snapshots)"
+            },
+            {
+              "severity": "INFO",
+              "category": "trust_scorer",
+              "detail": "Reputation baseline: 0.5"
+            }
+          ]
+        },
+        "mcp_supply_chain": {
+          "score": 0.0,
+          "findings": [
+            {
+              "severity": "CRITICAL",
+              "category": "mcp_supply_chain",
+              "detail": "No allowed MCP servers defined — supply chain open to any server"
+            }
+          ]
+        }
+      }
+    },
+    "codex": {
+      "d1": {
+        "score": 20.0,
+        "conformance_verdict": "NON-COMPLIANT (blocked)",
+        "severity_counts": {
+          "total_findings": 10,
+          "critical": 3,
+          "high": 0,
+          "warning": 1,
+          "info": 6
+        },
+        "data_cross_border_chain": [
+          {
+            "check": "1.11",
+            "severity": "CRITICAL",
+            "detail": "Cross-border enabled but allowed_transfer_zones ['US'] only contains current residency US"
+          }
+        ],
+        "federation_version_compat": [
+          {
+            "check": "1.12",
+            "severity": "INFO",
+            "detail": "MCP protocol version 2025-03-26 is compatible"
+          }
+        ]
+      },
+      "d3": {
+        "score": 31.7,
+        "subscores": {
+          "spawn": 0.0,
+          "protocol": 56.0,
+          "orchestration": 45.0,
+          "isolation": 30.0,
+          "conflict": 30.0,
+          "persistence": 15.0,
+          "federation_compat": 5.0,
+          "federation_role": 0.0,
+          "federation_permissions": 0
+        },
+        "federation_compatibility": {
+          "score": 5.0,
+          "findings": [
+            {
+              "severity": "INFO",
+              "category": "federation_compat",
+              "detail": "MCP v2025-03-26 compatible with federation topology"
+            }
+          ]
+        },
+        "role_conflicts": {
+          "score": 0.0,
+          "findings": [
+            {
+              "severity": "WARNING",
+              "category": "federation_role",
+              "detail": "Federation role 'secondary' conflicts with orchestration role 'supervisor'"
+            }
+          ]
+        },
+        "permission_propagation": {
+          "score": 0,
+          "findings": [
+            {
+              "severity": "INFO",
+              "category": "federation_permissions",
+              "detail": "No MCP server whitelist — permission not assessed"
+            }
+          ]
+        }
+      },
+      "d4": {
+        "score": 61.7,
+        "verdict": "",
+        "trust_score": {
+          "score": 50.0,
+          "findings": [
+            {
+              "severity": "INFO",
+              "category": "trust_scorer",
+              "detail": "Trust score 0.50/1.0 (stable, 0 snapshots)"
+            },
+            {
+              "severity": "INFO",
+              "category": "trust_scorer",
+              "detail": "Reputation baseline: 0.5"
+            }
+          ]
+        },
+        "mcp_supply_chain": {
+          "score": 0.0,
+          "findings": [
+            {
+              "severity": "CRITICAL",
+              "category": "mcp_supply_chain",
+              "detail": "No allowed MCP servers defined — supply chain open to any server"
+            }
+          ]
+        }
+      }
+    },
+    "cursor": {
+      "d1": {
+        "score": 20.0,
+        "conformance_verdict": "NON-COMPLIANT (blocked)",
+        "severity_counts": {
+          "total_findings": 10,
+          "critical": 3,
+          "high": 0,
+          "warning": 1,
+          "info": 6
+        },
+        "data_cross_border_chain": [
+          {
+            "check": "1.11",
+            "severity": "CRITICAL",
+            "detail": "Cross-border enabled but allowed_transfer_zones ['US'] only contains current residency US"
+          }
+        ],
+        "federation_version_compat": [
+          {
+            "check": "1.12",
+            "severity": "INFO",
+            "detail": "MCP protocol version 2025-03-26 is compatible"
+          }
+        ]
+      },
+      "d3": {
+        "score": 21.9,
+        "subscores": {
+          "spawn": 0.0,
+          "protocol": 36.0,
+          "orchestration": 25.0,
+          "isolation": 30.0,
+          "conflict": 20.0,
+          "persistence": 15.0,
+          "federation_compat": 5.0,
+          "federation_role": 5.0,
+          "federation_permissions": 0
+        },
+        "federation_compatibility": {
+          "score": 5.0,
+          "findings": [
+            {
+              "severity": "INFO",
+              "category": "federation_compat",
+              "detail": "MCP v2025-03-26 compatible with federation topology"
+            }
+          ]
+        },
+        "role_conflicts": {
+          "score": 5.0,
+          "findings": [
+            {
+              "severity": "INFO",
+              "category": "federation_role",
+              "detail": "Federation role 'secondary' matches orchestration role 'worker'"
+            }
+          ]
+        },
+        "permission_propagation": {
+          "score": 0,
+          "findings": [
+            {
+              "severity": "INFO",
+              "category": "federation_permissions",
+              "detail": "No MCP server whitelist — permission not assessed"
+            }
+          ]
+        }
+      },
+      "d4": {
+        "score": 60.9,
+        "verdict": "",
+        "trust_score": {
+          "score": 50.0,
+          "findings": [
+            {
+              "severity": "INFO",
+              "category": "trust_scorer",
+              "detail": "Trust score 0.50/1.0 (stable, 0 snapshots)"
+            },
+            {
+              "severity": "INFO",
+              "category": "trust_scorer",
+              "detail": "Reputation baseline: 0.5"
+            }
+          ]
+        },
+        "mcp_supply_chain": {
+          "score": 0.0,
+          "findings": [
+            {
+              "severity": "CRITICAL",
+              "category": "mcp_supply_chain",
+              "detail": "No allowed MCP servers defined — supply chain open to any server"
+            }
+          ]
+        }
+      }
+    },
+    "opencode": {
+      "d1": {
+        "score": 45.0,
+        "conformance_verdict": "NON-COMPLIANT (blocked)",
+        "severity_counts": {
+          "total_findings": 10,
+          "critical": 2,
+          "high": 0,
+          "warning": 1,
+          "info": 7
+        },
+        "data_cross_border_chain": [
+          {
+            "check": "1.11",
+            "severity": "INFO",
+            "detail": "Cross-border chain valid: LOCAL → ['LOCAL']"
+          }
+        ],
+        "federation_version_compat": [
+          {
+            "check": "1.12",
+            "severity": "INFO",
+            "detail": "MCP protocol version 2025-03-26 is compatible"
+          }
+        ]
+      },
+      "d3": {
+        "score": 30.0,
+        "subscores": {
+          "spawn": 0.0,
+          "protocol": 36.0,
+          "orchestration": 23.3,
+          "isolation": 60.0,
+          "conflict": 35.0,
+          "persistence": 40.0,
+          "federation_compat": 5.0,
+          "federation_role": 5.0,
+          "federation_permissions": 0
+        },
+        "federation_compatibility": {
+          "score": 5.0,
+          "findings": [
+            {
+              "severity": "INFO",
+              "category": "federation_compat",
+              "detail": "MCP v2025-03-26 compatible with federation topology"
+            }
+          ]
+        },
+        "role_conflicts": {
+          "score": 5.0,
+          "findings": [
+            {
+              "severity": "INFO",
+              "category": "federation_role",
+              "detail": "Federation role 'secondary' matches orchestration role 'worker'"
+            }
+          ]
+        },
+        "permission_propagation": {
+          "score": 0,
+          "findings": [
+            {
+              "severity": "INFO",
+              "category": "federation_permissions",
+              "detail": "No MCP server whitelist — permission not assessed"
+            }
+          ]
+        }
+      },
+      "d4": {
+        "score": 62.0,
+        "verdict": "",
+        "trust_score": {
+          "score": 50.0,
+          "findings": [
+            {
+              "severity": "INFO",
+              "category": "trust_scorer",
+              "detail": "Trust score 0.50/1.0 (stable, 0 snapshots)"
+            },
+            {
+              "severity": "INFO",
+              "category": "trust_scorer",
+              "detail": "Reputation baseline: 0.5"
+            }
+          ]
+        },
+        "mcp_supply_chain": {
+          "score": 0.0,
+          "findings": [
+            {
+              "severity": "CRITICAL",
+              "category": "mcp_supply_chain",
+              "detail": "No allowed MCP servers defined — supply chain open to any server"
+            }
+          ]
+        }
+      }
+    },
+    "trae_cn": {
+      "d1": {
+        "score": 45.0,
+        "conformance_verdict": "NON-COMPLIANT (blocked)",
+        "severity_counts": {
+          "total_findings": 10,
+          "critical": 2,
+          "high": 0,
+          "warning": 1,
+          "info": 7
+        },
+        "data_cross_border_chain": [
+          {
+            "check": "1.11",
+            "severity": "INFO",
+            "detail": "Cross-border chain valid: CN → ['CN']"
+          }
+        ],
+        "federation_version_compat": [
+          {
+            "check": "1.12",
+            "severity": "INFO",
+            "detail": "MCP protocol version 2025-03-26 is compatible"
+          }
+        ]
+      },
+      "d3": {
+        "score": 13.7,
+        "subscores": {
+          "spawn": 0.0,
+          "protocol": 36.0,
+          "orchestration": 10.0,
+          "isolation": 0.0,
+          "conflict": 20.0,
+          "persistence": 15.0,
+          "federation_compat": 5.0,
+          "federation_role": 5.0,
+          "federation_permissions": 0
+        },
+        "federation_compatibility": {
+          "score": 5.0,
+          "findings": [
+            {
+              "severity": "INFO",
+              "category": "federation_compat",
+              "detail": "MCP v2025-03-26 compatible with federation topology"
+            }
+          ]
+        },
+        "role_conflicts": {
+          "score": 5.0,
+          "findings": [
+            {
+              "severity": "INFO",
+              "category": "federation_role",
+              "detail": "Federation role 'secondary' matches orchestration role 'worker'"
+            }
+          ]
+        },
+        "permission_propagation": {
+          "score": 0,
+          "findings": [
+            {
+              "severity": "INFO",
+              "category": "federation_permissions",
+              "detail": "No MCP server whitelist — permission not assessed"
+            }
+          ]
+        }
+      },
+      "d4": {
+        "score": 60.5,
+        "verdict": "",
+        "trust_score": {
+          "score": 50.0,
+          "findings": [
+            {
+              "severity": "INFO",
+              "category": "trust_scorer",
+              "detail": "Trust score 0.50/1.0 (stable, 0 snapshots)"
+            },
+            {
+              "severity": "INFO",
+              "category": "trust_scorer",
+              "detail": "Reputation baseline: 0.5"
+            }
+          ]
+        },
+        "mcp_supply_chain": {
+          "score": 0.0,
+          "findings": [
+            {
+              "severity": "CRITICAL",
+              "category": "mcp_supply_chain",
+              "detail": "No allowed MCP servers defined — supply chain open to any server"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "federation": {
+    "d4_federation": {
+      "domain": "D4",
+      "component": "federation",
+      "name": "Federation (Trust + Vendor Diversity + MCP Supply Chain)",
+      "score": 14.0,
+      "subscores": {
+        "trust": 50.0,
+        "vendor_diversity": 80.0,
+        "mcp_supply_chain": 0.0
+      },
+      "findings": [
+        {
+          "severity": "INFO",
+          "category": "trust_scorer",
+          "detail": "Trust score 0.50/1.0 (stable, 0 snapshots)"
+        },
+        {
+          "severity": "INFO",
+          "category": "trust_scorer",
+          "detail": "Reputation baseline: 0.5"
+        },
+        {
+          "severity": "INFO",
+          "category": "vendor_diversity",
+          "detail": "HHI=2000, diversity=80.0/100, vendors=5"
+        },
+        {
+          "severity": "INFO",
+          "category": "vendor_diversity",
+          "detail": "Multi-vendor federation (5 vendors) — good diversity"
+        },
+        {
+          "severity": "CRITICAL",
+          "category": "mcp_supply_chain",
+          "detail": "No allowed MCP servers defined — supply chain open to any server"
+        },
+        {
+          "severity": "INFO",
+          "category": "trust_scorer",
+          "detail": "Trust score 0.50/1.0 (stable, 0 snapshots)"
+        },
+        {
+          "severity": "INFO",
+          "category": "trust_scorer",
+          "detail": "Reputation baseline: 0.5"
+        },
+        {
+          "severity": "INFO",
+          "category": "vendor_diversity",
+          "detail": "HHI=2000, diversity=80.0/100, vendors=5"
+        },
+        {
+          "severity": "INFO",
+          "category": "vendor_diversity",
+          "detail": "Multi-vendor federation (5 vendors) — good diversity"
+        },
+        {
+          "severity": "CRITICAL",
+          "category": "mcp_supply_chain",
+          "detail": "No allowed MCP servers defined — supply chain open to any server"
+        },
+        {
+          "severity": "INFO",
+          "category": "trust_scorer",
+          "detail": "Trust score 0.50/1.0 (stable, 0 snapshots)"
+        },
+        {
+          "severity": "INFO",
+          "category": "trust_scorer",
+          "detail": "Reputation baseline: 0.5"
+        },
+        {
+          "severity": "INFO",
+          "category": "vendor_diversity",
+          "detail": "HHI=2000, diversity=80.0/100, vendors=5"
+        },
+        {
+          "severity": "INFO",
+          "category": "vendor_diversity",
+          "detail": "Multi-vendor federation (5 vendors) — good diversity"
+        },
+        {
+          "severity": "CRITICAL",
+          "category": "mcp_supply_chain",
+          "detail": "No allowed MCP servers defined — supply chain open to any server"
+        },
+        {
+          "severity": "INFO",
+          "category": "trust_scorer",
+          "detail": "Trust score 0.50/1.0 (stable, 0 snapshots)"
+        },
+        {
+          "severity": "INFO",
+          "category": "trust_scorer",
+          "detail": "Reputation baseline: 0.5"
+        },
+        {
+          "severity": "INFO",
+          "category": "vendor_diversity",
+          "detail": "HHI=2000, diversity=80.0/100, vendors=5"
+        },
+        {
+          "severity": "INFO",
+          "category": "vendor_diversity",
+          "detail": "Multi-vendor federation (5 vendors) — good diversity"
+        },
+        {
+          "severity": "CRITICAL",
+          "category": "mcp_supply_chain",
+          "detail": "No allowed MCP servers defined — supply chain open to any server"
+        },
+        {
+          "severity": "INFO",
+          "category": "trust_scorer",
+          "detail": "Trust score 0.50/1.0 (stable, 0 snapshots)"
+        },
+        {
+          "severity": "INFO",
+          "category": "trust_scorer",
+          "detail": "Reputation baseline: 0.5"
+        },
+        {
+          "severity": "INFO",
+          "category": "vendor_diversity",
+          "detail": "HHI=2000, diversity=80.0/100, vendors=5"
+        },
+        {
+          "severity": "INFO",
+          "category": "vendor_diversity",
+          "detail": "Multi-vendor federation (5 vendors) — good diversity"
+        },
+        {
+          "severity": "CRITICAL",
+          "category": "mcp_supply_chain",
+          "detail": "No allowed MCP servers defined — supply chain open to any server"
+        }
+      ],
+      "summary": {
+        "total_findings": 25,
+        "agents_scored": 5,
+        "avg_trust_score": 50.0,
+        "avg_vendor_diversity": 80.0,
+        "avg_mcp_supply_chain": 0.0
+      }
+    },
+    "vendor_diversity": {
+      "score": 80.0,
+      "findings": [
+        {
+          "severity": "INFO",
+          "category": "vendor_diversity",
+          "detail": "HHI=2000, diversity=80.0/100, vendors=5"
+        },
+        {
+          "severity": "INFO",
+          "category": "vendor_diversity",
+          "detail": "Multi-vendor federation (5 vendors) — good diversity"
+        }
+      ]
+    },
+    "role": "secondary",
+    "trust_score": 0.5,
+    "allowed_mcp_servers": [],
+    "cross_border_policy": null,
+    "federation_protocols": {
+      "a2a": {
+        "version": "0.3",
+        "enabled": false
+      },
+      "mcp": {
+        "version": "2025-03-26",
+        "enabled": true
+      }
+    }
+  },
+  "cross_border_regions": {
+    "claude_code": {
+      "data_residency": "US",
+      "allowed_transfer_zones": [
+        "US"
+      ]
+    },
+    "codex": {
+      "data_residency": "US",
+      "allowed_transfer_zones": [
+        "US"
+      ]
+    },
+    "cursor": {
+      "data_residency": "US",
+      "allowed_transfer_zones": [
+        "US"
+      ]
+    },
+    "opencode": {
+      "data_residency": "LOCAL",
+      "allowed_transfer_zones": [
+        "LOCAL"
+      ]
+    },
+    "trae_cn": {
+      "data_residency": "CN",
+      "allowed_transfer_zones": [
+        "CN"
+      ]
+    }
+  },
+  "card_version": "2.0",
+  "schema_version": "2.0",
+  "vendor_id": "unknown",
+  "agent_type": "cli",
+  "constitution": {
+    "envelope": {
+      "message_id": "urn:agent:unknown:migrated:v1-env-001",
+      "correlation_id": "urn:agent:unknown:migrated:v1-correlation-001",
+      "timestamp": "2026-06-11T00:00:00Z",
+      "sender": "urn:agent:unknown:migrated:v1"
+    },
+    "health_state": "HEALTHY",
+    "heartbeat_interval_seconds": 30,
+    "stale_node_timeout_seconds": 60
+  }
+}

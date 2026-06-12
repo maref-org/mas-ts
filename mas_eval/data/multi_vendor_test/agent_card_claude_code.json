@@ -347,7 +347,7 @@
   "agent_type": "cli",
   "federation": {
     "role": "secondary",
-    "trust_score": 0.5,
+    "trust_score": 0.92,
     "allowed_mcp_servers": [],
     "cross_border_policy": {
       "data_residency": "US",
@@ -366,6 +366,28 @@
         "version": "2025-03-26",
         "enabled": true
       }
-    }
+    },
+    "trust_history": [
+      {
+        "timestamp": "2026-05-01T00:00:00Z",
+        "score": 0.88,
+        "source": "oracle"
+      },
+      {
+        "timestamp": "2026-05-15T00:00:00Z",
+        "score": 0.9,
+        "source": "peer"
+      },
+      {
+        "timestamp": "2026-06-01T00:00:00Z",
+        "score": 0.91,
+        "source": "oracle"
+      },
+      {
+        "timestamp": "2026-06-10T00:00:00Z",
+        "score": 0.92,
+        "source": "self"
+      }
+    ]
   }
 }
