@@ -96,22 +96,22 @@ class WebArenaOracle(Oracle):
         if task_data is None:
             return 0.0
 
+        nav_events = [
+            e
+            for e in events
+            if e.get("action", {}).get("tool_id") == "web_fetch"
+            and "url" in e.get("action", {}).get("input", {})
+        ]
+
+        if not nav_events:
+            return self._simulate_score(task, events)
+
         try:
             from playwright.sync_api import sync_playwright
 
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=True)
                 page = browser.new_page()
-
-                nav_events = [
-                    e
-                    for e in events
-                    if e.get("action", {}).get("tool_id") == "web_fetch"
-                    and "url" in e.get("action", {}).get("input", {})
-                ]
-
-                if not nav_events:
-                    return self._simulate_score(task, events)
 
                 last_url = nav_events[-1]["action"]["input"]["url"]
                 try:

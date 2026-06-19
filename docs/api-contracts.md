@@ -25,7 +25,11 @@ Full-Run evaluation pipeline (L0-L4).
 |------|------|---------|-------------|
 | `--card` | `str` | (required) | Path to single Agent Card JSON |
 | `--cards-dir` | `str` | `None` | Directory of Agent Cards (batch) |
-| `--level` | `str` | `L0` | Level: `L0`/`L1`/`L2`/`L3`/`L4`/`all` |
+| `--level` | `str` | `all` | Level: `L0`/`L1`/`L2`/`L3`/`L4`/`all` |
+| `--mode` | `str` | `full` | Execution mode: `full` or conditional `escalate` |
+| `--converge` | flag | `False` | Run each non-L0 level in a convergence loop |
+| `--max-iterations` | `int` | `5` | Maximum iterations per converged level |
+| `--convergence-delta` | `float` | `0.5` | Score delta threshold for convergence |
 | `--output` | `str` | `None` | Write JSON report to path |
 | `--verbose` | flag | `False` | Debug-level logging |
 
@@ -96,7 +100,7 @@ Hardware benchmark coefficient generator.
 | `d4_governance_security` | `check_vendor_diversity(cards)` | `(score, findings)` — HHI-adapted |
 | `d4_governance_security` | `check_mcp_supply_chain(card)` | `(score, findings)` — MCP server security |
 | `d4_governance_security` | `TrustScorer` class | 5-dim trust scoring with trust_transfer decay |
-| `d5_robustness` | `run_d5(card, seed=42)` | Same structure |
+| `d5_robustness` | `run_d5(card=None, seed=42, verifier_registry=None)` | Same structure; optional verifier registry blends D5 convergence scoring |
 
 All return shape: `{"domain": str, "score": float(0-100), "findings": list[Finding], "subscores": dict}`.
 
@@ -140,9 +144,14 @@ Diversity = max(0, 100 × (1 - HHI / 10000))
 | `l1_standard` | `run_l1_standard(card)` | `HarnessResult` |
 | `l2_deep` | `run_l2_deep(card)` | `HarnessResult` |
 | `l3_comprehensive` | `run_l3_comprehensive(card)` | `HarnessResult` |
-| `l4_evolution` | `run_l4_evolution(card)` | `HarnessResult` |
+| `l4_evolution` | `run_l4_evolution(card=None, max_epochs=3, convergence_delta=2.0, epoch_state=None, verifier_registry=None)` | `HarnessResult` with epoch metadata |
+| `loop_engine` | `ConvergenceLoop(max_iterations=5, convergence_delta=0.5, regression_threshold=-20.0, timeout_seconds=3600, resource_governor=None)` | Iterative harness wrapper returning convergence history |
+| `epoch_state` | `EpochState` class | L4 epoch score/findings history with trend and improvement metrics |
+| `resource_governor` | `TokenBudget` / `ResourceGovernor` classes | Resource limits and circuit-breaker guard for convergence loops |
 
 `HarnessResult` shape: `{"level": str, "score": float, "grade": str, "verdict": str, "domain_scores": dict, "findings": list}`.
+
+Convergence result shape: `{"final_score": float, "iterations": int, "converged": bool, "stop_reason": str, "score_trajectory": list, "history": list, "findings": list}`.
 
 ### `mas_eval.scoring`
 
@@ -152,6 +161,7 @@ Diversity = max(0, 100 × (1 - HHI / 10000))
 | `absolute` | `grade_to_emoji(grade)` | `str` (emoji) |
 | `absolute` | `compute_absolute_score(domain_scores)` | `float` |
 | `elo` | `EloRating` class | Pairwise rating system |
+| `verifier` | `Verifier`, `MockVerifier`, `VerifierRegistry` | Pluggable verifier governance with cross-validation consensus |
 
 ### `mas_eval.oracle`
 
@@ -205,3 +215,17 @@ python scripts/migrate_agent_card.py --dir cards/  # batch, in-place
 | D3 (Multi-Agent) | 0.25 |
 | D4 (Governance & Security) | 0.20 |
 | D5 (Evolution & Robustness) | 0.20 |
+
+---
+
+## SLO / SLI — Execution Level Performance Targets
+
+| Level | Name | Domains | P50 Duration | P99 Duration | Error Rate Target |
+|-------|------|---------|-------------|-------------|-------------------|
+| L0 | Fast-Screen | D1+D2+D3 subset | ≤ 5 min | ≤ 10 min | ≤ 1% |
+| L1 | Standard | D1-D3 | ≤ 30 min | ≤ 45 min | ≤ 0.5% |
+| L2 | Deep | D1-D4 | ≤ 2 h | ≤ 3 h | ≤ 0.5% |
+| L3 | Comprehensive | D1-D5 | ≤ 8 h | ≤ 12 h | ≤ 0.5% |
+| L4 | Evolution | D5 lifecycle | ≤ 72 h | ≤ 96 h | ≤ 1% |
+
+> **Note**: These are CI-baseline targets for the zero-cost / mock-LLM path. Real LLM inference times will vary by model provider and API latency.
