@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 frankiehot-tech
+# SPDX-License-Identifier: Apache-2.0
 """Tests for VerifierRegistry — pluggable verifier + cross-validation."""
 
 import pytest
@@ -92,8 +94,12 @@ class TestVerifierRegistry:
         registry.register(MockVerifier(name="v1", score=88.0))
         registry.register(MockVerifier(name="v2", score=92.0))
 
-        result = run_d5(verifier_registry=registry)
-        assert result["domain"] == "D5"
-        assert 0 <= result["score"] <= 100
-        assert "chaos_engineering" in result["subscores"]
-        assert "reflection_loop" in result["subscores"]
+        result_no_reg = run_d5()
+        result_with_reg = run_d5(verifier_registry=registry)
+
+        assert result_with_reg["domain"] == "D5"
+        assert 0 <= result_with_reg["score"] <= 100
+        assert (
+            result_with_reg["subscores"]["convergence_cycle"]
+            != result_no_reg["subscores"]["convergence_cycle"]
+        )

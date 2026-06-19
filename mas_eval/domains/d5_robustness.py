@@ -1385,6 +1385,18 @@ def _score_convergence(
     c2 = cv.score_c2_self_consistency()
     c3 = cv.score_c3_task_completion()
 
+    if cv._verifier_registry is not None:
+        task_ids = list(cv.responses.keys())
+        if task_ids:
+            for tid in task_ids:
+                resp_texts = [r["text"] for r in cv.responses.get(tid, [])]
+                if len(resp_texts) >= 2:
+                    cons = cv._verifier_registry.consensus_evaluate(tid, resp_texts)
+                    if cons["verifier_count"] > 0:
+                        verifier_norm = cons["consensus_score"] / 100.0
+                        c1 = round(c1 * 0.6 + verifier_norm * 0.4, 2)
+                        break
+
     c1_score = min(100, c1 * 100)
     c2_score = min(100, c2 * 100)
     c3_score = c3
