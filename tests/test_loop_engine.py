@@ -112,6 +112,22 @@ class TestConvergenceLoop:
         assert result["stop_reason"] == "regression"
         assert result["iterations"] == 3
 
+    def test_stops_on_resource_exhaustion(self):
+        from mas_eval.harness.resource_governor import ResourceGovernor, TokenBudget
+
+        budget = TokenBudget(max_calls=1)
+        governor = ResourceGovernor(budget=budget)
+        called = [0]
+
+        def runner(card, **kw):
+            called[0] += 1
+            return {"score": 80.0, "findings": [], "domain_scores": {}}
+
+        loop = ConvergenceLoop(max_iterations=10, resource_governor=governor)
+        result = loop.run(SAMPLE_CARD, runner)
+        assert result["stop_reason"] == "resource_exhausted"
+        assert called[0] == 1
+
     def test_wraps_l3_runner(self):
         from mas_eval.harness.l3_comprehensive import run_l3_comprehensive
 

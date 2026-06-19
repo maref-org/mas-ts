@@ -8,6 +8,7 @@ regression detection, and timeout-based graceful termination.
 
 import logging
 import time
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -31,12 +32,14 @@ class ConvergenceLoop:
         convergence_delta: float = 0.5,
         regression_threshold: float = -20.0,
         timeout_seconds: float = 3600,
+        resource_governor: Any = None,
     ):
         self.max_iterations = max_iterations
         self.convergence_delta = convergence_delta
         self.regression_threshold = regression_threshold
         self.timeout_seconds = timeout_seconds
-        self.history: list[dict] = []
+        self.governor = resource_governor
+        self.history: list[dict[str, Any]] = []
 
     def run(self, card, runner_fn, **runner_kwargs):
         """Run evaluation in a convergence loop.
@@ -56,6 +59,10 @@ class ConvergenceLoop:
         stop_reason = "max_iterations"
 
         for iteration in range(1, self.max_iterations + 1):
+            if self.governor is not None and not self.governor.check():
+                stop_reason = "resource_exhausted"
+                break
+
             if time.time() - start_time > self.timeout_seconds:
                 stop_reason = "timeout"
                 logger.warning(
@@ -65,6 +72,8 @@ class ConvergenceLoop:
                 break
 
             result = runner_fn(card, **runner_kwargs)
+            if self.governor is not None:
+                self.governor.consume(calls=1)
             score = result.get("score", 0.0)
             entry = {
                 "iteration": iteration,
