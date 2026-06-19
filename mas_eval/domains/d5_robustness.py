@@ -34,6 +34,7 @@ Usage:
   result = run_d5()
 """
 
+import collections
 import logging
 import math
 import os
@@ -46,6 +47,7 @@ import tempfile
 import time
 from collections import defaultdict
 from pathlib import Path
+from typing import Any, Callable
 
 logger = logging.getLogger(__name__)
 
@@ -67,12 +69,12 @@ class FaultInjector:
     falls back to simulation when tools/sudo are unavailable.
     """
 
-    def __init__(self, mode="auto"):
+    def __init__(self, mode: str = "auto") -> None:
         self.mode = mode
-        self._cleanup_handlers = []
-        self._injection_mode = None
+        self._cleanup_handlers: list[Callable[[], Any]] = []
+        self._injection_mode: str | None = None
 
-    def injection_mode(self):
+    def injection_mode(self) -> str:
         if self._injection_mode is not None:
             return self._injection_mode
         if self.mode == "sim":
@@ -81,7 +83,7 @@ class FaultInjector:
         self._injection_mode = self._probe_capabilities()
         return self._injection_mode
 
-    def _probe_capabilities(self):
+    def _probe_capabilities(self) -> str:
         has_stress = (
             subprocess.run(
                 ["which", "stress-ng"], capture_output=True, text=True
@@ -104,7 +106,7 @@ class FaultInjector:
             return "real" if has_sudo else "partial"
         return "simulated"
 
-    def inject_cpu_pressure(self, cores=2, duration=10):
+    def inject_cpu_pressure(self, cores: int = 2, duration: int = 10) -> dict[str, Any]:
         try:
             proc = subprocess.Popen(
                 ["stress-ng", "--cpu", str(cores), "--timeout", f"{duration}s"],
@@ -120,7 +122,9 @@ class FaultInjector:
         except FileNotFoundError:
             return {"fault": "cpu_pressure", "mode": "simulated"}
 
-    def inject_memory_pressure(self, megabytes=256, duration=10):
+    def inject_memory_pressure(
+        self, megabytes: int = 256, duration: int = 10
+    ) -> dict[str, Any]:
         try:
             proc = subprocess.Popen(
                 [
@@ -144,14 +148,14 @@ class FaultInjector:
         except FileNotFoundError:
             return {"fault": "memory_pressure", "mode": "simulated"}
 
-    def inject_disk_failure(self):
+    def inject_disk_failure(self) -> dict[str, Any]:
         try:
             tmpdir = Path(tempfile.mkdtemp())
             test_file = tmpdir / "test_write"
             test_file.write_text("test")
             os.chmod(str(tmpdir), stat.S_IRUSR | stat.S_IXUSR)
 
-            def cleanup():
+            def cleanup() -> None:
                 os.chmod(str(tmpdir), stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
                 for f in tmpdir.iterdir():
                     f.unlink()
@@ -167,7 +171,7 @@ class FaultInjector:
         except Exception:
             return {"fault": "disk_failure", "mode": "simulated"}
 
-    def inject_process_kill(self, pid=None):
+    def inject_process_kill(self, pid: int | None = None) -> dict[str, Any]:
         if pid is not None:
             try:
                 os.kill(pid, signal.SIGKILL)
@@ -191,7 +195,9 @@ class FaultInjector:
         except Exception:
             return {"fault": "process_kill", "mode": "simulated"}
 
-    def inject_network_partition(self, target_ip=None, duration=30):
+    def inject_network_partition(
+        self, target_ip: str | None = None, duration: int = 30
+    ) -> dict[str, Any]:
         target = target_ip or "127.0.0.2"
         system = platform.system()
         try:
@@ -256,7 +262,9 @@ class FaultInjector:
             pass
         return {"fault": "network_partition", "mode": "simulated"}
 
-    def inject_mcp_disconnect(self, host="127.0.0.1", port=9000):
+    def inject_mcp_disconnect(
+        self, host: str = "127.0.0.1", port: int = 9000
+    ) -> dict[str, Any]:
         try:
             import socket
 
@@ -279,7 +287,9 @@ class FaultInjector:
                 "detail": "MCP disconnection simulated",
             }
 
-    def inject_a2a_timeout(self, host="127.0.0.1", port=9001):
+    def inject_a2a_timeout(
+        self, host: str = "127.0.0.1", port: int = 9001
+    ) -> dict[str, Any]:
         try:
             import socket
 
@@ -304,7 +314,7 @@ class FaultInjector:
                 "detail": "A2A timeout simulated",
             }
 
-    def inject_gossip_partition(self, port_range="9002-9005"):
+    def inject_gossip_partition(self, port_range: str = "9002-9005") -> dict[str, Any]:
         system = platform.system()
         try:
             if (
@@ -352,7 +362,7 @@ class FaultInjector:
             "detail": "Gossip partition simulated",
         }
 
-    def inject(self, fault_type):
+    def inject(self, fault_type: str) -> dict[str, Any]:
         injectors = {
             "network_partition": lambda: self.inject_network_partition(),
             "cpu_pressure": lambda: self.inject_cpu_pressure(),
@@ -368,7 +378,7 @@ class FaultInjector:
             return injector()
         return {"fault": fault_type, "mode": "unknown"}
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         for handler in reversed(self._cleanup_handlers):
             try:
                 handler()
@@ -453,17 +463,19 @@ LLM_PASS_CRITERIA = {
 
 
 class ChaosEngine:
-    def __init__(self, seed=None, fault_injector=None):
+    def __init__(
+        self, seed: int | None = None, fault_injector: FaultInjector | None = None
+    ) -> None:
         self.rng = random.Random(seed)
-        self.fault_history = []
-        self.healing_results = defaultdict(list)
+        self.fault_history: list[dict[str, Any]] = []
+        self.healing_results: defaultdict[str, list[dict[str, Any]]] = defaultdict(list)
         self.injector = fault_injector or FaultInjector(mode="auto")
         self._injection_mode = self.injector.injection_mode()
 
-    def injection_mode(self):
+    def injection_mode(self) -> str:
         return self._injection_mode
 
-    def inject(self, fault_type, scenario=0):
+    def inject(self, fault_type: str, scenario: int = 0) -> dict[str, Any]:
         if fault_type in INFRA_FAULTS:
             domain = "infra"
             inject_result = self.injector.inject(fault_type)
@@ -492,7 +504,9 @@ class ChaosEngine:
         self.fault_history.append(record)
         return record
 
-    def record_healing(self, fault_type, success, recovery_time=None):
+    def record_healing(
+        self, fault_type: str, success: bool, recovery_time: float | None = None
+    ) -> None:
         measured = recovery_time if recovery_time is not None else None
         self.healing_results[fault_type].append(
             {
@@ -502,7 +516,7 @@ class ChaosEngine:
             }
         )
 
-    def _expected_recovery(self, fault_type):
+    def _expected_recovery(self, fault_type: str) -> int:
         recovery_map = {
             "network_partition": 30,
             "cpu_pressure": 10,
@@ -517,7 +531,7 @@ class ChaosEngine:
         }
         return recovery_map.get(fault_type, 15)
 
-    def healing_rate(self, fault_type=None):
+    def healing_rate(self, fault_type: str | None = None) -> float:
         if fault_type:
             results = self.healing_results.get(fault_type, [])
             if not results:
@@ -530,7 +544,7 @@ class ChaosEngine:
             return 0.0
         return sum(1 for r in all_results if r["success"]) / len(all_results)
 
-    def infra_healing_rate(self):
+    def infra_healing_rate(self) -> float:
         infra_results = []
         for ft, results in self.healing_results.items():
             if ft in INFRA_FAULTS:
@@ -539,7 +553,7 @@ class ChaosEngine:
             return 0.0
         return sum(1 for r in infra_results if r["success"]) / len(infra_results)
 
-    def llm_healing_rate(self):
+    def llm_healing_rate(self) -> float:
         llm_results = []
         for ft, results in self.healing_results.items():
             if ft in LLM_FAULTS:
@@ -548,7 +562,7 @@ class ChaosEngine:
             return 0.0
         return sum(1 for r in llm_results if r["success"]) / len(llm_results)
 
-    def federation_healing_rate(self):
+    def federation_healing_rate(self) -> float:
         fed_results = []
         for ft, results in self.healing_results.items():
             if ft in FEDERATION_FAULTS:
@@ -557,7 +571,7 @@ class ChaosEngine:
             return 0.0
         return sum(1 for r in fed_results if r["success"]) / len(fed_results)
 
-    def clear(self):
+    def clear(self) -> None:
         self.fault_history.clear()
         self.healing_results.clear()
         self.injector.cleanup()
@@ -566,7 +580,7 @@ class ChaosEngine:
 # --- Drift Detection ---
 
 
-def _kl_divergence(p, q):
+def _kl_divergence(p: list[float], q: list[float]) -> float:
     p = [max(x, 1e-10) for x in p]
     q = [max(x, 1e-10) for x in q]
     if abs(sum(p) - 1.0) > 0.01:
@@ -580,7 +594,7 @@ def _kl_divergence(p, q):
     return sum(pi * math.log(pi / qi) for pi, qi in zip(p, q))
 
 
-def _js_divergence(p, q):
+def _js_divergence(p: list[float], q: list[float]) -> float:
     p = [max(x, 1e-10) for x in p]
     q = [max(x, 1e-10) for x in q]
     if abs(sum(p) - 1.0) > 0.01:
@@ -593,7 +607,7 @@ def _js_divergence(p, q):
     return (_kl_divergence(p, m) + _kl_divergence(q, m)) / 2
 
 
-def _hellinger_distance(p, q):
+def _hellinger_distance(p: list[float], q: list[float]) -> float:
     p = [max(x, 1e-10) for x in p]
     q = [max(x, 1e-10) for x in q]
     if abs(sum(p) - 1.0) > 0.01:
@@ -616,23 +630,25 @@ HUMAN_REVIEW_TIMEOUT = 300
 
 
 class DriftDetector:
-    def __init__(self):
-        self.baselines = {}
-        self.samples = defaultdict(list)
-        self.results = []
+    def __init__(self) -> None:
+        self.baselines: dict[str, list[float]] = {}
+        self.samples: defaultdict[str, list[list[float]]] = defaultdict(list)
+        self.results: list[dict[str, Any]] = []
         self.false_negatives = 0
         self.false_positives = 0
         self.total_checks = 0
-        self.last_baseline_reset = {}
+        self.last_baseline_reset: dict[str, float] = {}
 
-    def add_baseline(self, name, distribution):
+    def add_baseline(self, name: str, distribution: list[float]) -> None:
         self.baselines[name] = list(distribution)
         self.last_baseline_reset[name] = time.time()
 
-    def add_sample(self, name, distribution):
+    def add_sample(self, name: str, distribution: list[float]) -> None:
         self.samples[name].append(list(distribution))
 
-    def check_drift(self, name, sample=None):
+    def check_drift(
+        self, name: str, sample: list[float] | None = None
+    ) -> dict[str, Any]:
         if name not in self.baselines:
             return {"error": "no_baseline", "name": name}
 
@@ -665,7 +681,7 @@ class DriftDetector:
         self.results.append(result)
         return result
 
-    def auto_reset_baseline(self, name, sample=None):
+    def auto_reset_baseline(self, name: str, sample: list[float] | None = None) -> bool:
         if name not in self.baselines:
             return False
         now = time.time()
@@ -678,25 +694,25 @@ class DriftDetector:
             return True
         return False
 
-    def record_false_negative(self):
+    def record_false_negative(self) -> None:
         self.false_negatives += 1
 
-    def record_false_positive(self):
+    def record_false_positive(self) -> None:
         self.false_positives += 1
 
     @property
-    def fnr(self):
+    def fnr(self) -> float:
         if self.total_checks == 0:
             return 0.0
         return self.false_negatives / self.total_checks
 
     @property
-    def fpr(self):
+    def fpr(self) -> float:
         if self.total_checks == 0:
             return 0.0
         return self.false_positives / self.total_checks
 
-    def clear(self):
+    def clear(self) -> None:
         self.baselines.clear()
         self.samples.clear()
         self.results.clear()
@@ -705,16 +721,179 @@ class DriftDetector:
         self.total_checks = 0
 
 
+# --- Federation Circuit Breaker Cascade ---
+
+
+class FederationCircuitBreaker:
+    """Models cascading circuit breaker failure propagation across a federation.
+
+    Each agent has a binary breaker state (CLOSED/OPEN). When an agent's
+    breaker trips, dependent agents may also trip, creating a cascade.
+    Measures cascade depth, width, and containment.
+    """
+
+    def __init__(
+        self,
+        agent_names: list[str] | None = None,
+        dependency_matrix: list[list[float]] | None = None,
+    ) -> None:
+        self.agent_names = agent_names or [
+            "claude_code",
+            "codex",
+            "cursor",
+            "opencode",
+            "trae_cn",
+        ]
+        self.n = len(self.agent_names)
+        self.dependency_threshold = 0.4
+        self.dependency_matrix = (
+            dependency_matrix if dependency_matrix else self._default_mesh()
+        )
+        self.reset_all()
+
+    def _default_mesh(self) -> list[list[float]]:
+        n = self.n
+        m = [[0.0] * n for _ in range(n)]
+        for i in range(1, n):
+            m[i][0] = 0.8
+        if n > 2:
+            m[2][1] = 0.5
+            if n > 3:
+                m[3][1] = 0.5
+                m[3][2] = 0.5
+        return m
+
+    def reset_all(self) -> None:
+        self.agent_states = {name: "CLOSED" for name in self.agent_names}
+        self.agent_failures = {name: 0 for name in self.agent_names}
+        self.cascade_history: list[dict[str, Any]] = []
+
+    def _trip_breaker(self, name: str) -> None:
+        self.agent_failures[name] = 3
+        self.agent_states[name] = "OPEN"
+
+    def trigger(self, source_idx: int) -> dict[str, Any]:
+        source_name = self.agent_names[source_idx]
+        self._trip_breaker(source_name)
+
+        visited = {source_idx}
+        queue = collections.deque([(source_idx, 0)])
+        cascade_path = [(source_name, "OPEN", 0)]
+        affected_indices = {source_idx}
+        max_depth = 0
+
+        while queue:
+            current, depth = queue.popleft()
+            for i in range(self.n):
+                if i in visited:
+                    continue
+                dep_weight = self.dependency_matrix[i][current]
+                if dep_weight > self.dependency_threshold:
+                    dep_name = self.agent_names[i]
+                    self._trip_breaker(dep_name)
+                    visited.add(i)
+                    affected_indices.add(i)
+                    new_depth = depth + 1
+                    max_depth = max(max_depth, new_depth)
+                    queue.append((i, new_depth))
+                    cascade_path.append((dep_name, "OPEN", new_depth))
+
+        result = {
+            "source": source_name,
+            "cascade_depth": max_depth,
+            "affected_count": len(affected_indices),
+            "total_agents": self.n,
+            "affected_pct": len(affected_indices) / self.n * 100,
+            "cascade_path": cascade_path,
+            "fully_contained": len(affected_indices) == 1,
+        }
+        self.cascade_history.append(result)
+        return result
+
+    def cascade_metrics(self) -> dict[str, float | int]:
+        if not self.cascade_history:
+            return {
+                "avg_depth": 0.0,
+                "avg_affected_pct": 0.0,
+                "containment_rate": 0.0,
+                "scenarios_run": 0,
+            }
+        depths = [h["cascade_depth"] for h in self.cascade_history]
+        affected_pcts = [h["affected_pct"] for h in self.cascade_history]
+        contained = sum(1 for h in self.cascade_history if h["fully_contained"])
+        return {
+            "avg_depth": sum(depths) / len(depths),
+            "avg_affected_pct": sum(affected_pcts) / len(affected_pcts),
+            "containment_rate": contained / len(self.cascade_history),
+            "scenarios_run": len(self.cascade_history),
+        }
+
+
 # --- Scoring ---
 
 CHAOS_WEIGHTS = {
-    "infra": 0.40,
+    "infra": 0.30,
     "federation": 0.20,
-    "llm": 0.40,
+    "llm": 0.30,
+    "fed_cascade": 0.20,
 }
 
 
-def _score_chaos(ce, card=None):
+def _score_federation_cascade(
+    ce: ChaosEngine | None = None, card: dict[str, Any] | None = None
+) -> tuple[float, list[dict[str, Any]]]:
+    findings = []
+    fcb = FederationCircuitBreaker()
+
+    source_indices = [0, 3, 1]
+    for source_idx in source_indices:
+        fcb.reset_all()
+        result = fcb.trigger(source_idx)
+        findings.append(
+            {
+                "severity": "INFO",
+                "category": "fed_cascade",
+                "detail": (
+                    f"Cascade from '{result['source']}': "
+                    f"depth={result['cascade_depth']}, "
+                    f"affected={result['affected_count']}/{result['total_agents']}, "
+                    f"contained={result['fully_contained']}"
+                ),
+            }
+        )
+        if ce:
+            for _ in range(result["affected_count"]):
+                ce.record_healing(f"fed_cascade_{source_idx}", True)
+
+    metrics = fcb.cascade_metrics()
+
+    containment_score = metrics["containment_rate"] * 40
+    max_depth = fcb.n - 1
+    depth_ratio = metrics["avg_depth"] / max_depth if max_depth > 0 else 0
+    depth_score = max(0, 1 - depth_ratio) * 30
+    affected_ratio = metrics["avg_affected_pct"] / 100
+    affected_score = max(0, 1 - affected_ratio) * 30
+    score = containment_score + depth_score + affected_score
+
+    findings.append(
+        {
+            "severity": "INFO",
+            "category": "fed_cascade_summary",
+            "detail": (
+                f"Cascade containment={metrics['containment_rate']:.0%}, "
+                f"avg_depth={metrics['avg_depth']:.1f}/{max_depth}, "
+                f"avg_affected={metrics['avg_affected_pct']:.0f}% "
+                f"({metrics['scenarios_run']} scenarios)"
+            ),
+        }
+    )
+
+    return round(score, 1), findings
+
+
+def _score_chaos(
+    ce: ChaosEngine, card: dict[str, Any] | None = None
+) -> tuple[float, list[dict[str, Any]]]:
     findings = []
     score = 0.0
 
@@ -755,14 +934,6 @@ def _score_chaos(ce, card=None):
                 ce.fault_history[-1]["healed"] = False
 
     infra_rate = ce.infra_healing_rate()
-    score += infra_rate * 40
-    findings.append(
-        {
-            "severity": "INFO",
-            "category": "chaos_infra",
-            "detail": f"Infra self-heal rate: {infra_rate * 100:.0f}% ({len(ce.healing_results)} fault types × 3 scenarios)",
-        }
-    )
 
     for fault in FEDERATION_FAULTS:
         for scenario in range(3):
@@ -774,14 +945,6 @@ def _score_chaos(ce, card=None):
                 ce.fault_history[-1]["healed"] = False
 
     fed_rate = ce.federation_healing_rate()
-    score += fed_rate * 20
-    findings.append(
-        {
-            "severity": "INFO",
-            "category": "chaos_federation",
-            "detail": f"Federation self-heal rate: {fed_rate * 100:.0f}% ({len(FEDERATION_FAULTS)} fault types × 3 scenarios)",
-        }
-    )
 
     for fault in LLM_FAULTS:
         for scenario in range(3):
@@ -793,12 +956,49 @@ def _score_chaos(ce, card=None):
                 ce.fault_history[-1]["healed"] = False
 
     llm_rate = ce.llm_healing_rate()
-    score += llm_rate * 40
+
+    cascade_score, cascade_findings = _score_federation_cascade(ce, card)
+    findings.extend(cascade_findings)
+
+    infra_score = infra_rate * 100
+    fed_score = fed_rate * 100
+    llm_score = llm_rate * 100
+
+    score = (
+        infra_score * CHAOS_WEIGHTS["infra"]
+        + fed_score * CHAOS_WEIGHTS["federation"]
+        + llm_score * CHAOS_WEIGHTS["llm"]
+        + cascade_score * CHAOS_WEIGHTS["fed_cascade"]
+    )
+
+    findings.append(
+        {
+            "severity": "INFO",
+            "category": "chaos_infra",
+            "detail": (
+                f"Infra self-heal rate: {infra_rate * 100:.0f}% "
+                f"(weight {CHAOS_WEIGHTS['infra']:.0%})"
+            ),
+        }
+    )
+    findings.append(
+        {
+            "severity": "INFO",
+            "category": "chaos_federation",
+            "detail": (
+                f"Federation self-heal rate: {fed_rate * 100:.0f}% "
+                f"(weight {CHAOS_WEIGHTS['federation']:.0%})"
+            ),
+        }
+    )
     findings.append(
         {
             "severity": "INFO",
             "category": "chaos_llm",
-            "detail": f"LLM self-heal rate: {llm_rate * 100:.0f}% ({len(LLM_FAULTS)} fault types × 3 scenarios)",
+            "detail": (
+                f"LLM self-heal rate: {llm_rate * 100:.0f}% "
+                f"(weight {CHAOS_WEIGHTS['llm']:.0%})"
+            ),
         }
     )
 
@@ -825,7 +1025,7 @@ def _score_chaos(ce, card=None):
     return round(score, 1), findings
 
 
-def _score_drift(dd):
+def _score_drift(dd: DriftDetector) -> tuple[float, list[dict[str, Any]]]:
     findings = []
     score = 100.0
 
@@ -902,15 +1102,15 @@ CRITIQUE_CATEGORIES = [
 
 
 class ReflectiveAgent:
-    def __init__(self, max_iterations=3):
+    def __init__(self, max_iterations: int = 3) -> None:
         self.max_iterations = max_iterations
-        self.history = []
+        self.history: list[dict[str, Any]] = []
         self.current_output = ""
         self.iteration = 0
-        self.critiques = []
-        self.scores = []
+        self.critiques: list[dict[str, float]] = []
+        self.scores: list[float] = []
 
-    def generate(self, task, output=None):
+    def generate(self, task: str, output: str | None = None) -> None:
         self.iteration = 0
         self.critiques = []
         self.scores = []
@@ -919,7 +1119,7 @@ class ReflectiveAgent:
             {"iteration": 0, "phase": "generate", "output": self.current_output}
         )
 
-    def critique(self, critique_scores=None):
+    def critique(self, critique_scores: dict[str, float] | None = None) -> float:
         if self.iteration >= self.max_iterations:
             return self.scores[-1] if self.scores else 0
 
@@ -955,10 +1155,10 @@ class ReflectiveAgent:
 
         return weighted
 
-    def _mock_score(self, lo, hi):
+    def _mock_score(self, lo: float, hi: float) -> float:
         return lo + (hi - lo) * 0.5
 
-    def refine(self, refinement=None):
+    def refine(self, refinement: str | None = None) -> str:
         if self.iteration >= self.max_iterations:
             return self.current_output
 
@@ -975,14 +1175,14 @@ class ReflectiveAgent:
         )
         return self.current_output
 
-    def verify(self):
+    def verify(self) -> bool:
         if not self.scores:
             return False
         threshold = 0.85
         best_score = max(self.scores)
         return best_score >= threshold
 
-    def accept(self):
+    def accept(self) -> dict[str, Any]:
         best_idx = (
             max(range(len(self.scores)), key=lambda i: self.scores[i])
             if self.scores
@@ -995,7 +1195,7 @@ class ReflectiveAgent:
             "critique_history": self.critiques,
         }
 
-    def clear(self):
+    def clear(self) -> None:
         self.history.clear()
         self.current_output = ""
         self.iteration = 0
@@ -1010,7 +1210,7 @@ C2_AGREEMENT_THRESHOLD = 0.6
 C3_PASS_THRESHOLD = 80
 
 
-def _cosine_sim(a, b):
+def _cosine_sim(a: list[float], b: list[float]) -> float:
     if not a or not b or len(a) != len(b):
         return 0.0
     dot = sum(x * y for x, y in zip(a, b))
@@ -1022,11 +1222,14 @@ def _cosine_sim(a, b):
 
 
 class ConvergenceVerifier:
-    def __init__(self):
-        self.responses = defaultdict(list)
-        self.task_results = {}
+    def __init__(self) -> None:
+        self.responses: defaultdict[str, list[dict[str, Any]]] = defaultdict(list)
+        self.task_results: dict[str, bool] = {}
+        self._verifier_registry = None
 
-    def add_response(self, task_id, response_text, embedding=None):
+    def add_response(
+        self, task_id: str, response_text: str, embedding: list[float] | None = None
+    ) -> None:
         self.responses[task_id].append(
             {
                 "text": response_text,
@@ -1035,13 +1238,17 @@ class ConvergenceVerifier:
             }
         )
 
-    def add_task_result(self, task_id, passed):
+    def add_task_result(self, task_id: str, passed: bool) -> None:
         self.task_results[task_id] = passed
 
-    def _mock_embedding(self, text):
+    def set_verifier_registry(self, registry: Any) -> None:
+        """Set a VerifierRegistry for cross-validated evaluation."""
+        self._verifier_registry = registry
+
+    def _mock_embedding(self, text: str) -> list[float]:
         return [hash(c) % 100 / 100.0 for c in text.ljust(8, "_")[:8]]
 
-    def score_c1_consistency(self, task_id=None):
+    def score_c1_consistency(self, task_id: str | None = None) -> float:
         task_ids = [task_id] if task_id else list(self.responses.keys())
         if not task_ids:
             return 0.0
@@ -1066,7 +1273,7 @@ class ConvergenceVerifier:
         avg = sum(scores) / len(scores) if scores else 0.0
         return round(avg, 2)
 
-    def score_c2_self_consistency(self, task_id=None):
+    def score_c2_self_consistency(self, task_id: str | None = None) -> float:
         task_ids = [task_id] if task_id else list(self.responses.keys())
         if not task_ids:
             return 0.0
@@ -1092,18 +1299,20 @@ class ConvergenceVerifier:
         avg = sum(scores) / len(scores) if scores else 0.0
         return round(avg, 2)
 
-    def score_c3_task_completion(self):
+    def score_c3_task_completion(self) -> float:
         if not self.task_results:
             return 0.0
         passed = sum(1 for v in self.task_results.values() if v)
         return round(passed / len(self.task_results) * 100, 1)
 
-    def clear(self):
+    def clear(self) -> None:
         self.responses.clear()
         self.task_results.clear()
 
 
-def _score_reflection(ra=None):
+def _score_reflection(
+    ra: ReflectiveAgent | None = None,
+) -> tuple[float, list[dict[str, Any]]]:
     findings = []
     if ra is None:
         ra = ReflectiveAgent(max_iterations=3)
@@ -1144,10 +1353,15 @@ def _score_reflection(ra=None):
     return score, findings
 
 
-def _score_convergence(cv=None):
+def _score_convergence(
+    cv: ConvergenceVerifier | None = None,
+    verifier_registry: Any = None,
+) -> tuple[float, list[dict[str, Any]]]:
     findings = []
     if cv is None:
         cv = ConvergenceVerifier()
+    if verifier_registry:
+        cv.set_verifier_registry(verifier_registry)
 
     cv.add_response("math_1", "x = 3")
     cv.add_response("math_1", "x = 3")
@@ -1208,7 +1422,12 @@ def _score_convergence(cv=None):
     return round(score, 1), findings
 
 
-def run_d5_part1(ce=None, dd=None, card=None, seed=42):
+def run_d5_part1(
+    ce: ChaosEngine | None = None,
+    dd: DriftDetector | None = None,
+    card: dict[str, Any] | None = None,
+    seed: int = 42,
+) -> dict[str, Any]:
     ce = ce or ChaosEngine(seed=seed)
     dd = dd or DriftDetector()
 
@@ -1237,9 +1456,13 @@ def run_d5_part1(ce=None, dd=None, card=None, seed=42):
     }
 
 
-def run_d5_part2(ra=None, cv=None):
+def run_d5_part2(
+    ra: ReflectiveAgent | None = None,
+    cv: ConvergenceVerifier | None = None,
+    verifier_registry: Any = None,
+) -> dict[str, Any]:
     reflection_score, reflection_findings = _score_reflection(ra)
-    convergence_score, convergence_findings = _score_convergence(cv)
+    convergence_score, convergence_findings = _score_convergence(cv, verifier_registry)
     all_findings = reflection_findings + convergence_findings
 
     return {
@@ -1260,7 +1483,13 @@ def run_d5_part2(ra=None, cv=None):
     }
 
 
-def run_d5(ce=None, dd=None, card=None, seed=42):
+def run_d5(
+    ce: ChaosEngine | None = None,
+    dd: DriftDetector | None = None,
+    card: dict[str, Any] | None = None,
+    seed: int = 42,
+    verifier_registry: Any = None,
+) -> dict[str, Any]:
     """Run D5 evaluation: chaos engineering + drift detection + reflection + convergence.
 
     Args:
@@ -1268,12 +1497,13 @@ def run_d5(ce=None, dd=None, card=None, seed=42):
         dd: Optional DriftDetector instance.
         card: Optional agent card dict.
         seed: Random seed for deterministic chaos injection (default 42).
+        verifier_registry: Optional VerifierRegistry for cross-validated evaluation.
 
     Returns:
         Dict with domain, score, subscores, findings.
     """
     p1 = run_d5_part1(ce, dd, card, seed=seed)
-    p2 = run_d5_part2()
+    p2 = run_d5_part2(verifier_registry=verifier_registry)
 
     d5_score = (
         p1["subscores"]["chaos_engineering"] * 0.30
