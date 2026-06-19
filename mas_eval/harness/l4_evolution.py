@@ -12,7 +12,7 @@ from typing import Any
 
 from mas_eval.domains.d5_robustness import run_d5
 from mas_eval.harness.epoch_state import EpochState
-from mas_eval.scoring.absolute import determine_verdict, score_domain, score_to_grade
+from mas_eval.scoring.absolute import determine_verdict, score_to_grade
 
 logger = logging.getLogger(__name__)
 
@@ -60,11 +60,11 @@ def run_l4_evolution(
     trend = state.trend()
     improvement = state.improvement_pct()
     final_score = state.avg_score if trend == "stable" else state.max_score
-    d5_score = score_domain(final_score, all_findings)
+    d5_score = round(final_score, 1)
     d5_detail = {
         "domain": "D5",
         "name": "Evolution & Robustness",
-        "score": final_score,
+        "score": d5_score,
         "epochs": epoch_details,
         "trend": trend,
         "improvement_pct": improvement,

@@ -2,8 +2,12 @@
 # SPDX-License-Identifier: Apache-2.0
 """Tests for L4 multi-epoch evolution lifecycle."""
 
+from typing import Any
+
 from mas_eval.harness.epoch_state import EpochState
 from mas_eval.harness.l4_evolution import run_l4_evolution
+
+FINDING = {"severity": "WARNING", "category": "test", "detail": "warning"}
 
 
 class TestEpochState:
@@ -73,3 +77,26 @@ class TestRunL4EvolutionMultiEpoch:
     def test_early_convergence(self):
         r = run_l4_evolution(max_epochs=5, convergence_delta=50.0)
         assert r["epoch_count"] == 3
+
+    def test_epoch_findings_do_not_compound_final_score_penalties(
+        self, monkeypatch: Any
+    ) -> None:
+        def fake_run_d5(
+            card: dict[str, Any] | None = None,
+            seed: int | None = None,
+            verifier_registry: Any = None,
+        ) -> dict[str, Any]:
+            return {
+                "domain": "D5",
+                "score": 90.0,
+                "findings": [FINDING],
+                "summary": "stable warning",
+            }
+
+        monkeypatch.setattr("mas_eval.harness.l4_evolution.run_d5", fake_run_d5)
+
+        r = run_l4_evolution(max_epochs=3, convergence_delta=2.0)
+
+        assert r["score"] == 90.0
+        assert r["domain_scores"]["d5"] == 90.0
+        assert len(r["findings"]) == 3
