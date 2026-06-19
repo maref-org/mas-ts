@@ -533,16 +533,20 @@ def main():
             def make_runner(runner_fn, lvl):
                 def wrapped(card, **kw):
                     if lvl == "L4":
-                        return runner_fn()
+                        return runner_fn(card)
                     return runner_fn(card, kw.get("tasks"))
 
                 return wrapped
 
             conv_result = loop.run(card, make_runner(runner, level), tasks=tasks)
+            last_iteration = (
+                conv_result["history"][-1] if conv_result.get("history") else {}
+            )
             result = {
                 "level": level,
                 "name": runner.__name__.replace("run_", "").replace("_", " ").title(),
                 "score": conv_result["final_score"],
+                "domain_scores": last_iteration.get("domain_scores", {}),
                 "convergence": conv_result,
                 "findings": conv_result["findings"],
                 "iterations": conv_result["iterations"],
@@ -553,7 +557,7 @@ def main():
             t0 = time.perf_counter()
 
             if level == "L4":
-                result = runner()
+                result = runner(card)
             elif level == "L0":
                 result = runner(card, tasks)
             else:

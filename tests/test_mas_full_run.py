@@ -415,3 +415,86 @@ class TestCLIFlags:
         assert args.converge is False
         assert args.max_iterations == 5
         assert args.convergence_delta == 0.5
+
+
+class TestConvergeMode:
+    def test_converge_preserves_domain_scores_for_report(self, monkeypatch, tmp_path):
+        output = tmp_path / "report.json"
+
+        def runner(card, tasks=None):
+            return {
+                "level": "L1",
+                "name": "Stub",
+                "score": 80.0,
+                "grade": "B-",
+                "verdict": "APPROVED",
+                "domain_scores": {"d1": 80.0},
+                "domains": {},
+                "findings": [],
+            }
+
+        monkeypatch.setattr(mfr, "load_card", lambda path: SAMPLE_CARD)
+        monkeypatch.setattr(mfr, "load_tasks", lambda path: None)
+        monkeypatch.setattr(mfr, "print_report", lambda report: None)
+        monkeypatch.setitem(mfr.LEVEL_RUNNERS, "L1", runner)
+        monkeypatch.setattr(
+            "sys.argv",
+            [
+                "mas_full_run.py",
+                "--card",
+                "dummy.json",
+                "--level",
+                "L1",
+                "--converge",
+                "--max-iterations",
+                "3",
+                "--output",
+                str(output),
+            ],
+        )
+
+        mfr.main()
+        report = json.loads(output.read_text())
+        assert report["overall"]["score"] == 80.0
+        assert report["levels"][0]["domain_scores"] == {"d1": 80.0}
+
+    def test_l4_converge_passes_card_to_runner(self, monkeypatch, tmp_path):
+        output = tmp_path / "report.json"
+        received_cards = []
+
+        def runner(card=None):
+            received_cards.append(card)
+            return {
+                "level": "L4",
+                "name": "Evolution",
+                "score": 80.0,
+                "grade": "B-",
+                "domain_scores": {"d5": 80.0},
+                "domains": {},
+                "findings": [],
+            }
+
+        monkeypatch.setattr(mfr, "load_card", lambda path: SAMPLE_CARD)
+        monkeypatch.setattr(mfr, "load_tasks", lambda path: None)
+        monkeypatch.setattr(mfr, "print_report", lambda report: None)
+        monkeypatch.setitem(mfr.LEVEL_RUNNERS, "L4", runner)
+        monkeypatch.setattr(
+            "sys.argv",
+            [
+                "mas_full_run.py",
+                "--card",
+                "dummy.json",
+                "--level",
+                "L4",
+                "--converge",
+                "--max-iterations",
+                "3",
+                "--output",
+                str(output),
+            ],
+        )
+
+        mfr.main()
+        report = json.loads(output.read_text())
+        assert received_cards == [SAMPLE_CARD, SAMPLE_CARD, SAMPLE_CARD]
+        assert report["levels"][0]["domain_scores"] == {"d5": 80.0}
