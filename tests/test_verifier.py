@@ -91,15 +91,14 @@ class TestVerifierRegistry:
         from mas_eval.domains.d5_robustness import run_d5
 
         registry = VerifierRegistry()
-        registry.register(MockVerifier(name="v1", score=88.0))
-        registry.register(MockVerifier(name="v2", score=92.0))
+        v1 = MockVerifier(name="v1", score=88.0)
+        v2 = MockVerifier(name="v2", score=92.0)
+        registry.register(v1)
+        registry.register(v2)
 
-        result_no_reg = run_d5()
         result_with_reg = run_d5(verifier_registry=registry)
 
         assert result_with_reg["domain"] == "D5"
         assert 0 <= result_with_reg["score"] <= 100
-        assert (
-            result_with_reg["subscores"]["convergence_cycle"]
-            != result_no_reg["subscores"]["convergence_cycle"]
-        )
+        assert v1.eval_count > 0
+        assert v2.eval_count > 0
