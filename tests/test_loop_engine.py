@@ -115,8 +115,8 @@ class TestConvergenceLoop:
     def test_wraps_l3_runner(self):
         from mas_eval.harness.l3_comprehensive import run_l3_comprehensive
 
-        loop = ConvergenceLoop(max_iterations=2, convergence_delta=50.0)
+        loop = ConvergenceLoop(max_iterations=5, convergence_delta=50.0)
         result = loop.run(SAMPLE_CARD, run_l3_comprehensive)
-        assert result["iterations"] == 2
+        assert result["iterations"] >= 3
         assert 0 <= result["final_score"] <= 100
         assert result["stop_reason"] == "converged"

@@ -76,7 +76,7 @@ class ConvergenceLoop:
             self.history.append(entry)
             logger.info("Iteration %d: score=%.1f", iteration, score)
 
-            if len(self.history) >= 2:
+            if len(self.history) >= 3:
                 prev_scores = [h["score"] for h in self.history[-3:]]
                 deltas = [
                     prev_scores[i] - prev_scores[i - 1]
@@ -105,9 +105,7 @@ class ConvergenceLoop:
             all_findings.extend(h.get("findings", []))
 
         return {
-            "final_score": round(sum(trajectory) / len(trajectory), 1)
-            if trajectory
-            else 0.0,
+            "final_score": trajectory[-1] if trajectory else 0.0,
             "iterations": len(self.history),
             "converged": stop_reason == "converged",
             "stop_reason": stop_reason,
