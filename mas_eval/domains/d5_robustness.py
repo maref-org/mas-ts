@@ -1246,7 +1246,7 @@ class ConvergenceVerifier:
         self._verifier_registry = registry
 
     def _mock_embedding(self, text: str) -> list[float]:
-        return [hash(c) % 100 / 100.0 for c in text.ljust(8, "_")[:8]]
+        return [ord(c) % 100 / 100.0 for c in text.ljust(8, "_")[:8]]
 
     def score_c1_consistency(self, task_id: str | None = None) -> float:
         task_ids = [task_id] if task_id else list(self.responses.keys())
