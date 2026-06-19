@@ -57,11 +57,14 @@ class ResourceGovernor:
         self._tripped = False
 
     def check(self) -> bool:
-        return (
-            not self._tripped
-            and not self.budget.exceeded()
-            and self.budget.remaining_calls > 0
-        )
+        if self.budget.exceeded() or self.budget.remaining_calls <= 0:
+            return False
+        if self._tripped:
+            if self.circuit_breaker.check_cooldown():
+                self._tripped = False
+            else:
+                return False
+        return self.circuit_breaker.state != CircuitBreakerState.OPEN
 
     def consume(self, tokens: float = 0, calls: int = 1) -> None:
         self.budget.consume(tokens=tokens, calls=calls)

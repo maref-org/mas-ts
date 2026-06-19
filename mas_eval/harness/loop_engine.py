@@ -71,9 +71,15 @@ class ConvergenceLoop:
                 )
                 break
 
-            result = runner_fn(card, **runner_kwargs)
+            try:
+                result = runner_fn(card, **runner_kwargs)
+            except Exception:
+                if self.governor is not None:
+                    self.governor.record_failure()
+                raise
             if self.governor is not None:
                 self.governor.consume(calls=1)
+                self.governor.record_success()
             score = result.get("score", 0.0)
             entry = {
                 "iteration": iteration,
