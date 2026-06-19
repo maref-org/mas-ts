@@ -348,3 +348,76 @@ class TestPrintReport:
         mfr.print_report(report)
         captured = capsys.readouterr()
         assert "BLOCKED" in captured.out
+
+
+class TestEscalationThresholds:
+    def test_thresholds_defined(self):
+        from mas_full_run import ESCALATION_THRESHOLDS
+
+        assert "L0" in ESCALATION_THRESHOLDS
+        assert "L1" in ESCALATION_THRESHOLDS
+        assert "L2" in ESCALATION_THRESHOLDS
+        assert "L3" in ESCALATION_THRESHOLDS
+        assert ESCALATION_THRESHOLDS["L0"] >= 60
+        assert ESCALATION_THRESHOLDS["L3"] >= 50
+
+
+class TestSelectLevelsEscalate:
+    def test_skips_on_low_score(self):
+        from mas_full_run import _select_levels_escalate
+
+        results = {"L0": {"score": 55.0}}
+        selected = _select_levels_escalate(results)
+        assert selected == []
+
+    def test_proceeds_on_pass(self):
+        from mas_full_run import _select_levels_escalate
+
+        results = {"L0": {"score": 85.0}}
+        selected = _select_levels_escalate(results)
+        assert selected == ["L1"]
+
+    def test_full_chain(self):
+        from mas_full_run import _select_levels_escalate
+
+        results = {
+            "L0": {"score": 85.0},
+            "L1": {"score": 80.0},
+            "L2": {"score": 75.0},
+            "L3": {"score": 70.0},
+        }
+        selected = _select_levels_escalate(results)
+        assert selected == ["L1", "L2", "L3", "L4"]
+
+    def test_gate_fails_at_l2(self):
+        from mas_full_run import _select_levels_escalate
+
+        results = {
+            "L0": {"score": 85.0},
+            "L1": {"score": 80.0},
+            "L2": {"score": 45.0},
+        }
+        selected = _select_levels_escalate(results)
+        assert selected == []  # L2 below threshold, stop
+
+    def test_empty_results(self):
+        from mas_full_run import _select_levels_escalate
+
+        selected = _select_levels_escalate({})
+        assert selected == []
+
+
+class TestCLIFlags:
+    def test_default_mode(self):
+        import argparse
+
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--mode", default="full", choices=["full", "escalate"])
+        parser.add_argument("--converge", action="store_true")
+        parser.add_argument("--max-iterations", type=int, default=5)
+        parser.add_argument("--convergence-delta", type=float, default=0.5)
+        args = parser.parse_args([])
+        assert args.mode == "full"
+        assert args.converge is False
+        assert args.max_iterations == 5
+        assert args.convergence_delta == 0.5

@@ -27,12 +27,9 @@ import argcomplete
 
 sys.path.insert(0, str(Path(__file__).parent.resolve()))
 from mas_eval import __version__ as VERSION
-from mas_eval.domains.d1_compliance import (
-    run_d1,
-)
-from mas_eval.domains.d3_multi_agent import (
-    run_d3,
-)
+from mas_eval.domains.d1_compliance import run_d1
+from mas_eval.domains.d2_single_agent import run_d2
+from mas_eval.domains.d3_multi_agent import run_d3
 from mas_eval.domains.d4_governance_security import (
     check_mcp_supply_chain,
     check_trust_score,
@@ -40,12 +37,15 @@ from mas_eval.domains.d4_governance_security import (
     run_d4,
     run_d4_federation,
 )
+from mas_eval.domains.d5_robustness import run_d5
 from mas_eval.harness.l0_fast_screen import run_l0_fast_screen
 from mas_eval.harness.l1_standard import run_l1_standard
 from mas_eval.harness.l2_deep import run_l2_deep
 from mas_eval.harness.l3_comprehensive import run_l3_comprehensive
 from mas_eval.harness.l4_evolution import run_l4_evolution
 from mas_eval.scoring.absolute import grade_to_emoji, score_to_grade
+from mas_eval.scoring.compliance_formatter import format_report
+from mas_eval.scoring.compliance_report import build_report as build_fed_report
 
 logging.basicConfig(
     level=logging.INFO,
@@ -61,6 +61,49 @@ LEVEL_RUNNERS = {
     "L3": run_l3_comprehensive,
     "L4": run_l4_evolution,
 }
+
+ESCALATION_THRESHOLDS = {
+    "L0": 60,
+    "L1": 60,
+    "L2": 50,
+    "L3": 50,
+}
+
+
+def _select_levels_escalate(completed_results):
+    """Determine next levels to run based on completed scores.
+
+    Validates the chain of completed levels against escalation thresholds
+    and returns all levels that should continue (including already-completed
+    levels that passed, which the caller deduplicates).
+
+    Args:
+        completed_results: dict mapping level -> {"score": float}
+
+    Returns:
+        List of level strings to append to the schedule.
+    """
+    ordered = ["L0", "L1", "L2", "L3", "L4"]
+    next_levels = []
+    for i, level in enumerate(ordered):
+        if level in completed_results:
+            score = completed_results[level].get("score", 0)
+            if score < ESCALATION_THRESHOLDS.get(level, 50):
+                return []
+            if i > 0:
+                next_levels.append(level)
+        else:
+            if i == 0:
+                continue
+            prev = ordered[i - 1]
+            if prev not in completed_results:
+                return next_levels
+            prev_score = completed_results[prev].get("score", 0)
+            if prev_score >= ESCALATION_THRESHOLDS.get(prev, 50):
+                next_levels.append(level)
+            else:
+                return next_levels
+    return next_levels
 
 
 def load_card(card_path):
@@ -205,7 +248,12 @@ def print_report(report):
     print("=" * 70 + "\n")
 
 
-def run_multi_vendor(card_paths, level, output_path):
+def _findings_from_checks(check_tuple):
+    score, findings = check_tuple if isinstance(check_tuple, tuple) else (0, [])
+    return findings if isinstance(findings, list) else []
+
+
+def run_multi_vendor(card_paths, level, output_path, compliance_format="none"):
     """Run federation evaluation across multiple vendor agent cards."""
     cards = {}
     for path_str in card_paths:
@@ -226,13 +274,57 @@ def run_multi_vendor(card_paths, level, output_path):
             cards[name].get("vendor_id", cards[name].get("agent_id", "?")),
         )
 
+    cards_list = list(cards.values())
     results = {}
+    agent_results = {}
     for name, card in cards.items():
         d1 = run_d1(card)
-        d3 = run_d3(card)
+        d2 = run_d2(card)
+        d3 = run_d3(card, federation_cards=cards_list)
         d4 = run_d4(card)
+        d5 = run_d5()
         trust_s, trust_f = check_trust_score(card)
         mcp_s, mcp_f = check_mcp_supply_chain(card)
+        combined_findings = (
+            d1.get("findings", [])
+            + d2.get("findings", [])
+            + d3.get("findings", [])
+            + d4.get("findings", [])
+            + d5.get("findings", [])
+            + _findings_from_checks(trust_f)
+            + _findings_from_checks(mcp_f)
+        )
+        agent_key = card.get("agent_id", name)
+        agent_results[agent_key] = {
+            "D1": {
+                "domain": "D1",
+                "score": d1["score"],
+                "findings": d1.get("findings", []),
+            },
+            "D2": {
+                "domain": "D2",
+                "score": d2["score"],
+                "findings": d2.get("findings", []),
+            },
+            "D3": {
+                "domain": "D3",
+                "score": d3["score"],
+                "subscores": d3.get("subscores", {}),
+                "findings": d3.get("findings", []),
+            },
+            "D4": {
+                "domain": "D4",
+                "score": d4["score"],
+                "subscores": d4.get("subscores", {}),
+                "findings": d4.get("findings", []),
+            },
+            "D5": {
+                "domain": "D5",
+                "score": d5["score"],
+                "findings": d5.get("findings", []),
+            },
+            "findings": combined_findings,
+        }
         results[name] = {
             "d1": {"score": d1["score"], "verdict": d1["conformance_verdict"]},
             "d3": {"score": d3["score"]},
@@ -241,9 +333,9 @@ def run_multi_vendor(card_paths, level, output_path):
             "mcp_score": mcp_s,
         }
 
-    cards_list = list(cards.values())
     fed = run_d4_federation(cards_list)
     div_s, div_f = check_vendor_diversity(cards_list)
+    fed_report = build_fed_report(agent_results, cards_list)
 
     report = {
         "standard": "MAS-TS-001",
@@ -283,6 +375,44 @@ def run_multi_vendor(card_paths, level, output_path):
     print(f"  Vendor diversity:      {div_s:.1f}/100")
     print(f"  Total findings:        {len(fed['findings'])}")
     print("=" * 70 + "\n")
+
+    print("\n" + "=" * 70)
+    print("  Federation Compliance Report Summary")
+    print("=" * 70)
+    print(f"  Overall health: {fed_report['federation']['overall_health']:.1f}/100")
+    print(f"  Compliance rate: {fed_report['federation']['compliance_rate']}")
+    print(
+        f"  Agents: {fed_report['summary']['total_agents']} total, "
+        f"{fed_report['summary']['agents_passing']} passing, "
+        f"{fed_report['summary']['agents_blocked']} blocked"
+    )
+    if fed_report["gaps"]:
+        print(
+            f"  Gaps: {fed_report['summary']['total_gaps']} "
+            f"({sum(1 for g in fed_report['gaps'] if g['severity'] == 'CRITICAL')} CRITICAL, "
+            f"{sum(1 for g in fed_report['gaps'] if g['severity'] == 'HIGH')} HIGH)"
+        )
+        for g in fed_report["gaps"][:3]:
+            print(f"    - [{g['severity']}] {g['description'][:80]}")
+    if fed_report["recommendations"]:
+        print(f"  Recommendations ({fed_report['summary']['total_recommendations']}):")
+        for r in fed_report["recommendations"][:3]:
+            print(f"    - {r}")
+    print("=" * 70 + "\n")
+
+    report["compliance_report"] = fed_report
+
+    if compliance_format != "none":
+        fmt_ext = {"markdown": ".md", "html": ".html"}
+        ext = fmt_ext.get(compliance_format, ".md")
+        base = output_path or "reports/federation-compliance"
+        base = Path(str(base).rsplit(".", 1)[0])
+        fmt_path = base.parent / f"{base.name}{ext}"
+        fmt_path.parent.mkdir(parents=True, exist_ok=True)
+        formatted = format_report(fed_report, compliance_format)
+        with open(fmt_path, "w", encoding="utf-8") as f:
+            f.write(formatted)
+        logger.info("Compliance report saved to %s", fmt_path)
 
     return report
 
@@ -325,11 +455,42 @@ def main():
         action="store_true",
         help="Exit with error code if verdict is BLOCKED",
     )
+    parser.add_argument(
+        "--compliance-format",
+        choices=["markdown", "html", "none"],
+        default="none",
+        help="Output format for the federation compliance report (multi-vendor only)",
+    )
+    parser.add_argument(
+        "--mode",
+        default="full",
+        choices=["full", "escalate"],
+        help="Execution mode: 'full' runs all selected levels, 'escalate' runs levels conditionally (default: full)",
+    )
+    parser.add_argument(
+        "--converge",
+        action="store_true",
+        help="Enable convergence loop: runs each level up to --max-iterations times until score stabilizes",
+    )
+    parser.add_argument(
+        "--max-iterations",
+        type=int,
+        default=5,
+        help="Maximum iterations per level when --converge is set (default: 5)",
+    )
+    parser.add_argument(
+        "--convergence-delta",
+        type=float,
+        default=0.5,
+        help="Score delta threshold for convergence (default: 0.5)",
+    )
     argcomplete.autocomplete(parser)
     args = parser.parse_args()
 
     if args.multi_vendor:
-        return run_multi_vendor(args.multi_vendor, args.level, args.output)
+        return run_multi_vendor(
+            args.multi_vendor, args.level, args.output, args.compliance_format
+        )
 
     if not args.card:
         parser.error(
@@ -343,34 +504,73 @@ def main():
     logger.info("Selected level: %s", args.level)
 
     level_results = []
+    completed_scores = {}
 
     selected_levels = (
         ["L0", "L1", "L2", "L3", "L4"] if args.level == "all" else [args.level]
     )
 
-    for level in selected_levels:
+    if args.mode == "escalate":
+        selected_levels = ["L0"]
+
+    while selected_levels:
+        level = selected_levels.pop(0)
         runner = LEVEL_RUNNERS[level]
-        logger.info("[%s] Running %s...", level, runner.__name__)
-        t0 = time.perf_counter()
 
-        if level == "L4":
-            result = runner()
-        elif level == "L0":
-            result = runner(card, tasks)
+        if args.converge and level != "L0":
+            from mas_eval.harness.loop_engine import ConvergenceLoop
+
+            loop = ConvergenceLoop(
+                max_iterations=args.max_iterations,
+                convergence_delta=args.convergence_delta,
+            )
+
+            def make_runner(runner_fn, lvl):
+                def wrapped(card, **kw):
+                    if lvl == "L4":
+                        return runner_fn()
+                    return runner_fn(card, kw.get("tasks"))
+
+                return wrapped
+
+            conv_result = loop.run(card, make_runner(runner, level), tasks=tasks)
+            result = {
+                "level": level,
+                "name": runner.__name__.replace("run_", "").replace("_", " ").title(),
+                "score": conv_result["final_score"],
+                "convergence": conv_result,
+                "findings": conv_result["findings"],
+                "iterations": conv_result["iterations"],
+                "converged": conv_result["converged"],
+            }
         else:
-            result = runner(card, tasks)
+            logger.info("[%s] Running %s...", level, runner.__name__)
+            t0 = time.perf_counter()
 
-        result["duration_ms"] = int((time.perf_counter() - t0) * 1000)
+            if level == "L4":
+                result = runner()
+            elif level == "L0":
+                result = runner(card, tasks)
+            else:
+                result = runner(card, tasks)
+
+            result["duration_ms"] = int((time.perf_counter() - t0) * 1000)
+
+        result.setdefault("score", result.get("score", 0) or 0)
         level_results.append(result)
+        completed_scores[level] = {"score": result.get("score", 0)}
 
         status = result.get("status") or (
             "PASS" if (result.get("score") or 0) >= 70 else "FAIL"
         )
-        logger.info(
-            "  -> %s (%sms)",
-            status,
-            result["duration_ms"],
-        )
+        logger.info("  -> %s (score=%.1f)", status, result.get("score", 0))
+
+        if args.mode == "escalate":
+            next_levels = _select_levels_escalate(completed_scores)
+            for nl in next_levels:
+                if nl not in [r["level"] for r in level_results]:
+                    selected_levels.append(nl)
+            selected_levels = list(dict.fromkeys(selected_levels))
 
     report = generate_report(card, level_results, args.source_dir)
 
