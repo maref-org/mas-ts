@@ -417,7 +417,7 @@ def run_multi_vendor(card_paths, level, output_path, compliance_format="none"):
     return report
 
 
-def main():
+def _setup_parser():
     parser = argparse.ArgumentParser(
         description="MAS-TS-001 Full-Run Evaluation Pipeline (L0-L4)"
     )
@@ -484,6 +484,11 @@ def main():
         default=0.5,
         help="Score delta threshold for convergence (default: 0.5)",
     )
+    return parser
+
+
+def main():
+    parser = _setup_parser()
     argcomplete.autocomplete(parser)
     args = parser.parse_args()
 

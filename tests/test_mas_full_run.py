@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 frankiehot-tech
+# SPDX-License-Identifier: Apache-2.0
+
 import importlib.util
 import json
 from pathlib import Path
@@ -354,12 +357,7 @@ class TestEscalationThresholds:
     def test_thresholds_defined(self):
         from mas_full_run import ESCALATION_THRESHOLDS
 
-        assert "L0" in ESCALATION_THRESHOLDS
-        assert "L1" in ESCALATION_THRESHOLDS
-        assert "L2" in ESCALATION_THRESHOLDS
-        assert "L3" in ESCALATION_THRESHOLDS
-        assert ESCALATION_THRESHOLDS["L0"] >= 60
-        assert ESCALATION_THRESHOLDS["L3"] >= 50
+        assert ESCALATION_THRESHOLDS == {"L0": 60, "L1": 60, "L2": 50, "L3": 50}
 
 
 class TestSelectLevelsEscalate:
@@ -409,14 +407,10 @@ class TestSelectLevelsEscalate:
 
 class TestCLIFlags:
     def test_default_mode(self):
-        import argparse
+        from mas_full_run import _setup_parser
 
-        parser = argparse.ArgumentParser()
-        parser.add_argument("--mode", default="full", choices=["full", "escalate"])
-        parser.add_argument("--converge", action="store_true")
-        parser.add_argument("--max-iterations", type=int, default=5)
-        parser.add_argument("--convergence-delta", type=float, default=0.5)
-        args = parser.parse_args([])
+        parser = _setup_parser()
+        args = parser.parse_args(["--card", "dummy.json"])
         assert args.mode == "full"
         assert args.converge is False
         assert args.max_iterations == 5
