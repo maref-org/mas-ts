@@ -41,6 +41,11 @@ class ConvergenceLoop:
         self.governor = resource_governor
         self.history: list[dict[str, Any]] = []
 
+    def _governor_stop_reason(self) -> str:
+        if self.governor is not None and self.governor.circuit_breaker.state == "OPEN":
+            return "circuit_open"
+        return "resource_exhausted"
+
     def run(self, card, runner_fn, **runner_kwargs):
         """Run evaluation in a convergence loop.
 
@@ -60,7 +65,7 @@ class ConvergenceLoop:
 
         for iteration in range(1, self.max_iterations + 1):
             if self.governor is not None and not self.governor.check():
-                stop_reason = "resource_exhausted"
+                stop_reason = self._governor_stop_reason()
                 break
 
             if time.time() - start_time > self.timeout_seconds:
@@ -74,9 +79,13 @@ class ConvergenceLoop:
             try:
                 result = runner_fn(card, **runner_kwargs)
             except Exception:
-                if self.governor is not None:
-                    self.governor.record_failure()
-                raise
+                if self.governor is None:
+                    raise
+                self.governor.record_failure()
+                if not self.governor.check():
+                    stop_reason = self._governor_stop_reason()
+                    break
+                continue
             if self.governor is not None:
                 self.governor.consume(calls=1)
                 self.governor.record_success()

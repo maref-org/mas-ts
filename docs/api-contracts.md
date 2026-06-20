@@ -23,15 +23,19 @@ Full-Run evaluation pipeline (L0-L4).
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--card` | `str` | (required) | Path to single Agent Card JSON |
-| `--cards-dir` | `str` | `None` | Directory of Agent Cards (batch) |
+| `--engine` | `str` | `v3` | Engine version |
 | `--level` | `str` | `all` | Level: `L0`/`L1`/`L2`/`L3`/`L4`/`all` |
+| `--card` | `str` | (required) | Path to single Agent Card JSON unless `--multi-vendor` is used |
+| `--tasks` | `str` | `None` | Task definitions JSON path |
+| `--output` | `str` | `None` | Write JSON report to path |
+| `--source-dir` | `str` | `None` | Agent source code directory for deeper analysis |
+| `--multi-vendor` | `list[str]` | `None` | Evaluate multiple agent cards and run federation analysis |
+| `--block` | flag | `False` | Exit non-zero if verdict is `BLOCKED` |
+| `--compliance-format` | `str` | `none` | Federation compliance report format: `markdown`/`html`/`none` |
 | `--mode` | `str` | `full` | Execution mode: `full` or conditional `escalate` |
 | `--converge` | flag | `False` | Run each non-L0 level in a convergence loop |
 | `--max-iterations` | `int` | `5` | Maximum iterations per converged level |
 | `--convergence-delta` | `float` | `0.5` | Score delta threshold for convergence |
-| `--output` | `str` | `None` | Write JSON report to path |
-| `--verbose` | flag | `False` | Debug-level logging |
 
 Exit code: 0 = PASS, 1 = FAIL.
 

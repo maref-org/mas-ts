@@ -1248,6 +1248,20 @@ class ConvergenceVerifier:
     def _mock_embedding(self, text: str) -> list[float]:
         return [ord(c) % 100 / 100.0 for c in text.ljust(8, "_")[:8]]
 
+    def _verifier_consensus(
+        self, task_id: str, min_responses: int
+    ) -> dict[str, Any] | None:
+        if self._verifier_registry is None:
+            return None
+        resp_list = self.responses.get(task_id, [])
+        if len(resp_list) < min_responses:
+            return None
+        resp_texts = [r["text"] for r in resp_list]
+        cons = self._verifier_registry.consensus_evaluate(task_id, resp_texts)
+        if cons.get("verifier_count", 0) <= 0:
+            return None
+        return cons
+
     def score_c1_consistency(self, task_id: str | None = None) -> float:
         task_ids = [task_id] if task_id else list(self.responses.keys())
         if not task_ids:
@@ -1265,10 +1279,12 @@ class ConvergenceVerifier:
                 for j in range(i + 1, len(resp_list)):
                     e2 = resp_list[j]["embedding"]
                     sims.append(_cosine_sim(e1, e2))
-            if sims:
-                scores.append(sum(sims) / len(sims))
-            else:
-                scores.append(0.0)
+            base_score = sum(sims) / len(sims) if sims else 0.0
+            cons = self._verifier_consensus(tid, min_responses=2)
+            if cons is not None:
+                verifier_score = cons["consensus_score"] / 100.0
+                base_score = base_score * 0.6 + verifier_score * 0.4
+            scores.append(base_score)
 
         avg = sum(scores) / len(scores) if scores else 0.0
         return round(avg, 2)
@@ -1294,7 +1310,12 @@ class ConvergenceVerifier:
                 )
                 if matches >= len(embeddings) - 2:
                     agreement += 1
-            scores.append(agreement / len(embeddings))
+            base_score = agreement / len(embeddings)
+            cons = self._verifier_consensus(tid, min_responses=3)
+            if cons is not None:
+                verifier_agreement = cons["agreement"]
+                base_score = base_score * 0.6 + verifier_agreement * 0.4
+            scores.append(base_score)
 
         avg = sum(scores) / len(scores) if scores else 0.0
         return round(avg, 2)
@@ -1384,18 +1405,6 @@ def _score_convergence(
     c1 = cv.score_c1_consistency()
     c2 = cv.score_c2_self_consistency()
     c3 = cv.score_c3_task_completion()
-
-    if cv._verifier_registry is not None:
-        task_ids = list(cv.responses.keys())
-        if task_ids:
-            for tid in task_ids:
-                resp_texts = [r["text"] for r in cv.responses.get(tid, [])]
-                if len(resp_texts) >= 2:
-                    cons = cv._verifier_registry.consensus_evaluate(tid, resp_texts)
-                    if cons["verifier_count"] > 0:
-                        verifier_norm = cons["consensus_score"] / 100.0
-                        c1 = round(c1 * 0.6 + verifier_norm * 0.4, 2)
-                        break
 
     c1_score = min(100, c1 * 100)
     c2_score = min(100, c2 * 100)

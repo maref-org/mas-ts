@@ -102,3 +102,27 @@ class TestVerifierRegistry:
         assert 0 <= result_with_reg["score"] <= 100
         assert v1.eval_count > 0
         assert v2.eval_count > 0
+
+    def test_convergence_verifier_uses_registry_for_c1_and_c2_all_tasks(self):
+        from mas_eval.domains.d5_robustness import ConvergenceVerifier
+
+        registry = VerifierRegistry()
+        v1 = MockVerifier(name="v1", score=88.0)
+        v2 = MockVerifier(name="v2", score=92.0)
+        registry.register(v1)
+        registry.register(v2)
+
+        cv = ConvergenceVerifier()
+        cv.set_verifier_registry(registry)
+        for task_id in ("math", "code"):
+            cv.add_response(task_id, "answer one")
+            cv.add_response(task_id, "answer two")
+            cv.add_response(task_id, "answer three")
+
+        c1 = cv.score_c1_consistency()
+        c2 = cv.score_c2_self_consistency()
+
+        assert 0 <= c1 <= 1
+        assert 0 <= c2 <= 1
+        assert v1.eval_count == 4
+        assert v2.eval_count == 4

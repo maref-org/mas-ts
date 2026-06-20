@@ -128,6 +128,22 @@ class TestConvergenceLoop:
         assert result["stop_reason"] == "resource_exhausted"
         assert called[0] == 1
 
+    def test_stops_on_circuit_open_after_repeated_runner_failures(self):
+        from mas_eval.harness.resource_governor import ResourceGovernor
+
+        governor = ResourceGovernor()
+        called = [0]
+
+        def runner(card, **kw):
+            called[0] += 1
+            raise RuntimeError("boom")
+
+        loop = ConvergenceLoop(max_iterations=10, resource_governor=governor)
+        result = loop.run(SAMPLE_CARD, runner)
+        assert result["stop_reason"] == "circuit_open"
+        assert result["iterations"] == 0
+        assert called[0] == 3
+
     def test_wraps_l3_runner(self):
         from mas_eval.harness.l3_comprehensive import run_l3_comprehensive
 
