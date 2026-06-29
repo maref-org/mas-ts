@@ -528,3 +528,129 @@ class TestScoringPipeline:
         assert report["gold_verdict"] in ("GOLD", "SILVER")
         assert report["consistency_index"] == 0.80
         assert report["cost_efficiency"] == 0.70
+
+    # ═══════════════════════════════════════════════════════════
+    # Phase 2: Coordination Efficiency + Consistency Index
+    # ═══════════════════════════════════════════════════════════
+
+    def test_gold_pipeline_coordination_efficiency(self):
+        """Full pipeline with coordination efficiency scoring."""
+        from mas_eval.domains.d3_multi_agent import run_coordination_efficiency
+
+        msgs = [
+            {
+                "message_type": "request",
+                "source_agent": "a1",
+                "target_agent": "a2",
+                "latency_ms": 100,
+                "is_coordination": True,
+                "is_waiting_response": False,
+            },
+            {"action": {"type": "tool_call"}, "latency_ms": 50},
+            {
+                "message_type": "response",
+                "source_agent": "a2",
+                "target_agent": "a1",
+                "latency_ms": 50,
+                "is_coordination": True,
+                "is_waiting_response": False,
+            },
+        ]
+        score, findings = run_coordination_efficiency(msgs)
+        assert score >= 50
+        assert any(f["category"] == "coordination_efficiency" for f in findings)
+
+    def test_gold_pipeline_plan_quality(self):
+        """Full pipeline with plan quality scoring."""
+        from mas_eval.domains.d3_multi_agent import run_plan_quality
+
+        plan = [
+            {"action": {"type": "tool_call", "tool_id": "grep"}},
+            {"action": {"type": "tool_call", "tool_id": "file_read"}},
+            {"action": {"type": "tool_call", "tool_id": "file_edit"}},
+        ]
+        score, findings = run_plan_quality(plan, actual_trajectory=plan)
+        assert score >= 85
+        assert any(f["category"] == "plan_quality" for f in findings)
+
+    def test_gold_pipeline_consistency_index(self):
+        """Full pipeline with consistency index."""
+        from mas_eval.domains.d5_robustness import ConsistencyIndex
+
+        ci = ConsistencyIndex()
+        for _ in range(3):
+            ci.add_run(
+                {
+                    "result": {"value": 42},
+                    "elapsed_seconds": 10.0,
+                    "events": [{"action": {"type": "tool_call", "tool_id": "grep"}}],
+                }
+            )
+        result = ci.score()
+        assert result["ci"] >= 0.9
+        assert "c_task" in result["dimensions"]
+
+    # ═══════════════════════════════════════════════════════════
+    # Phase 3: Action Safety + Federation Cascade
+    # ═══════════════════════════════════════════════════════════
+
+    def test_gold_pipeline_action_safety(self):
+        """Full pipeline with action safety scoring."""
+        from mas_eval.domains.d4_governance_security import run_action_safety
+
+        card = {
+            "authentication": {"type": "OAuth2", "scopes": ["file_read", "file_write"]},
+            "constitution": {"data_sanitizer": True, "prompt_guard": True},
+            "governance": {
+                "human_in_the_loop": {"required_for": ["delete"]},
+                "compensating_transactions": True,
+            },
+        }
+        score, findings = run_action_safety(card)
+        assert score >= 50
+        assert any(f["category"] == "action_safety" for f in findings)
+
+    def test_gold_pipeline_federation_cascade(self):
+        """Full pipeline with federation cascade testing."""
+        from mas_eval.domains.d5_robustness import run_federation_cascade
+
+        result = run_federation_cascade()
+        assert result["score"] >= 0
+        assert result["score"] <= 100
+        assert "dimensions" in result
+        assert "containment" in result["dimensions"]
+
+    # ═══════════════════════════════════════════════════════════
+    # Phase 4: Cost Efficiency + Meta Evaluation
+    # ═══════════════════════════════════════════════════════════
+
+    def test_gold_pipeline_cost_efficiency(self):
+        """Full pipeline with cost efficiency."""
+        from mas_eval.cross_cutting.cost_efficiency import compute_cost_efficiency
+
+        traj = {
+            "events": [
+                {
+                    "action": {"type": "tool_call", "tool_id": "grep"},
+                    "cost_usd": 0.02,
+                    "token_usage": {"total": 200},
+                }
+            ]
+        }
+        result = compute_cost_efficiency(traj)
+        assert result["cpt"] == 0.02
+        assert result["total_tokens"] == 200
+        assert result["efficiency"] > 0
+
+    def test_gold_pipeline_meta_evaluation(self):
+        """Full pipeline with meta evaluation."""
+        from mas_eval.scoring.meta_evaluator import MetaEvaluator
+
+        me = MetaEvaluator()
+        for _ in range(3):
+            me.record_run({"model": "x"}, {"overall": 85.0})
+        result = me.overall_meta_score(
+            weak_result={"overall": 30}, strong_result={"overall": 90}
+        )
+        assert result["meta_score"] >= 0.7
+        assert result["confidence"] == "high"
