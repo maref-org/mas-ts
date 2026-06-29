@@ -376,3 +376,155 @@ class TestScoringPipeline:
         ci = elo.confidence_interval("target")
         assert ci is not None
         assert ci["ci_lower"] < ci["rating"] < ci["ci_upper"]
+
+    # ═══════════════════════════════════════════════════════════
+    # Gold Standard Pipeline Tests
+    # ═══════════════════════════════════════════════════════════
+
+    def test_gold_pipeline_step_efficiency(self):
+        """Full pipeline with step efficiency scoring."""
+        from mas_eval.domains.d2_single_agent import run_step_efficiency
+
+        scenario = {"expected_steps": "3-5"}
+        trajectory = {
+            "events": [
+                {"action": {"type": "tool_call", "tool_id": "grep", "is_retry": False}},
+                {
+                    "action": {
+                        "type": "tool_call",
+                        "tool_id": "file_read",
+                        "is_retry": False,
+                    }
+                },
+                {
+                    "action": {
+                        "type": "tool_call",
+                        "tool_id": "file_edit",
+                        "is_retry": False,
+                    }
+                },
+            ]
+        }
+        score, findings = run_step_efficiency(trajectory, scenario)
+        assert score >= 60, f"StepEfficiency score too low: {score}"
+
+    def test_gold_pipeline_trajectory_quality(self):
+        """Full pipeline with trajectory quality scoring."""
+        from mas_eval.domains.d2_single_agent import run_trajectory_quality
+
+        golden = {
+            "events": [
+                {"action": {"type": "tool_call", "tool_id": "grep"}},
+                {
+                    "action": {
+                        "type": "tool_call",
+                        "tool_id": "file_read",
+                        "reasoning": "check content",
+                    }
+                },
+                {
+                    "action": {
+                        "type": "tool_call",
+                        "tool_id": "file_edit",
+                        "reasoning": "apply fix",
+                    }
+                },
+            ]
+        }
+        score, findings = run_trajectory_quality(golden, golden)
+        assert score >= 80, f"TrajectoryQuality score too low: {score}"
+
+    def test_gold_pipeline_tool_selection(self):
+        """Full pipeline with tool selection correctness."""
+        from mas_eval.domains.d2_single_agent import run_tool_selection_correctness
+
+        trajectory = {
+            "events": [
+                {
+                    "action": {
+                        "type": "tool_call",
+                        "tool_id": "grep",
+                        "input": {"pattern": "TODO"},
+                    }
+                },
+                {
+                    "action": {
+                        "type": "tool_call",
+                        "tool_id": "file_read",
+                        "input": {"path": "main.py"},
+                    }
+                },
+                {
+                    "action": {
+                        "type": "tool_call",
+                        "tool_id": "file_edit",
+                        "input": {"path": "main.py", "content": "fix"},
+                    }
+                },
+            ]
+        }
+        score, findings = run_tool_selection_correctness(
+            trajectory, ["grep", "file_read", "file_edit"]
+        )
+        assert score >= 70, f"ToolSelection score too low: {score}"
+
+    def test_gold_scoring(self):
+        """Gold scoring with cross-cutting adjustments."""
+        from mas_eval.scoring.absolute import (
+            compute_gold_overall,
+            determine_gold_verdict,
+        )
+
+        overall = compute_gold_overall(
+            d1=95,
+            d2=88,
+            d3=82,
+            d4=90,
+            d5=85,
+            consistency_index=0.80,
+            cost_efficiency=0.70,
+        )
+        assert overall >= 80
+        verdict = determine_gold_verdict(overall, consistency_index=0.80)
+        assert verdict in ("GOLD", "SILVER")
+
+    def test_gold_verdict_critical_block(self):
+        """Gold verdict blocked by CRITICAL finding."""
+        from mas_eval.scoring.absolute import (
+            compute_gold_overall,
+            determine_gold_verdict,
+        )
+
+        overall = compute_gold_overall(
+            d1=95,
+            d2=88,
+            d3=82,
+            d4=90,
+            d5=85,
+            consistency_index=0.80,
+        )
+        verdict = determine_gold_verdict(
+            overall,
+            findings=[{"severity": "CRITICAL", "layer": "tool"}],
+            consistency_index=0.80,
+        )
+        assert verdict != "GOLD", "CRITICAL finding should block GOLD verdict"
+
+    def test_gold_aggregation_report(self):
+        """Gold aggregation report from harness."""
+        from mas_eval.harness.aggregation import compute_gold_report
+
+        domain_results = {
+            "d1": {"score": 95, "findings": []},
+            "d2": {"score": 88, "findings": [{"severity": "INFO", "category": "test"}]},
+            "d3": {"score": 82, "findings": []},
+            "d4": {"score": 90, "findings": []},
+            "d5": {"score": 85, "findings": []},
+        }
+        report = compute_gold_report(
+            domain_results, consistency_index=0.80, cost_efficiency=0.70
+        )
+        assert report["overall"] >= 80
+        assert report["gold_verdict"] in ("GOLD", "SILVER")
+        assert report["consistency_index"] == 0.80
+        assert report["cost_efficiency"] == 0.70
