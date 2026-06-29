@@ -443,6 +443,70 @@ class TestSchemaV2Federation:
         errors = self.validate(card)
         assert errors
 
+    def test_trust_score_object_with_evaluator_valid(self):
+        card = dict(V2_CARD)
+        card["federation"] = dict(V2_CARD["federation"])
+        card["federation"]["trust_score"] = {
+            "value": 0.85,
+            "evaluated_by": "urn:agent:mas-ts:evaluator",
+            "method": "behavioral_analysis",
+        }
+        errors = self.validate(card)
+        assert not errors
+
+    def test_trust_score_object_value_range(self):
+        card = dict(V2_CARD)
+        card["federation"] = dict(V2_CARD["federation"])
+        card["federation"]["trust_score"] = {
+            "value": 1.5,
+            "evaluated_by": "urn:agent:mas-ts:evaluator",
+        }
+        errors = self.validate(card)
+        assert errors
+
+    def test_federation_permissions_values(self):
+        card = dict(V2_CARD)
+        card["federation"] = dict(V2_CARD["federation"])
+        card["federation"]["permissions"] = {
+            "read": True,
+            "write": "requires_hitl",
+            "delete": "requires_hitl",
+            "execute": "denied",
+        }
+        errors = self.validate(card)
+        assert not errors
+
+    def test_federation_permissions_reject_invalid_value(self):
+        card = dict(V2_CARD)
+        card["federation"] = dict(V2_CARD["federation"])
+        card["federation"]["permissions"] = {"execute": "always"}
+        errors = self.validate(card)
+        assert errors
+
+    def test_federation_arbitration_policy_valid(self):
+        card = dict(V2_CARD)
+        card["federation"] = dict(V2_CARD["federation"])
+        card["federation"]["arbitration_policy"] = "human_review"
+        errors = self.validate(card)
+        assert not errors
+
+    def test_audit_trace_flags_required_when_audit_present(self):
+        card = dict(V2_CARD)
+        card["audit"] = {"trace_id_required": True}
+        errors = self.validate(card)
+        assert errors
+
+    def test_audit_trace_flags_valid(self):
+        card = dict(V2_CARD)
+        card["audit"] = {
+            "trace_id_required": True,
+            "timestamp_required": True,
+            "source_agent_required": True,
+            "target_agent_required": True,
+        }
+        errors = self.validate(card)
+        assert not errors
+
 
 class TestSchemaV2Governance:
     def validate(self, card):
@@ -509,6 +573,38 @@ class TestSchemaV2Governance:
         }
         errors = self.validate(card)
         assert errors
+
+
+class TestSchemaV2MultiVendorFixtures:
+    def validate(self, card):
+        return list(VALIDATOR.iter_errors(card))
+
+    def test_v2_multi_vendor_cards_have_federation_release_fields(self):
+        cards_dir = (
+            Path(__file__).parent.parent
+            / "mas_eval"
+            / "data"
+            / "multi_vendor_test"
+            / "v2_cards"
+        )
+        card_paths = sorted(cards_dir.glob("agent_card_*_v2.json"))
+        cards = [json.loads(path.read_text()) for path in card_paths]
+        passing_cards = [
+            card
+            for card in cards
+            if card.get("federation", {}).get("allowed_mcp_servers")
+            and all(
+                card.get("audit", {}).get(field) is True
+                for field in (
+                    "trace_id_required",
+                    "timestamp_required",
+                    "source_agent_required",
+                    "target_agent_required",
+                )
+            )
+        ]
+        assert len(passing_cards) >= 3
+        assert all(not self.validate(card) for card in cards)
 
 
 class TestSchemaV2BackwardCompat:

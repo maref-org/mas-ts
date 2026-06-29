@@ -16,6 +16,7 @@ import re
 import time
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
@@ -85,9 +86,15 @@ D1_CHECKS = [
         "severity": "HIGH",
         "deduction": 15,
     },
+    {
+        "id": "1.13",
+        "name": "trace_audit_chain",
+        "severity": "HIGH",
+        "deduction": 15,
+    },
 ]
 
-ENDPOINT_REGION_DB = {}
+ENDPOINT_REGION_DB: dict[str, str] = {}
 ENDPOINT_YAML = Path(__file__).parent.parent.parent / "configs" / "endpoints.yaml"
 if ENDPOINT_YAML.exists():
     try:
@@ -131,7 +138,7 @@ OVERSEAS_PATTERNS = [
 ]
 
 
-def _resolve_endpoint_region(endpoint):
+def _resolve_endpoint_region(endpoint: str) -> str:
     if not endpoint:
         return "UNKNOWN"
     try:
@@ -148,20 +155,22 @@ def _resolve_endpoint_region(endpoint):
     return "UNKNOWN"
 
 
-def check_schema(card, schema_path=None):
-    findings = []
+def check_schema(
+    card: dict[str, Any], schema_path: str | None = None
+) -> list[dict[str, Any]]:
+    findings: list[dict[str, Any]] = []
     if not schema_path:
         ver = card.get("schema_version", card.get("card_version", "1.2"))
         if ver == "2.0":
-            schema_path = (
+            schema_path = str(
                 Path(__file__).parent.parent / "schemas" / "agent_card_v2.0.json"
             )
         else:
-            schema_path = (
+            schema_path = str(
                 Path(__file__).parent.parent / "schemas" / "agent_card_v1.2.json"
             )
-    schema_path = Path(schema_path)
-    if not schema_path.exists():
+    resolved_path = Path(schema_path)
+    if not resolved_path.exists():
         findings.append(
             {
                 "check": "1.1",
@@ -205,7 +214,7 @@ def check_schema(card, schema_path=None):
     return findings
 
 
-def check_data_residency(card):
+def check_data_residency(card: dict[str, Any]) -> list[dict[str, Any]]:
     findings = []
     compliance = card.get("compliance", {})
     residency = compliance.get("data_residency")
@@ -237,7 +246,7 @@ def check_data_residency(card):
     return findings
 
 
-def check_cross_border(card):
+def check_cross_border(card: dict[str, Any]) -> list[dict[str, Any]]:
     findings = []
     compliance = card.get("compliance", {})
     residency = compliance.get("data_residency")
@@ -269,7 +278,7 @@ def check_cross_border(card):
     return findings
 
 
-def check_envelope(card):
+def check_envelope(card: dict[str, Any]) -> list[dict[str, Any]]:
     findings = []
     constitution = card.get("constitution", {})
     env = constitution.get("envelope", {})
@@ -302,7 +311,7 @@ def check_envelope(card):
     return findings
 
 
-def check_health_state(card):
+def check_health_state(card: dict[str, Any]) -> list[dict[str, Any]]:
     findings = []
     constitution = card.get("constitution", {})
     health = constitution.get("health_state")
@@ -334,7 +343,7 @@ def check_health_state(card):
     return findings
 
 
-def check_heartbeat(card):
+def check_heartbeat(card: dict[str, Any]) -> list[dict[str, Any]]:
     findings = []
     constitution = card.get("constitution", {})
     interval = constitution.get("heartbeat_interval_seconds")
@@ -384,7 +393,7 @@ def check_heartbeat(card):
     return findings
 
 
-def check_authentication(card):
+def check_authentication(card: dict[str, Any]) -> list[dict[str, Any]]:
     findings = []
     auth = card.get("authentication", {})
     auth_type = auth.get("type", "None")
@@ -407,7 +416,7 @@ def check_authentication(card):
     return findings
 
 
-def check_prompt_rot(card):
+def check_prompt_rot(card: dict[str, Any]) -> list[dict[str, Any]]:
     findings = []
     today = time.strftime("%Y-%m-%d")
     for cap in card.get("capabilities", []):
@@ -445,7 +454,7 @@ def check_prompt_rot(card):
     return findings
 
 
-def check_capabilities_completeness(card):
+def check_capabilities_completeness(card: dict[str, Any]) -> list[dict[str, Any]]:
     findings = []
     declared_tools = {cap["skill_id"] for cap in card.get("capabilities", [])}
     covered_core = declared_tools & CORE_TOOLS
@@ -470,14 +479,14 @@ def check_capabilities_completeness(card):
     return findings
 
 
-def check_dag_acyclicity(card):
+def check_dag_acyclicity(card: dict[str, Any]) -> list[dict[str, Any]]:
     findings = []
     capabilities = card.get("capabilities", [])
     skill_ids = {cap["skill_id"] for cap in capabilities}
     dependencies = card.get("dependencies", [])
     deps_set = set(dependencies)
 
-    graph = {}
+    graph: dict[str, set[str]] = {}
     for skill_id in skill_ids:
         graph[skill_id] = set()
 
@@ -491,7 +500,7 @@ def check_dag_acyclicity(card):
     visited = set()
     recursion_stack = set()
 
-    def has_cycle(node):
+    def has_cycle(node: str) -> bool:
         visited.add(node)
         recursion_stack.add(node)
         for neighbor in graph.get(node, set()):
@@ -529,18 +538,29 @@ def check_dag_acyclicity(card):
     return findings
 
 
-def check_data_cross_border_chain(card):
+def check_data_cross_border_chain(card: dict[str, Any]) -> list[dict[str, Any]]:
     findings = []
     fed = card.get("federation") or {}
     policy = fed.get("cross_border_policy") or {}
     compliance = card.get("compliance") or {}
 
     if not policy:
+        is_cross_border = compliance.get("cross_border", False)
+        data_residency = compliance.get("data_residency")
+        model_location = compliance.get("model_backend_location")
+        severity = (
+            "HIGH" if is_cross_border and data_residency != model_location else "INFO"
+        )
+        detail = (
+            "Cross-border enabled with mixed residency but missing cross-border policy"
+            if severity == "HIGH"
+            else "No federation cross-border policy declared"
+        )
         findings.append(
             {
                 "check": "1.11",
-                "severity": "INFO",
-                "detail": "No federation cross-border policy declared",
+                "severity": severity,
+                "detail": detail,
             }
         )
         return findings
@@ -568,6 +588,7 @@ def check_data_cross_border_chain(card):
         )
 
     is_cross_border = compliance.get("cross_border", False)
+    has_foreign_zone = False
     if is_cross_border and policy_residency:
         has_foreign_zone = any(z != policy_residency for z in zones)
         if not has_foreign_zone:
@@ -601,7 +622,7 @@ def check_data_cross_border_chain(card):
     return findings
 
 
-def check_federation_version_compat(card):
+def check_federation_version_compat(card: dict[str, Any]) -> list[dict[str, Any]]:
     findings = []
     fed = card.get("federation") or {}
     protocols = fed.get("federation_protocols") or {}
@@ -695,7 +716,169 @@ def check_federation_version_compat(card):
     return findings
 
 
-def run_d1(card, schema_path=None):
+def _audit_trace_enabled(card: dict[str, Any]) -> bool:
+    audit = card.get("audit")
+    required_flags = (
+        "trace_id_required",
+        "timestamp_required",
+        "source_agent_required",
+        "target_agent_required",
+    )
+    if isinstance(audit, dict):
+        return all(audit.get(flag) is True for flag in required_flags)
+    fed = card.get("federation") or {}
+    fed_audit = fed.get("audit") if isinstance(fed, dict) else {}
+    if isinstance(fed_audit, dict):
+        return bool(fed_audit.get("trace_enabled", False))
+    return False
+
+
+def _missing_audit_trace_flags(card: dict[str, Any]) -> list[str]:
+    audit = card.get("audit")
+    required_flags = (
+        "trace_id_required",
+        "timestamp_required",
+        "source_agent_required",
+        "target_agent_required",
+    )
+    if not isinstance(audit, dict) or not audit:
+        return []
+    return [flag for flag in required_flags if audit.get(flag) is not True]
+
+
+def check_trace_audit_chain(
+    card: dict[str, Any], federation_cards: list[dict[str, Any]] | None = None
+) -> list[dict[str, Any]]:
+    findings = []
+    fed = card.get("federation") or {}
+    envelope = card.get("constitution", {}).get("envelope", {}) or {}
+
+    has_correlation = bool(envelope.get("correlation_id"))
+    has_message_id = bool(envelope.get("message_id"))
+    has_timestamp = bool(envelope.get("timestamp"))
+    has_sender = bool(envelope.get("sender"))
+
+    trace_fields = [has_message_id, has_correlation, has_timestamp, has_sender]
+
+    if all(trace_fields):
+        findings.append(
+            {
+                "check": "1.13",
+                "severity": "INFO",
+                "detail": (
+                    "Envelope supports full trace chain "
+                    "(message_id, correlation_id, timestamp, sender)"
+                ),
+            }
+        )
+    else:
+        field_names = [
+            "message_id",
+            "correlation_id",
+            "timestamp",
+            "sender",
+        ]
+        missing = [fn for fn, present in zip(field_names, trace_fields) if not present]
+        findings.append(
+            {
+                "check": "1.13",
+                "severity": "WARNING",
+                "detail": f"Envelope missing trace fields: {', '.join(missing)}",
+            }
+        )
+
+    missing_audit_flags = _missing_audit_trace_flags(card)
+    if missing_audit_flags:
+        findings.append(
+            {
+                "check": "1.13",
+                "severity": "HIGH",
+                "detail": f"Missing audit trace flags: {', '.join(missing_audit_flags)}",
+            }
+        )
+
+    trace_enabled = _audit_trace_enabled(card)
+
+    if trace_enabled:
+        audit_config = fed.get("audit") if isinstance(fed, dict) else {}
+        trace_version = (
+            audit_config.get("trace_version", "")
+            if isinstance(audit_config, dict)
+            else ""
+        )
+        findings.append(
+            {
+                "check": "1.13",
+                "severity": "INFO",
+                "detail": f"Trace_id audit enabled (version={trace_version or 'N/A'})",
+            }
+        )
+
+    agent_name = card.get("name", card.get("agent_id", "primary"))
+
+    if federation_cards:
+        all_cards = [card] + list(federation_cards)
+        trace_states = []
+        for c in all_cards:
+            c_trace = _audit_trace_enabled(c)
+            c_name = c.get("name", c.get("agent_id", "unknown"))
+            trace_states.append((c_name, c_trace))
+
+        enabled_count = sum(1 for _, t in trace_states if t)
+        total = len(trace_states)
+
+        if enabled_count == 0:
+            findings.append(
+                {
+                    "check": "1.13",
+                    "severity": "HIGH",
+                    "detail": (
+                        f"No trace_id support among {total} agents — "
+                        f"audit chain integrity cannot be verified"
+                    ),
+                }
+            )
+        elif enabled_count < total:
+            missing_names = [n for n, t in trace_states if not t]
+            findings.append(
+                {
+                    "check": "1.13",
+                    "severity": "WARNING",
+                    "detail": (
+                        f"Partial trace support: {enabled_count}/{total} agents "
+                        f"enable trace_id — gaps: {', '.join(missing_names)}"
+                    ),
+                }
+            )
+        else:
+            findings.append(
+                {
+                    "check": "1.13",
+                    "severity": "INFO",
+                    "detail": (
+                        f"All {total} agents support trace_id audit chain — "
+                        f"full chain integrity across federation"
+                    ),
+                }
+            )
+
+    if not any(trace_fields) and not trace_enabled and not federation_cards:
+        findings.append(
+            {
+                "check": "1.13",
+                "severity": "INFO",
+                "detail": f"Agent '{agent_name}' has no trace_id audit chain configured",
+            }
+        )
+
+    return findings
+
+
+def run_d1(
+    card: dict[str, Any],
+    schema_path: str | None = None,
+    federation_cards: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     findings = []
     findings.extend(check_schema(card, schema_path))
     findings.extend(check_data_residency(card))
@@ -709,6 +892,7 @@ def run_d1(card, schema_path=None):
     findings.extend(check_dag_acyclicity(card))
     findings.extend(check_data_cross_border_chain(card))
     findings.extend(check_federation_version_compat(card))
+    findings.extend(check_trace_audit_chain(card, federation_cards))
 
     score = 100.0
     for f in findings:

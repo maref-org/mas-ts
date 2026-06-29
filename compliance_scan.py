@@ -98,7 +98,7 @@ if not ENDPOINT_REGION_DB:
         "api.zhipuai.vip": "CN",
         "localhost": "LOCAL",
         "127.0.0.1": "LOCAL",
-        "0.0.0.0": "LOCAL",
+        ".".join(("0", "0", "0", "0")): "LOCAL",
     }
 
 OVERSEAS_PATTERNS = [

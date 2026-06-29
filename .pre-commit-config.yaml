@@ -31,8 +31,8 @@ repos:
     hooks:
       - id: mypy
         additional_dependencies: [types-requests]
-        args: [--ignore-missing-imports, --python-version=3.14]
-        exclude: ^scripts/
+        args: [--ignore-missing-imports, --python-version=3.14, --explicit-package-bases]
+        files: ^mas_eval/
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0

@@ -88,7 +88,7 @@
     },
     "constitution": {
       "type": "object",
-      "description": "OpenClaw Constitution compliance fields (Article 15-A, 27, 28)",
+      "description": "Constitution compliance fields (Article 15-A, 27, 28)",
       "required": [
         "envelope",
         "health_state",
@@ -278,9 +278,33 @@
           "description": "Agent role in federation topology"
         },
         "trust_score": {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 1,
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            {
+              "type": "object",
+              "required": ["value", "evaluated_by"],
+              "properties": {
+                "value": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "evaluated_by": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "method": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "additionalProperties": false
+            }
+          ],
           "description": "Initial/reputation-based trust score (0-1)"
         },
         "trust_history": {
@@ -315,6 +339,39 @@
             "minLength": 1
           },
           "uniqueItems": true
+        },
+        "permissions": {
+          "type": "object",
+          "description": "Federation permission policy",
+          "properties": {
+            "read": {
+              "oneOf": [{"type": "boolean"}, {"type": "string", "enum": ["allowed", "requires_hitl", "denied"]}]
+            },
+            "write": {
+              "oneOf": [{"type": "boolean"}, {"type": "string", "enum": ["allowed", "requires_hitl", "denied"]}]
+            },
+            "delete": {
+              "oneOf": [{"type": "boolean"}, {"type": "string", "enum": ["allowed", "requires_hitl", "denied"]}]
+            },
+            "execute": {
+              "oneOf": [{"type": "boolean"}, {"type": "string", "enum": ["allowed", "requires_hitl", "denied"]}]
+            }
+          },
+          "additionalProperties": false
+        },
+        "blocked_operations": {
+          "type": "array",
+          "description": "Operations denied for federation safety",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "arbitration_policy": {
+          "type": "string",
+          "enum": ["human_review", "priority_order", "consensus_vote", "external_arbiter"],
+          "description": "Policy used to resolve federation role conflicts"
         },
         "cross_border_policy": {
           "type": "object",
@@ -435,6 +492,35 @@
             }
           },
           "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "audit": {
+      "type": "object",
+      "description": "Federation audit chain requirements",
+      "required": [
+        "trace_id_required",
+        "timestamp_required",
+        "source_agent_required",
+        "target_agent_required"
+      ],
+      "properties": {
+        "trace_id_required": {
+          "type": "boolean"
+        },
+        "timestamp_required": {
+          "type": "boolean"
+        },
+        "source_agent_required": {
+          "type": "boolean"
+        },
+        "target_agent_required": {
+          "type": "boolean"
+        },
+        "audit_retention_days": {
+          "type": "integer",
+          "minimum": 1
         }
       },
       "additionalProperties": false

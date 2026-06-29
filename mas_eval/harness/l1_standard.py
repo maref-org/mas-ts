@@ -7,22 +7,18 @@ Covers D1-D3 fully. ~30 minutes.
 
 import logging
 import time
+import warnings
 
 from mas_eval.domains.d1_compliance import run_d1
 from mas_eval.domains.d2_single_agent import run_d2
 from mas_eval.domains.d3_multi_agent import run_d3
+from mas_eval.harness.aggregation import aggregate_level
 from mas_eval.oracle.oracle_base import run_d2_with_oracle
-from mas_eval.scoring.absolute import (
-    compute_overall,
-    determine_verdict,
-    score_domain,
-    score_to_grade,
-)
 
 logger = logging.getLogger(__name__)
 
 
-def run_l1_standard(card, tasks=None):
+def run_l1_standard(card, tasks=None, golden_trajectory=None, mock_trajectory=None):
     """Run L1 Standard evaluation (D1-D3 fully, ~30 min).
 
     Aggregates compliance (D1), single-agent (D2), and multi-agent (D3) scores
@@ -30,38 +26,35 @@ def run_l1_standard(card, tasks=None):
 
     Args:
     card: Agent card dict.
-    tasks: Optional list of task dicts for D2.
+    tasks: Deprecated alias for `golden_trajectory`; emits DeprecationWarning
+        when not None. Use `golden_trajectory` instead.
+    golden_trajectory: Optional expected trajectory for D2 task completion.
+    mock_trajectory: Optional observed trajectory for D2 task completion.
 
     Returns:
     Dict with keys: level, name, elapsed_seconds, score, grade, verdict,
     domain_scores, domains, findings.
     """
+    if tasks is not None:
+        warnings.warn(
+            "run_l1_standard parameter 'tasks' is deprecated; "
+            "use 'golden_trajectory' instead. The 'tasks' alias will be "
+            "removed in a future release.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
     start = time.time()
     d1 = run_d1(card)
-    d2 = run_d2(card, tasks or [])
+    trajectory = golden_trajectory if golden_trajectory is not None else tasks
+    d2 = run_d2(card, trajectory, mock_trajectory)
     d3 = run_d3(card)
 
-    d1_score = score_domain(d1["score"], d1.get("findings"))
-    d2_score = score_domain(d2["score"], d2.get("findings"))
-    d3_score = score_domain(d3["score"], d3.get("findings"))
-
-    overall = compute_overall(d1=d1_score, d2=d2_score, d3=d3_score)
-    all_findings = (
-        d1.get("findings", []) + d2.get("findings", []) + d3.get("findings", [])
+    return aggregate_level(
+        "L1",
+        "Standard",
+        start,
+        {"d1": d1, "d2": d2, "d3": d3},
     )
-    verdict = determine_verdict(overall, findings=all_findings)
-
-    return {
-        "level": "L1",
-        "name": "Standard",
-        "elapsed_seconds": round(time.time() - start, 1),
-        "score": overall,
-        "grade": score_to_grade(overall),
-        "verdict": verdict,
-        "domain_scores": {"d1": d1_score, "d2": d2_score, "d3": d3_score},
-        "domains": {"d1_detail": d1, "d2_detail": d2, "d3_detail": d3},
-        "findings": all_findings,
-    }
 
 
 def run_l1_with_oracle(card, oracle_name, task_id=None, mock_trajectory=None):
@@ -84,24 +77,9 @@ def run_l1_with_oracle(card, oracle_name, task_id=None, mock_trajectory=None):
     d2 = run_d2_with_oracle(card, oracle_name, task_id, mock_trajectory)
     d3 = run_d3(card)
 
-    d1_score = score_domain(d1["score"], d1.get("findings"))
-    d2_score = score_domain(d2["score"], d2.get("findings"))
-    d3_score = score_domain(d3["score"], d3.get("findings"))
-
-    overall = compute_overall(d1=d1_score, d2=d2_score, d3=d3_score)
-    all_findings = (
-        d1.get("findings", []) + d2.get("findings", []) + d3.get("findings", [])
+    return aggregate_level(
+        "L1",
+        "Standard (Oracle)",
+        start,
+        {"d1": d1, "d2": d2, "d3": d3},
     )
-    verdict = determine_verdict(overall, findings=all_findings)
-
-    return {
-        "level": "L1",
-        "name": "Standard (Oracle)",
-        "elapsed_seconds": round(time.time() - start, 1),
-        "score": overall,
-        "grade": score_to_grade(overall),
-        "verdict": verdict,
-        "domain_scores": {"d1": d1_score, "d2": d2_score, "d3": d3_score},
-        "domains": {"d1_detail": d1, "d2_detail": d2, "d3_detail": d3},
-        "findings": all_findings,
-    }

@@ -8,6 +8,9 @@ on:
   schedule:
     - cron: "0 3 * * *"  # 每天 UTC 3:00
 
+permissions:
+  contents: read
+
 jobs:
   secrets-scan:
     runs-on: ubuntu-latest
@@ -29,9 +32,9 @@ jobs:
         with:
           python-version: "3.13"
       - name: Install bandit
-        run: pip install bandit
+        run: pip install bandit==1.9.2
       - name: Bandit SAST scan
-        run: bandit -r mas_eval/ -c pyproject.toml -f sarif -o bandit-results.sarif || true
+        run: bandit -r mas_eval/ scripts/ *.py -c pyproject.toml -f sarif -o bandit-results.sarif
 
   dependency-scan:
     runs-on: ubuntu-latest
@@ -42,8 +45,25 @@ jobs:
         with:
           python-version: "3.13"
       - name: Install pip-audit
-        run: pip install pip-audit
+        run: pip install pip-audit==2.9.0
       - name: Audit dependencies (requirements.txt)
-        run: pip-audit --requirement requirements.txt || true
+        run: pip-audit --requirement requirements.txt --strict
       - name: Audit dependencies (project scan)
-        run: pip-audit . || true
+        run: pip-audit . --strict
+
+  sbom:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Generate SBOM
+        run: |
+          pip install cyclonedx-bom==7.2.1
+          cyclonedx-py environment -o sbom.xml
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.xml

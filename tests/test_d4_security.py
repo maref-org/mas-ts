@@ -11,12 +11,14 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.resolve()))
 
 from mas_eval.domains.d4_governance_security import (
+    ACTION_SAFETY_WEIGHTS,
     AUTH_TYPE_SCORES,
     SECURITY_WEIGHTS,
     _score_penetration_testing,
     _score_red_blue,
     _score_sast_scanning,
     _score_trust_chain,
+    run_action_safety,
     run_d4,
     run_d4_security,
 )
@@ -325,10 +327,104 @@ class TestD4Full:
     def test_d4_score_composition(self):
         result = run_d4(SECURE_CARD)
         expected = (
-            result["governance"]["score"] * 0.50
-            + result["security"]["score"] * 0.15
-            + result["subscores"].get("trust", 0) * 0.20
+            result["governance"]["score"] * 0.44
+            + result["security"]["score"] * 0.13
+            + result["subscores"].get("action_safety", 0) * 0.08
+            + result["subscores"].get("trust", 0) * 0.15
             + result["subscores"].get("vendor_diversity", 0) * 0.05
             + result["subscores"].get("mcp_supply_chain", 0) * 0.10
+            + result["subscores"].get("gossip_trust", 0) * 0.05
         )
         assert abs(result["score"] - expected) < 0.1
+
+
+# ═══════════════════════════════════════════════════════════════
+# Gold Standard: Action Safety (v3.0-GA §4.5)
+# ═══════════════════════════════════════════════════════════════
+
+
+class TestActionSafetyGold:
+    """Gold Standard action safety tests (v3.0-GA §4.5)"""
+
+    def test_safe_card_high_score(self):
+        card = {
+            "authentication": {"type": "OAuth2", "scopes": ["read", "write"]},
+            "capabilities": [{"skill_id": "read_file"}],
+        }
+        score, findings = run_action_safety(card)
+        assert score >= 70
+
+    def test_destructive_action_critical(self):
+        card = {
+            "authentication": {"type": "OAuth2", "scopes": ["read"]},
+            "capabilities": [{"skill_id": "delete"}],
+        }
+        score, findings = run_action_safety(card)
+        assert any(
+            f["severity"] == "CRITICAL" and "destructive" in f["category"]
+            for f in findings
+        )
+
+    def test_wildcard_scope_high(self):
+        card = {
+            "authentication": {"type": "OAuth2", "scopes": ["admin:*"]},
+            "capabilities": [{"skill_id": "read"}],
+        }
+        score, findings = run_action_safety(card)
+        assert any(
+            f["severity"] == "HIGH" and "wildcard" in f["category"] for f in findings
+        )
+
+    def test_dangerous_tools_warning(self):
+        card = {
+            "authentication": {"type": "OAuth2", "scopes": ["read"]},
+            "capabilities": [{"skill_id": "shell_exec"}],
+        }
+        score, findings = run_action_safety(card)
+        assert any(
+            f["severity"] == "WARNING" and "dangerous_tools" in f["category"]
+            for f in findings
+        )
+
+    def test_action_log_audit_gap(self):
+        card = {
+            "authentication": {"type": "OAuth2", "scopes": ["read"]},
+            "capabilities": [{"skill_id": "delete"}],
+            "audit": {"enabled": True},
+        }
+        action_log = [
+            {"action": "delete", "logged": False},
+        ]
+        score, findings = run_action_safety(card, action_log=action_log)
+        assert any(
+            f["severity"] == "HIGH" and "audit_gap" in f["category"] for f in findings
+        )
+
+    def test_action_log_all_logged(self):
+        card = {
+            "authentication": {"type": "OAuth2", "scopes": ["read", "write"]},
+            "capabilities": [{"skill_id": "delete"}],
+        }
+        action_log = [
+            {"action": "delete", "logged": True},
+        ]
+        score, findings = run_action_safety(card, action_log=action_log)
+        assert not any("audit_gap" in f["category"] for f in findings)
+
+    def test_weights_sum_to_1(self):
+        total = sum(ACTION_SAFETY_WEIGHTS.values())
+        assert abs(total - 1.0) < 0.01
+
+    def test_no_auth_defaults_moderate(self):
+        card = {}
+        score, findings = run_action_safety(card)
+        assert 50 <= score <= 70
+
+    def test_action_safety_finding_category(self):
+        card = {
+            "authentication": {"type": "OAuth2", "scopes": ["read"]},
+            "capabilities": [{"skill_id": "read_file"}],
+        }
+        score, findings = run_action_safety(card)
+        assert any(f["category"] == "action_safety" for f in findings)
+        assert 0 <= score <= 100

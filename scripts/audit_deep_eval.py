@@ -13,12 +13,6 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from mas_eval.domains.d1_compliance import run_d1
-from mas_eval.domains.d2_single_agent import run_d2
-from mas_eval.domains.d3_multi_agent import run_d3
-from mas_eval.domains.d4_governance_security import run_d4
-from mas_eval.domains.d5_robustness import run_d5
-
 # 领域权重
 DOMAIN_WEIGHTS = {
     "D1": 0.10,
@@ -31,6 +25,12 @@ DOMAIN_WEIGHTS = {
 
 def evaluate_card(card_path: Path) -> dict:
     """对单个Agent Card运行完整评估"""
+    from mas_eval.domains.d1_compliance import run_d1
+    from mas_eval.domains.d2_single_agent import run_d2
+    from mas_eval.domains.d3_multi_agent import run_d3
+    from mas_eval.domains.d4_governance_security import run_d4
+    from mas_eval.domains.d5_robustness import run_d5
+
     print(f"\n{'=' * 80}")
     print(f"评估: {card_path.name}")
     print(f"{'=' * 80}")

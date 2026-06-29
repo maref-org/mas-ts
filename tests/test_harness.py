@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 """Tests for MAS-TS-001 L0-L4 Executive Harness."""
 
+import pytest
+
 from mas_eval.harness.l0_fast_screen import (
     L0_STAGES,
     L0_TIMEOUT_SECONDS,
@@ -123,8 +125,9 @@ SAMPLE_CARD = {
 
 class TestL0Stages:
     def test_l0_stages_defined(self):
-        assert len(L0_STAGES) == 5
+        assert len(L0_STAGES) == 6
         assert "card_validation" in L0_STAGES
+        assert "step_efficiency" in L0_STAGES
         assert "traffic_light" in L0_STAGES
 
     def test_timeout_constant(self):
@@ -146,7 +149,7 @@ class TestRunL0FastScreen:
 
     def test_has_five_stages(self):
         result = run_l0_fast_screen(SAMPLE_CARD)
-        assert len(result["stages"]) == 5
+        assert len(result["stages"]) == 6
 
     def test_stages_have_expected_names(self):
         result = run_l0_fast_screen(SAMPLE_CARD)
@@ -156,7 +159,7 @@ class TestRunL0FastScreen:
     def test_each_stage_has_status(self):
         result = run_l0_fast_screen(SAMPLE_CARD)
         for s in result["stages"]:
-            assert s["status"] in ("PASS", "FAIL", "WARNING")
+            assert s["status"] in ("PASS", "FAIL", "WARNING", "SKIP")
 
     def test_each_stage_has_score(self):
         result = run_l0_fast_screen(SAMPLE_CARD)
@@ -217,6 +220,15 @@ class TestRunL1Standard:
     def test_has_findings(self):
         r = run_l1_standard(SAMPLE_CARD)
         assert isinstance(r["findings"], list)
+
+    def test_accepts_explicit_d2_trajectories(self):
+        event = {"action": {"type": "tool_call", "tool_id": "file_read", "input": {}}}
+        r = run_l1_standard(
+            SAMPLE_CARD,
+            golden_trajectory=[event],
+            mock_trajectory=[event],
+        )
+        assert r["level"] == "L1"
 
 
 class TestRunL2Deep:
@@ -288,3 +300,52 @@ class TestRunL4Evolution:
         r = run_l4_evolution()
         assert isinstance(r["findings"], list)
         assert len(r["findings"]) > 0
+
+
+class TestTasksParameterDeprecation:
+    """Phase 6.4: `tasks=` is deprecated alias for `golden_trajectory=`
+    in L1/L2/L3 wrappers. Must emit DeprecationWarning when used."""
+
+    def test_l1_tasks_param_emits_deprecation_warning(self):
+        with pytest.warns(DeprecationWarning, match="tasks"):
+            run_l1_standard(SAMPLE_CARD, tasks=[])
+
+    def test_l1_golden_trajectory_does_not_warn(self):
+        import warnings
+
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            run_l1_standard(SAMPLE_CARD, golden_trajectory=[])
+        deprecations = [w for w in caught if issubclass(w.category, DeprecationWarning)]
+        assert deprecations == [], (
+            f"golden_trajectory= should not trigger DeprecationWarning, "
+            f"got: {[str(w.message) for w in deprecations]}"
+        )
+
+    def test_l1_tasks_alias_routes_to_golden_trajectory(self):
+        """`tasks=` argument must still forward to D2 as golden_trajectory
+        so existing callers continue to function during deprecation window."""
+        import warnings
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            r1 = run_l1_standard(SAMPLE_CARD, tasks=[])
+            r2 = run_l1_standard(SAMPLE_CARD, golden_trajectory=[])
+        assert r1["domain_scores"]["d2"] == r2["domain_scores"]["d2"]
+
+    def test_l2_tasks_param_emits_deprecation_warning(self):
+        with pytest.warns(DeprecationWarning, match="tasks"):
+            run_l2_deep(SAMPLE_CARD, tasks=[])
+
+    def test_l3_tasks_param_emits_deprecation_warning(self):
+        with pytest.warns(DeprecationWarning, match="tasks"):
+            run_l3_comprehensive(SAMPLE_CARD, tasks=[])
+
+    def test_l1_no_warning_when_neither_tasks_nor_golden_trajectory(self):
+        import warnings
+
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            run_l1_standard(SAMPLE_CARD)
+        deprecations = [w for w in caught if issubclass(w.category, DeprecationWarning)]
+        assert deprecations == []

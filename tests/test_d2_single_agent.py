@@ -15,8 +15,11 @@ from mas_eval.domains.d2_single_agent import (
     run_d2,
     run_e2e_scenarios,
     run_model_quality,
+    run_step_efficiency,
     run_task_completion,
     run_tool_coverage,
+    run_tool_selection_correctness,
+    run_trajectory_quality,
 )
 
 FULL_CARD = {
@@ -214,6 +217,9 @@ def test_d2_full():
         "tool_coverage",
         "task_completion",
         "e2e_scenarios",
+        "step_efficiency",
+        "trajectory_quality",
+        "tool_selection_correctness",
     }
 
 
@@ -342,3 +348,291 @@ def test_d2_core_tools_defined():
 
 def test_d2_advanced_tools_defined():
     assert len(ADVANCED_TOOLS) == 7
+
+
+# ═══════════════════════════════════════════════════════════════
+# Gold Standard: StepEfficiency tests (v3.0-GA §4.2)
+# ═══════════════════════════════════════════════════════════════
+
+
+def test_step_efficiency_optimal():
+    """3-5 step scenario, actual 4 steps → high score."""
+    traj = {
+        "events": [
+            {"action": {"type": "tool_call", "tool_id": "grep", "is_retry": False}},
+            {
+                "action": {
+                    "type": "tool_call",
+                    "tool_id": "file_read",
+                    "is_retry": False,
+                }
+            },
+            {
+                "action": {
+                    "type": "tool_call",
+                    "tool_id": "file_edit",
+                    "is_retry": False,
+                }
+            },
+            {"action": {"type": "tool_call", "tool_id": "grep", "is_retry": False}},
+        ]
+    }
+    config = {"expected_steps": "3-5"}
+    score, findings = run_step_efficiency(traj, config)
+    assert score >= 70.0, f"Expected >=70, got {score}"
+
+
+def test_step_efficiency_poor():
+    """3-5 step scenario, 25 steps with repeated tools → low score."""
+    traj = {
+        "events": [
+            {"action": {"type": "tool_call", "tool_id": "grep", "is_retry": True}}
+            for _ in range(25)
+        ]
+    }
+    config = {"expected_steps": "3-5"}
+    score, findings = run_step_efficiency(traj, config)
+    assert score < 50.0, f"Expected <50, got {score}"
+
+
+def test_step_efficiency_no_trajectory():
+    """No trajectory → score 0 + WARNING."""
+    score, findings = run_step_efficiency(None, {"expected_steps": "3-5"})
+    assert score == 0.0
+    assert any(f["severity"] == "WARNING" for f in findings)
+
+
+def test_step_efficiency_no_config():
+    """No scenario config → score 0 + WARNING."""
+    score, findings = run_step_efficiency({"events": []}, None)
+    assert score == 0.0
+
+
+def test_step_efficiency_revisit_penalty():
+    """High revisitation → warning triggered."""
+    traj = {
+        "events": [
+            {"action": {"type": "tool_call", "tool_id": "grep", "is_retry": False}},
+            {"action": {"type": "tool_call", "tool_id": "grep", "is_retry": False}},
+            {"action": {"type": "tool_call", "tool_id": "grep", "is_retry": False}},
+            {"action": {"type": "tool_call", "tool_id": "grep", "is_retry": False}},
+        ]
+    }
+    config = {"expected_steps": "1-3"}
+    score, findings = run_step_efficiency(traj, config)
+    categories = [f["category"] for f in findings]
+    assert "step_efficiency_high_revisit" in categories, (
+        f"Expected 'step_efficiency_high_revisit' in {categories}"
+    )
+
+
+def test_step_efficiency_single_step():
+    """Single step near-optimal → score near 100."""
+    traj = {
+        "events": [
+            {"action": {"type": "tool_call", "tool_id": "bash", "is_retry": False}},
+        ]
+    }
+    config = {"expected_steps": "1-3"}
+    score, findings = run_step_efficiency(traj, config)
+    assert score >= 80.0, f"Expected >=80, got {score}"
+
+
+# ═══════════════════════════════════════════════════════════════
+# Gold Standard: TrajectoryQuality tests (v3.0-GA §4.3)
+# ═══════════════════════════════════════════════════════════════
+
+
+def test_trajectory_quality_perfect():
+    """Perfect match with golden trajectory → high score."""
+    golden = {"events": [{"action": {"type": "tool_call", "tool_id": "grep"}}]}
+    actual = {
+        "events": [
+            {
+                "action": {
+                    "type": "tool_call",
+                    "tool_id": "grep",
+                    "reasoning": "need to search",
+                }
+            }
+        ]
+    }
+    score, findings = run_trajectory_quality(actual, golden)
+    assert score >= 80.0, f"Expected >=80, got {score}"
+
+
+def test_trajectory_quality_no_golden():
+    """Without golden trajectory → partial score >= 40."""
+    actual = {
+        "events": [
+            {
+                "action": {
+                    "type": "tool_call",
+                    "tool_id": "grep",
+                    "reasoning": "search",
+                }
+            }
+        ]
+    }
+    score, findings = run_trajectory_quality(actual, None)
+    assert score >= 40.0, f"Expected >=40, got {score}"
+    categories = [f["category"] for f in findings]
+    assert "trajectory_quality_determinism" in categories
+
+
+def test_trajectory_quality_empty():
+    """No trajectory → score 0."""
+    score, findings = run_trajectory_quality(None)
+    assert score == 0.0
+
+
+def test_trajectory_quality_divergent():
+    """Completely different from golden → low score."""
+    golden = {"events": [{"action": {"type": "tool_call", "tool_id": "bash"}}]}
+    actual = {
+        "events": [
+            {"action": {"type": "tool_call", "tool_id": "web_search"}},
+            {"action": {"type": "tool_call", "tool_id": "file_write"}},
+        ]
+    }
+    score, findings = run_trajectory_quality(actual, golden)
+    assert score < 70.0
+
+
+def test_trajectory_quality_recovery():
+    """Error followed by recovery → good recovery score."""
+    actual = {
+        "events": [
+            {
+                "action": {"type": "tool_call", "tool_id": "bash"},
+                "error": "command not found",
+                "recovery": "retry with correct command",
+            },
+            {
+                "action": {
+                    "type": "tool_call",
+                    "tool_id": "bash",
+                    "reasoning": "retry",
+                },
+            },
+        ]
+    }
+    score, findings = run_trajectory_quality(actual, None)
+    assert score > 0
+
+
+# ═══════════════════════════════════════════════════════════════
+# Gold Standard: ToolSelectionCorrectness tests (v3.0-GA §4.4)
+# ═══════════════════════════════════════════════════════════════
+
+
+def test_tool_selection_correctness_perfect():
+    """All required tools used, no extras → high score."""
+    traj = {
+        "events": [
+            {
+                "action": {
+                    "type": "tool_call",
+                    "tool_id": "grep",
+                    "input": {"pattern": "foo"},
+                }
+            },
+            {
+                "action": {
+                    "type": "tool_call",
+                    "tool_id": "file_read",
+                    "input": {"path": "bar"},
+                }
+            },
+        ]
+    }
+    score, findings = run_tool_selection_correctness(traj, ["grep", "file_read"])
+    assert score >= 80.0, f"Expected >=80, got {score}"
+
+
+def test_tool_selection_correctness_poor():
+    """Wrong tools used → low selection accuracy."""
+    traj = {
+        "events": [
+            {
+                "action": {
+                    "type": "tool_call",
+                    "tool_id": "web_search",
+                    "input": {"query": "x"},
+                }
+            }
+        ]
+    }
+    score, findings = run_tool_selection_correctness(traj, ["grep", "file_read"])
+    assert score < 65.0, f"Expected <65, got {score}"
+
+
+def test_tool_selection_correctness_empty():
+    """No trajectory → score 0."""
+    score, findings = run_tool_selection_correctness(None)
+    assert score == 0.0
+
+
+def test_tool_selection_correctness_warning():
+    """Selection accuracy < 0.85 → warning."""
+    traj = {
+        "events": [
+            {
+                "action": {
+                    "type": "tool_call",
+                    "tool_id": "bash",
+                    "input": {"cmd": "ls"},
+                }
+            }
+        ]
+    }
+    score, findings = run_tool_selection_correctness(traj, ["grep", "file_read"])
+    categories = [f["category"] for f in findings]
+    assert "tool_selection_poor" in categories
+
+
+# ═══════════════════════════════════════════════════════════════
+# Gold Standard: D2 subscore validation
+# ═══════════════════════════════════════════════════════════════
+
+
+def test_d2_gold_subscores_present():
+    """Gold Standard run_d2 returns all 7 subscores."""
+    result = run_d2(FULL_CARD)
+    expected_subs = [
+        "model_quality",
+        "tool_coverage",
+        "task_completion",
+        "e2e_scenarios",
+        "step_efficiency",
+        "trajectory_quality",
+        "tool_selection_correctness",
+    ]
+    for sub in expected_subs:
+        assert sub in result["subscores"], f"Missing subscore: {sub}"
+
+
+def test_d2_gold_subscores_range():
+    """All 7 subscores within valid range."""
+    result = run_d2(FULL_CARD)
+    for subname, subscore in result["subscores"].items():
+        assert 0 <= subscore <= 100, f"{subname} score {subscore} out of range"
+
+
+def test_d2_gold_score_higher_with_scenario_trajs():
+    """run_d2 with scenario_trajectories yields non-zero step efficiency."""
+    traj = {
+        "trajectory": {
+            "events": [
+                {
+                    "action": {
+                        "type": "tool_call",
+                        "tool_id": "grep",
+                        "is_retry": False,
+                    }
+                },
+            ]
+        }
+    }
+    result = run_d2(FULL_CARD, scenario_trajectories=[traj])
+    assert result["subscores"]["step_efficiency"] >= 0

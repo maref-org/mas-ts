@@ -8,6 +8,8 @@ Covers: StateMachine, CircuitBreaker, OscillationDetector, AuditTrail
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).parent.parent.resolve()))
 
 from mas_eval.domains.d4_governance_security import (
@@ -19,6 +21,7 @@ from mas_eval.domains.d4_governance_security import (
     CircuitBreakerState,
     OscillationDetector,
     StateMachine,
+    _resolve_hmac_key,
     run_d4_governance,
 )
 
@@ -278,27 +281,31 @@ class TestOscillationDetector:
 
 
 class TestAuditTrail:
+    def test_requires_explicit_secret_key(self):
+        with pytest.raises(ValueError, match="secret_key is required"):
+            AuditTrail()
+
     def test_record_increments_entries(self):
-        at = AuditTrail()
+        at = AuditTrail(secret_key=b"test-audit-key")
         at.record({"event": "test"})
         assert len(at.entries) == 1
 
     def test_chain_valid(self):
-        at = AuditTrail()
+        at = AuditTrail(secret_key=b"test-audit-key")
         for i in range(10):
             at.record({"event": f"test_{i}"})
         errors = at.verify_chain()
         assert len(errors) == 0
 
     def test_tamper_detection(self):
-        at = AuditTrail()
+        at = AuditTrail(secret_key=b"test-audit-key")
         at.record({"event": "valid"})
         at.entries[0]["entry"]["tampered"] = True
         errors = at.verify_chain()
         assert len(errors) > 0
 
     def test_chain_structure(self):
-        at = AuditTrail()
+        at = AuditTrail(secret_key=b"test-audit-key")
         rec = at.record({"event": "first"})
         assert "_hash" in rec
         assert "_prev_hash" in rec
@@ -306,13 +313,13 @@ class TestAuditTrail:
         assert "_sequence" in rec
 
     def test_prev_hash_chaining(self):
-        at = AuditTrail()
+        at = AuditTrail(secret_key=b"test-audit-key")
         r1 = at.record({"event": "first"})
         r2 = at.record({"event": "second"})
         assert r2["_prev_hash"] == r1["_hash"]
 
     def test_jsonl_export(self):
-        at = AuditTrail()
+        at = AuditTrail(secret_key=b"test-audit-key")
         for i in range(3):
             at.record({"event": f"e{i}"})
         jsonl = at.export_jsonl()
@@ -320,14 +327,14 @@ class TestAuditTrail:
         assert len(lines) == 3
 
     def test_clear(self):
-        at = AuditTrail()
+        at = AuditTrail(secret_key=b"test-audit-key")
         at.record({"event": "test"})
         at.clear()
         assert len(at.entries) == 0
         assert at.last_hash == b"0" * 32
 
     def test_chain_broken_after_modification(self):
-        at = AuditTrail()
+        at = AuditTrail(secret_key=b"test-audit-key")
         at.record({"event": "a"})
         at.record({"event": "b"})
         at.entries[0]["entry"]["x"] = "y"
@@ -336,6 +343,14 @@ class TestAuditTrail:
 
 
 class TestD4Governance:
+    def test_hmac_key_fallback_is_ephemeral(self, monkeypatch):
+        monkeypatch.delenv("MAS_HMAC_KEY", raising=False)
+        assert _resolve_hmac_key() != _resolve_hmac_key()
+
+    def test_hmac_key_env_override(self, monkeypatch):
+        monkeypatch.setenv("MAS_HMAC_KEY", "test-env-hmac-key")
+        assert _resolve_hmac_key() == b"test-env-hmac-key"
+
     def test_governance_scoring(self):
         result = run_d4_governance()
         assert result["domain"] == "D4"

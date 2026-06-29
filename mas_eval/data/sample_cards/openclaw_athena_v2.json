@@ -1,8 +1,8 @@
 {
   "card_version": "2.0",
-  "agent_id": "urn:agent:openclaw:athena:athena-0-7-0",
-  "name": "OpenClaw Athena",
-  "description": "OpenClaw's multi-agent platform with governance, cognitive DNA, MAREF compliance, and autonomous research capabilities. Supports multi-agent swarm coordination, state machine governance, PII firewall, and cost budget management.",
+  "agent_id": "urn:agent:example:governance:reference-0-7-0",
+  "name": "Example Governance Agent",
+  "description": "Reference multi-agent platform with governance, cognitive DNA, MAREF compliance, and autonomous research capabilities. Supports multi-agent swarm coordination, state machine governance, PII firewall, and cost budget management.",
   "version": "0.7.0",
   "compliance": {
     "data_residency": "CN",
@@ -624,14 +624,14 @@
     "transport": "stdio+http"
   },
   "schema_version": "2.0",
-  "vendor_id": "openclaw",
+  "vendor_id": "example",
   "agent_type": "cli",
   "constitution": {
     "envelope": {
-      "message_id": "urn:agent:openclaw:athena:athena-0-7-0-env-001",
-      "correlation_id": "urn:agent:openclaw:athena:athena-0-7-0-correlation-001",
+      "message_id": "urn:agent:example:governance:reference-0-7-0-env-001",
+      "correlation_id": "urn:agent:example:governance:reference-0-7-0-correlation-001",
       "timestamp": "2026-06-11T00:00:00Z",
-      "sender": "urn:agent:openclaw:athena:athena-0-7-0"
+      "sender": "urn:agent:example:governance:reference-0-7-0"
     },
     "health_state": "HEALTHY",
     "heartbeat_interval_seconds": 30,

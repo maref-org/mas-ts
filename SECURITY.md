@@ -4,7 +4,7 @@
 
 **Do not open a public GitHub issue for security vulnerabilities.**
 
-Please report security issues to the MAREF security team via email.
+Please report security issues via GitHub Issues with the `security` label.
 Include as much detail as possible: affected component, steps to reproduce,
 potential impact, and suggested fix if available.
 
@@ -16,31 +16,25 @@ you request anonymity).
 
 | Version | Supported          |
 |---------|-------------------|
-| 0.20.x  | ✅ Active support |
-| 0.17.x  | ✅ Security fixes |
-| < 0.17  | ❌ End of life    |
+| 0.1.x   | ✅ Active support |
 
 ## Security Architecture
 
-MAREF implements an **8-layer defense-in-depth** architecture for desktop
-agent security. See [MAREF Security Whitepaper](docs/MAREF-Security-Whitepaper.md)
-for full details.
+MAS-TS-001 Evaluation Harness is a **static CLI evaluation tool** that does
+not run as a service or handle user data. Security focus areas:
 
-Key security features:
-- **4-Level Policy Decision Tree**: 97% automated safety decisions
-- **CircuitBreaker**: 3 consecutive failures trigger automatic lockout
-- **RedactionEngine**: Automatic screenshot redaction of sensitive content
-- **AuditLogger**: Append-only, HMAC-signed audit trail
-- **TLA+ Formal Verification**: Mathematically proven safety properties
-- **DID/VC Identity**: Cryptographic agent identity and trust scoring
+- **Supply Chain**: All dependencies pinned in `requirements.lock` + `uv.lock`
+- **SAST**: Bandit scans every PR (0 Critical/High threshold)
+- **SCA**: pip-audit blocks any Critical/High CVE in CI
+- **Secret Detection**: TruffleHog scans every commit
+- **SBOM**: CycloneDX SBOM generated on every push to `main`
+- **Code Review**: All PRs require passing CI with ruff + mypy + coverage gates
 
 ## Security Best Practices
 
-When deploying MAREF in production:
+When using MAS-TS-001:
 
-1. Always run with `MAREF_SAFETY_LEVEL=production`
-2. Enable all 8 defense layers (they are on by default)
-3. Grant only the minimum required OS permissions
-4. Review audit logs regularly (`maref audit show --last 100`)
-5. Monitor CircuitBreaker trip rate via Prometheus
-6. Keep dependencies updated (`pip list --outdated`)
+1. Pin dependencies (`pip install -e ".[ml,dev]"` uses locked `requirements.lock`)
+2. Run `bandit -r mas_eval/` before opening PRs
+3. Keep dependencies updated (`pip list --outdated`)
+4. Verify SBOM for supply chain audit (`cyclonedx-py -o sbom.xml`)

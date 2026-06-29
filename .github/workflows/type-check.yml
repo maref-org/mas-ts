@@ -20,4 +20,4 @@ jobs:
           pip install --upgrade pip
           pip install -e ".[ml,dev]"
       - name: mypy type check
-        run: mypy mas_eval/ --ignore-missing-imports --no-incremental
+        run: mypy mas_eval/ --strict --ignore-missing-imports --no-incremental

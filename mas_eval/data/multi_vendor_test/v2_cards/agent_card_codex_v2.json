@@ -217,7 +217,9 @@
   "governance": {
     "state_machine_version": "openai-internal-v1",
     "circuit_breaker": {
-      "enabled": false
+      "enabled": true,
+      "threshold": 3,
+      "cooldown_seconds": 30
     },
     "oscillation_detection": {
       "enabled": false
@@ -228,8 +230,15 @@
   "agent_type": "cli",
   "federation": {
     "role": "secondary",
-    "trust_score": 0.85,
-    "allowed_mcp_servers": [],
+    "trust_score": {
+      "value": 0.85,
+      "evaluated_by": "urn:agent:mas-ts:evaluator:v0-4-0",
+      "method": "federation_fixture_baseline"
+    },
+    "allowed_mcp_servers": [
+      "https://github-mcp.mcp.example",
+      "https://browser-mcp.mcp.example"
+    ],
     "cross_border_policy": {
       "data_residency": "US",
       "allowed_transfer_zones": [
@@ -265,6 +274,24 @@
         "score": 0.85,
         "source": "oracle"
       }
-    ]
+    ],
+    "permissions": {
+      "read": true,
+      "write": "requires_hitl",
+      "delete": "requires_hitl",
+      "execute": "denied"
+    },
+    "blocked_operations": [
+      "credential_management",
+      "system_admin"
+    ],
+    "arbitration_policy": "human_review"
+  },
+  "audit": {
+    "trace_id_required": true,
+    "timestamp_required": true,
+    "source_agent_required": true,
+    "target_agent_required": true,
+    "audit_retention_days": 90
   }
 }

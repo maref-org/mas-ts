@@ -225,7 +225,9 @@
   "governance": {
     "state_machine_version": "cursor-simple-v1",
     "circuit_breaker": {
-      "enabled": false
+      "enabled": true,
+      "threshold": 3,
+      "cooldown_seconds": 30
     },
     "oscillation_detection": {
       "enabled": false
@@ -236,8 +238,15 @@
   "agent_type": "ide",
   "federation": {
     "role": "secondary",
-    "trust_score": 0.78,
-    "allowed_mcp_servers": [],
+    "trust_score": {
+      "value": 0.78,
+      "evaluated_by": "urn:agent:mas-ts:evaluator:v0-4-0",
+      "method": "federation_fixture_baseline"
+    },
+    "allowed_mcp_servers": [
+      "https://github-mcp.mcp.example",
+      "https://filesystem-mcp.mcp.example"
+    ],
     "cross_border_policy": {
       "data_residency": "US",
       "allowed_transfer_zones": [
@@ -267,6 +276,23 @@
         "score": 0.78,
         "source": "peer"
       }
+    ],
+    "permissions": {
+      "read": true,
+      "write": "requires_hitl",
+      "delete": "requires_hitl",
+      "execute": "denied"
+    },
+    "blocked_operations": [
+      "credential_management",
+      "system_admin"
     ]
+  },
+  "audit": {
+    "trace_id_required": true,
+    "timestamp_required": true,
+    "source_agent_required": true,
+    "target_agent_required": true,
+    "audit_retention_days": 90
   }
 }

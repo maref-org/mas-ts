@@ -4,18 +4,21 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mas-eval-harness"
-version = "0.1.0"
-description = "MAS-TS-001 Fast-Screen Evaluation Harness"
+version = "0.5.0"
+description = "MAS-TS-001 Evaluation Harness with Adapter SDK and HTTP API"
 requires-python = ">=3.11"
 license = {text = "Apache-2.0"}
 dependencies = [
     "argcomplete>=3.0",
+    "fastapi>=0.109.0",
     "jsonschema>=4.20",
     "numpy>=1.24",
+    "pydantic>=2.0",
     "pyyaml>=6.0",
     "requests>=2.31",
     "rich>=13.0",
     "tenacity>=8.0",
+    "uvicorn[standard]>=0.27.0",
 ]
 [project.optional-dependencies]
 ml = ["scipy>=1.10"]
@@ -34,15 +37,35 @@ include = ["mas_eval*"]
 [tool.mas-eval]
 fast_screen_timeout_minutes = 5
 report_dir = "reports"
-trace_dir = "/var/log/mas-eval/traces"
+trace_dir = "reports/traces"
 
 [tool.ruff]
 lint.select = ["E", "F", "I"]
 lint.ignore = ["E501"]
 
 [tool.mypy]
+strict = true
 ignore_missing_imports = true
-exclude = ['scripts/']
+exclude = ['scripts/', 'mas_eval/data/']
+
+[[tool.mypy.overrides]]
+module = [
+    'mas_eval.harness.*',
+    'mas_eval.oracle.*',
+    'mas_eval.scoring.*',
+    'mas_eval.utils',
+]
+disallow_untyped_defs = false
+disallow_untyped_calls = false
+
+[[tool.mypy.overrides]]
+module = [
+    'adapters.*',
+    'api.*',
+]
+disallow_untyped_defs = false
+disallow_untyped_calls = false
+ignore_missing_imports = true
 
 [tool.bandit]
 skips = ["B101", "B105", "B110", "B311", "B404", "B603", "B607"]
@@ -53,3 +76,11 @@ source = ["mas_eval"]
 [tool.coverage.report]
 show_missing = true
 fail_under = 85
+
+[tool.pytest.ini_options]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]
+filterwarnings = [
+    "default::DeprecationWarning:mas_eval.harness.*",
+]

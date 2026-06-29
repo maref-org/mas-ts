@@ -93,12 +93,12 @@ Hardware benchmark coefficient generator.
 | `d1_compliance` | `run_d1(card, schemas_dir)` | `{"domain":"D1","score":float,"findings":list,"subscores":dict}` |
 | `d1_compliance` | `check_data_cross_border_chain(card)` | `(score, findings)` — D1.11 federation check |
 | `d1_compliance` | `check_federation_version_compat(card)` | `(score, findings)` — D1.12 federation check |
-| `d2_single_agent` | `run_d2(card, tasks_path)` | Same structure |
+| `d2_single_agent` | `run_d2(card, golden_trajectory=None, mock_trajectory=None, core_tools=None)` | Same structure |
 | `d3_multi_agent` | `run_d3(card)` | Same structure (auto-skip federation checks for non-federation cards) |
 | `d3_multi_agent` | `check_federation_compatibility(card)` | `(score, findings)` — protocol version check |
 | `d3_multi_agent` | `check_role_conflicts(card, cards)` | `(score, findings)` — role dedup |
 | `d3_multi_agent` | `check_permission_propagation(card)` | `(score, findings)` — scope propagation |
-| `d4_governance_security` | `run_d4(card, federation_cards=None)` | Same structure (federated: Governance×0.50 + Security×0.15 + Trust×0.20 + VendorDiv×0.05 + MCPChain×0.10) |
+| `d4_governance_security` | `run_d4(card, federation_cards=None)` | Same structure (federated: Governance×0.50 + Security×0.15 + Trust×0.15 + VendorDiv×0.05 + MCPChain×0.10 + GossipTrust×0.05) |
 | `d4_governance_security` | `run_d4_federation(cards)` | `{"domain":"D4","component":"federation","score":float,"subscores":dict,"findings":list}` |
 | `d4_governance_security` | `check_trust_score(card)` | `(score, findings)` — 5-dimension TrustScorer |
 | `d4_governance_security` | `check_vendor_diversity(cards)` | `(score, findings)` — HHI-adapted |
@@ -136,24 +136,30 @@ Diversity = max(0, 100 × (1 - HHI / 10000))
 |-----------|--------|
 | Governance | 0.50 |
 | Security | 0.15 |
-| Trust | 0.20 |
+| Trust | 0.15 |
 | Vendor Diversity | 0.05 |
 | MCP Supply Chain | 0.10 |
+| Gossip Trust | 0.05 |
 
 ### `mas_eval.harness`
 
 | Module | Entry Point | Returns |
 |--------|-------------|---------|
-| `l0_fast_screen` | `run_l0_fast_screen(card)` | `HarnessResult` |
-| `l1_standard` | `run_l1_standard(card)` | `HarnessResult` |
-| `l2_deep` | `run_l2_deep(card)` | `HarnessResult` |
-| `l3_comprehensive` | `run_l3_comprehensive(card)` | `HarnessResult` |
+| `l0_fast_screen` | `run_l0_fast_screen(card, tasks=None)` | `HarnessResult`. `tasks` here is the MockLLM task list, **not** a D2 trajectory alias |
+| `l1_standard` | `run_l1_standard(card, golden_trajectory=None, mock_trajectory=None)` | `HarnessResult`. Deprecated kwarg `tasks` aliases `golden_trajectory` and emits `DeprecationWarning` |
+| `l2_deep` | `run_l2_deep(card, golden_trajectory=None, mock_trajectory=None, federation_cards=None)` | `HarnessResult`. Deprecated kwarg `tasks` aliases `golden_trajectory` and emits `DeprecationWarning` |
+| `l3_comprehensive` | `run_l3_comprehensive(card, golden_trajectory=None, mock_trajectory=None, federation_cards=None)` | `HarnessResult`. Deprecated kwarg `tasks` aliases `golden_trajectory` and emits `DeprecationWarning` |
 | `l4_evolution` | `run_l4_evolution(card=None, max_epochs=3, convergence_delta=2.0, epoch_state=None, verifier_registry=None)` | `HarnessResult` with epoch metadata |
 | `loop_engine` | `ConvergenceLoop(max_iterations=5, convergence_delta=0.5, regression_threshold=-20.0, timeout_seconds=3600, resource_governor=None)` | Iterative harness wrapper returning convergence history |
 | `epoch_state` | `EpochState` class | L4 epoch score/findings history with trend and improvement metrics |
 | `resource_governor` | `TokenBudget` / `ResourceGovernor` classes | Resource limits and circuit-breaker guard for convergence loops |
 
 `HarnessResult` shape: `{"level": str, "score": float, "grade": str, "verdict": str, "domain_scores": dict, "findings": list}`.
+
+**`tasks` parameter semantics** (Phase 6.4 clarification):
+- `run_l0_fast_screen`: `tasks` is a MockLLM task list injected into stage 5
+- `run_l1_standard` / `run_l2_deep` / `run_l3_comprehensive`: `tasks` is a **deprecated alias** for `golden_trajectory`; emits `DeprecationWarning` when used and will be removed in a future release. New callers should pass `golden_trajectory`
+- `run_d3` and `_score_orchestration` (D3 internal): `tasks` is an orchestration task-plan dict, unrelated to D2 trajectories
 
 Convergence result shape: `{"final_score": float, "iterations": int, "converged": bool, "stop_reason": str, "score_trajectory": list, "history": list, "findings": list}`.
 

@@ -16,6 +16,8 @@ D3 = Spawn×0.20 + Protocol×0.20 + Orchestration×0.25 + Isolation×0.15 + Conf
 
 import logging
 import re
+from difflib import SequenceMatcher
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +88,9 @@ D3_MAS_TASKS = [
 ]
 
 
-def _score_spawn(card, golden_trajectory=None):
+def _score_spawn(
+    card: dict[str, Any], golden_trajectory: list[Any] | dict[str, Any] | None = None
+) -> tuple[float, list[dict[str, Any]]]:
     findings = []
     declared_tools = {cap["skill_id"] for cap in card.get("capabilities", [])}
     score = 0.0
@@ -158,7 +162,7 @@ def _score_spawn(card, golden_trajectory=None):
     return round(score, 1), findings
 
 
-def _score_protocol(card):
+def _score_protocol(card: dict[str, Any]) -> tuple[float, list[dict[str, Any]]]:
     findings = []
     score = 0.0
 
@@ -258,7 +262,9 @@ def _score_protocol(card):
     return round(score, 1), findings
 
 
-def _score_orchestration(card, tasks=None):
+def _score_orchestration(
+    card: dict[str, Any], tasks: list[dict[str, Any]] | None = None
+) -> tuple[float, list[dict[str, Any]]]:
     findings = []
     declared_tools = {cap["skill_id"] for cap in card.get("capabilities", [])}
     score = 0.0
@@ -363,7 +369,7 @@ def _score_orchestration(card, tasks=None):
     return round(score, 1), findings
 
 
-def _score_isolation(card):
+def _score_isolation(card: dict[str, Any]) -> tuple[float, list[dict[str, Any]]]:
     findings = []
     declared_tools = {cap["skill_id"] for cap in card.get("capabilities", [])}
     score = 0.0
@@ -422,7 +428,7 @@ def _score_isolation(card):
     return round(score, 1), findings
 
 
-def _score_conflict(card):
+def _score_conflict(card: dict[str, Any]) -> tuple[float, list[dict[str, Any]]]:
     findings = []
     declared_tools = {cap["skill_id"] for cap in card.get("capabilities", [])}
     score = 0.0
@@ -504,7 +510,7 @@ def _score_conflict(card):
     return round(score, 1), findings
 
 
-def _score_persistence(card):
+def _score_persistence(card: dict[str, Any]) -> tuple[float, list[dict[str, Any]]]:
     findings = []
     declared_tools = {cap["skill_id"] for cap in card.get("capabilities", [])}
     score = 0.0
@@ -594,11 +600,13 @@ def _score_persistence(card):
     return round(score, 1), findings
 
 
-def _is_federation_card(card):
+def _is_federation_card(card: dict[str, Any]) -> bool:
     return card.get("federation") is not None
 
 
-def check_federation_compatibility(card):
+def check_federation_compatibility(
+    card: dict[str, Any],
+) -> tuple[float, list[dict[str, Any]]]:
     findings = []
     fed = card.get("federation") or {}
     protocols = fed.get("federation_protocols") or {}
@@ -682,7 +690,203 @@ def check_federation_compatibility(card):
     return round(score, 1), findings
 
 
-def check_role_conflicts(card):
+MCP_VERSIONS = {"2025-03-26", "2024-11-05", "2024-10-01"}
+A2A_VERSIONS = {"1.0", "0.3"}
+
+
+def _pair_mcp_compat(a_fed: dict[str, Any], b_fed: dict[str, Any]) -> int:
+    a_mcp = (a_fed.get("federation_protocols") or {}).get("mcp") or {}
+    b_mcp = (b_fed.get("federation_protocols") or {}).get("mcp") or {}
+    a_ver = a_mcp.get("version", "")
+    b_ver = b_mcp.get("version", "")
+    a_enabled = a_mcp.get("enabled", False)
+    b_enabled = b_mcp.get("enabled", False)
+    if not a_enabled or not b_enabled:
+        return 0
+    if a_ver in MCP_VERSIONS and b_ver in MCP_VERSIONS:
+        return 20
+    if a_ver == b_ver:
+        return 20
+    return 10
+
+
+def _pair_a2a_compat(a_fed: dict[str, Any], b_fed: dict[str, Any]) -> int:
+    a_a2a = (a_fed.get("federation_protocols") or {}).get("a2a") or {}
+    b_a2a = (b_fed.get("federation_protocols") or {}).get("a2a") or {}
+    a_ver = a_a2a.get("version", "")
+    b_ver = b_a2a.get("version", "")
+    a_enabled = a_a2a.get("enabled", False)
+    b_enabled = b_a2a.get("enabled", False)
+    if not a_enabled or not b_enabled:
+        return 0
+    if a_ver in A2A_VERSIONS and b_ver in A2A_VERSIONS:
+        return 20
+    if a_ver == b_ver:
+        return 20
+    return 10
+
+
+def _pair_schema_compat(a_card: dict[str, Any], b_card: dict[str, Any]) -> int:
+    a_ver = a_card.get("schema_version", a_card.get("card_version", "1.2"))
+    b_ver = b_card.get("schema_version", b_card.get("card_version", "1.2"))
+    return 15 if a_ver == b_ver else 5
+
+
+def _pair_auth_compat(a_card: dict[str, Any], b_card: dict[str, Any]) -> int:
+    a_auth = a_card.get("authentication", {}).get("type", "None")
+    b_auth = b_card.get("authentication", {}).get("type", "None")
+    secure = {"mTLS", "OAuth2"}
+    if a_auth in secure and b_auth in secure:
+        return 15
+    if a_auth == b_auth:
+        return 10
+    return 5
+
+
+def _pair_cross_border_compat(a_card: dict[str, Any], b_card: dict[str, Any]) -> int:
+    a_fed = a_card.get("federation") or {}
+    b_fed = b_card.get("federation") or {}
+    a_policy = a_fed.get("cross_border_policy") or {}
+    b_policy = b_fed.get("cross_border_policy") or {}
+    a_zones = set(a_policy.get("allowed_transfer_zones") or [])
+    b_zones = set(b_policy.get("allowed_transfer_zones") or [])
+    if not a_zones or not b_zones:
+        return 5
+    overlap = a_zones & b_zones
+    if overlap:
+        return 10
+    return 0
+
+
+def _trust_score_value(value: Any) -> float:
+    if isinstance(value, dict):
+        raw = value.get("value", 0.5)
+    else:
+        raw = value
+    if isinstance(raw, int | float):
+        return float(raw)
+    return 0.5
+
+
+def _pair_trust_compat(a_card: dict[str, Any], b_card: dict[str, Any]) -> int:
+    a_trust = _trust_score_value(
+        (a_card.get("federation") or {}).get("trust_score", 0.5)
+    )
+    b_trust = _trust_score_value(
+        (b_card.get("federation") or {}).get("trust_score", 0.5)
+    )
+    delta = abs(a_trust - b_trust)
+    if delta <= 0.1:
+        return 10
+    if delta <= 0.3:
+        return 5
+    return 0
+
+
+def _pair_role_compat(a_card: dict[str, Any], b_card: dict[str, Any]) -> int:
+    a_role = (a_card.get("federation") or {}).get("role", "")
+    b_role = (b_card.get("federation") or {}).get("role", "")
+    if not a_role or not b_role:
+        return 5
+    conflict_pairs = {("primary", "primary"), ("secondary", "")}
+    pair = (a_role, b_role)
+    if pair in conflict_pairs or (pair[1], pair[0]) in conflict_pairs:
+        return 0
+    return 10
+
+
+COMPAT_DIMS = [
+    ("mcp_version", _pair_mcp_compat, 20),
+    ("a2a_version", _pair_a2a_compat, 20),
+    ("schema_version", _pair_schema_compat, 15),
+    ("auth_type", _pair_auth_compat, 15),
+    ("cross_border", _pair_cross_border_compat, 10),
+    ("trust_delta", _pair_trust_compat, 10),
+    ("role", _pair_role_compat, 10),
+]
+
+
+def check_federation_compatibility_matrix(
+    cards: list[dict[str, Any]],
+) -> tuple[float, list[Any], list[dict[str, Any]]]:
+    findings = []
+    n = len(cards)
+    if n < 2:
+        return (
+            100.0,
+            [],
+            [
+                {
+                    "severity": "INFO",
+                    "category": "fed_matrix",
+                    "detail": "Less than 2 agents — compatibility matrix not built",
+                }
+            ],
+        )
+
+    matrix = [[0.0] * n for _ in range(n)]
+    pair_scores = []
+    incompatible_pairs = []
+
+    for i in range(n):
+        matrix[i][i] = 100.0
+        for j in range(i + 1, n):
+            a_card, b_card = cards[i], cards[j]
+            a_name = a_card.get("name", a_card.get("agent_id", f"agent_{i}"))
+            b_name = b_card.get("name", b_card.get("agent_id", f"agent_{j}"))
+
+            pair_score = 0
+            dim_scores = {}
+            for dim_name, dim_fn, dim_max in COMPAT_DIMS:
+                ds = dim_fn(a_card, b_card)
+                dim_scores[dim_name] = ds
+                pair_score += ds
+
+            matrix[i][j] = pair_score
+            matrix[j][i] = pair_score
+            pair_scores.append(pair_score)
+
+            status = (
+                "compatible"
+                if pair_score >= 80
+                else "partial"
+                if pair_score >= 50
+                else "incompatible"
+            )
+            if status == "incompatible":
+                incompatible_pairs.append((a_name, b_name, pair_score, dim_scores))
+
+            findings.append(
+                {
+                    "severity": "INFO",
+                    "category": "fed_matrix",
+                    "detail": (
+                        f"{a_name} ↔ {b_name}: score={pair_score}/100 "
+                        f"({status}, {n} dims)"
+                    ),
+                }
+            )
+
+    agg_score = sum(pair_scores) / len(pair_scores) if pair_scores else 100.0
+    penalty = len(incompatible_pairs) * 10
+    agg_score = max(0, agg_score - penalty)
+
+    findings.append(
+        {
+            "severity": "WARNING" if incompatible_pairs else "INFO",
+            "category": "fed_matrix_summary",
+            "detail": (
+                f"Compatibility matrix: {n} agents, "
+                f"avg_pair={sum(pair_scores) / len(pair_scores):.1f}/100, "
+                f"incompatible={len(incompatible_pairs)} pairs"
+            ),
+        }
+    )
+
+    return round(agg_score, 1), matrix, findings
+
+
+def check_role_conflicts(card: dict[str, Any]) -> tuple[float, list[dict[str, Any]]]:
     findings = []
     fed = card.get("federation") or {}
     role = fed.get("role")
@@ -718,19 +922,32 @@ def check_role_conflicts(card):
                 }
             )
         else:
-            findings.append(
-                {
-                    "severity": "WARNING",
-                    "category": "federation_role",
-                    "detail": f"Federation role '{role}' conflicts with "
-                    f"orchestration role '{preferred_role}'",
-                }
-            )
+            arbitration_policy = fed.get("arbitration_policy")
+            if arbitration_policy:
+                score += 3
+                findings.append(
+                    {
+                        "severity": "INFO",
+                        "category": "federation_role",
+                        "detail": f"Federation role '{role}' conflicts with orchestration role '{preferred_role}' but arbitration policy '{arbitration_policy}' is declared",
+                    }
+                )
+            else:
+                findings.append(
+                    {
+                        "severity": "WARNING",
+                        "category": "federation_role",
+                        "detail": f"Federation role '{role}' conflicts with "
+                        f"orchestration role '{preferred_role}'",
+                    }
+                )
 
     return round(score, 1), findings
 
 
-def check_permission_propagation(card):
+def check_permission_propagation(
+    card: dict[str, Any],
+) -> tuple[float, list[dict[str, Any]]]:
     findings = []
     fed = card.get("federation") or {}
     allowed_servers = fed.get("allowed_mcp_servers") or []
@@ -798,13 +1015,238 @@ def check_permission_propagation(card):
     return round(score, 1), findings
 
 
-def run_d3(card, tasks=None, golden_trajectory=None):
+# ═══════════════════════════════════════════════════════════════
+# Gold Standard: Coordination Efficiency (v3.0-GA §5.2)
+# ═══════════════════════════════════════════════════════════════
+
+
+def run_coordination_efficiency(
+    trajectory: list[dict[str, Any]] | None = None,
+) -> tuple[float, list[dict[str, Any]]]:
+    """Evaluate multi-agent coordination efficiency.
+
+    Gold Standard §5.2 — measures:
+      - Message efficiency:     actual_messages / optimal_messages
+      - Communication overhead:  comm_time / total_time
+      - Coordination complexity: coord_turns / task_steps
+      - Noise ratio:             irrelevant_msgs / total_msgs
+      - Serialization loss:      waiting_msgs / total_msgs
+    """
+    findings: list[dict[str, Any]] = []
+    if not trajectory:
+        return 50.0, findings  # neutral for single-agent
+
+    events: list[dict[str, Any]] = (
+        trajectory if isinstance(trajectory, list) else trajectory.get("events", [])
+    )
+    messages = [
+        e
+        for e in events
+        if e.get("message_type") in ("request", "response", "broadcast", "irrelevant")
+    ]
+    tool_calls = [e for e in events if e.get("action", {}).get("type") == "tool_call"]
+
+    if not messages:
+        return 50.0, findings
+
+    actual_msg_count = len(messages)
+    optimal_msg_count = max(len(tool_calls) * 2, 1)
+    msg_efficiency = min(1.0, optimal_msg_count / max(actual_msg_count, 1))
+
+    total_latency = sum(m.get("latency_ms", 0) for m in messages)
+    task_latency = sum(
+        e.get("latency_ms", 0)
+        for e in events
+        if e.get("action", {}).get("type") == "tool_call"
+    )
+    total_time = total_latency + task_latency
+    comm_overhead = 1.0 - (total_latency / max(total_time, 1))
+
+    coord_messages = sum(1 for m in messages if m.get("is_coordination", False))
+    coord_complexity = coord_messages / max(len(tool_calls), 1)
+    coord_efficiency = min(1.0, 1.0 / max(coord_complexity, 0.1))
+
+    irrelevant = sum(1 for m in messages if m.get("message_type") == "irrelevant")
+    noise_ratio = 1.0 - (irrelevant / max(actual_msg_count, 1))
+
+    waiting_msgs = sum(1 for m in messages if m.get("is_waiting_response", False))
+    serial_loss = 1.0 - (waiting_msgs / max(actual_msg_count, 1))
+
+    dim_weights = {
+        "msg_efficiency": 0.30,
+        "comm_overhead": 0.25,
+        "coord_complexity": 0.20,
+        "noise_ratio": 0.15,
+        "serialization_loss": 0.10,
+    }
+    dim_scores = {
+        "msg_efficiency": msg_efficiency,
+        "comm_overhead": comm_overhead,
+        "coord_complexity": coord_efficiency,
+        "noise_ratio": noise_ratio,
+        "serialization_loss": serial_loss,
+    }
+    score = sum(dim_scores[k] * dim_weights[k] for k in dim_weights) * 100
+    score = round(max(0, min(100, score)), 1)
+
+    findings.append(
+        {
+            "severity": "INFO",
+            "category": "coordination_efficiency",
+            "detail": (
+                f"msgs={actual_msg_count}, overhead={1 - comm_overhead:.2f}, "
+                f"noise={1 - noise_ratio:.2f}, score={score:.1f}"
+            ),
+        }
+    )
+
+    if 1 - comm_overhead > 0.5:
+        findings.append(
+            {
+                "severity": "HIGH",
+                "category": "coordination_overhead_excessive",
+                "detail": f"Comm overhead {(1 - comm_overhead) * 100:.0f}% > 50%",
+            }
+        )
+    if 1 - noise_ratio > 0.2:
+        findings.append(
+            {
+                "severity": "WARNING",
+                "category": "coordination_noise_high",
+                "detail": f"Irrelevant message ratio {(1 - noise_ratio) * 100:.0f}% > 20%",
+            }
+        )
+
+    return score, findings
+
+
+# ═══════════════════════════════════════════════════════════════
+# Gold Standard: Plan Quality (v3.0-GA §5.3)
+# ═══════════════════════════════════════════════════════════════
+
+
+def run_plan_quality(
+    planned_trajectory: list[dict[str, Any]] | None = None,
+    actual_trajectory: list[dict[str, Any]] | None = None,
+    runs: list[dict[str, Any]] | None = None,
+) -> tuple[float, list[dict[str, Any]]]:
+    """Evaluate plan quality of a multi-agent orchestration.
+
+    Gold Standard §5.3 — dimensions:
+      - Completeness: plan covers all required actions (40%)
+      - Adherence:    actual vs planned tool sequence match (35%)
+      - Stability:    plan consistency across multiple runs (25%)
+
+    Returns:
+        Score 0.0-100.0, findings list.
+    """
+    findings: list[dict[str, Any]] = []
+    if not planned_trajectory:
+        return 50.0, findings  # neutral
+
+    planned_events: list[dict[str, Any]] = (
+        planned_trajectory
+        if isinstance(planned_trajectory, list)
+        else planned_trajectory.get("events", [])
+    )
+    actual_events: list[dict[str, Any]] = (
+        actual_trajectory
+        if isinstance(actual_trajectory, list)
+        else (actual_trajectory or {}).get("events", [])  # type: ignore[call-overload]
+    )
+
+    planned_tools = [
+        e.get("action", {}).get("tool_id", "")
+        for e in planned_events
+        if e.get("action", {}).get("type") == "tool_call"
+    ]
+    actual_tools = [
+        e.get("action", {}).get("tool_id", "")
+        for e in actual_events
+        if e.get("action", {}).get("type") == "tool_call"
+    ]
+
+    adherence = (
+        SequenceMatcher(None, planned_tools, actual_tools).ratio()
+        if planned_tools
+        else 0.0
+    )
+
+    if planned_tools:
+        executed = sum(1 for p in planned_tools if p in actual_tools)
+        completeness = executed / len(planned_tools)
+    else:
+        completeness = 0.5
+
+    if runs and len(runs) >= 2:
+        plans = [
+            [
+                e.get("action", {}).get("tool_id", "")
+                for e in (r if isinstance(r, list) else r.get("events", []))
+                if e.get("action", {}).get("type") == "tool_call"
+            ]
+            for r in runs
+        ]
+        similarities = []
+        for i in range(len(plans)):
+            for j in range(i + 1, len(plans)):
+                sim = SequenceMatcher(None, plans[i], plans[j]).ratio()
+                similarities.append(sim)
+        stability = (
+            sum(similarities) / max(len(similarities), 1) if similarities else 0.0
+        )
+    else:
+        stability = 0.5
+
+    score = completeness * 40 + adherence * 35 + stability * 25
+    score = round(max(0, min(100, score)), 1)
+
+    findings.append(
+        {
+            "severity": "INFO",
+            "category": "plan_quality",
+            "detail": (
+                f"completeness={completeness:.3f}, "
+                f"adherence={adherence:.3f}, "
+                f"stability={stability:.3f}, "
+                f"score={score:.1f}"
+            ),
+        }
+    )
+
+    if adherence < 0.6:
+        findings.append(
+            {
+                "severity": "WARNING",
+                "category": "plan_adherence_poor",
+                "detail": (
+                    f"Plan adherence {adherence:.2f} < 0.6 — "
+                    "execution diverged from plan"
+                ),
+            }
+        )
+
+    return score, findings
+
+
+def run_d3(
+    card: dict[str, Any],
+    tasks: list[dict[str, Any]] | None = None,
+    golden_trajectory: list[Any] | dict[str, Any] | None = None,
+    federation_cards: list[dict[str, Any]] | None = None,
+    inter_agent_trajectory: list[dict[str, Any]] | None = None,
+    planned_trajectory: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     spawn_score, spawn_findings = _score_spawn(card, golden_trajectory)
     protocol_score, protocol_findings = _score_protocol(card)
     orchestration_score, orchestration_findings = _score_orchestration(card, tasks)
     isolation_score, isolation_findings = _score_isolation(card)
     conflict_score, conflict_findings = _score_conflict(card)
     persistence_score, persistence_findings = _score_persistence(card)
+    coord_score, coord_findings = run_coordination_efficiency(inter_agent_trajectory)
+    plan_score, plan_findings = run_plan_quality(
+        planned_trajectory, inter_agent_trajectory
+    )
 
     all_findings = (
         spawn_findings
@@ -813,20 +1255,25 @@ def run_d3(card, tasks=None, golden_trajectory=None):
         + isolation_findings
         + conflict_findings
         + persistence_findings
+        + coord_findings
+        + plan_findings
     )
 
     d3_score = (
-        spawn_score * 0.20
-        + protocol_score * 0.20
-        + orchestration_score * 0.25
+        spawn_score * 0.15
+        + protocol_score * 0.15
+        + orchestration_score * 0.20
         + isolation_score * 0.15
         + conflict_score * 0.10
         + persistence_score * 0.10
+        + coord_score * 0.10
+        + plan_score * 0.05
     )
 
-    fed_compat_score = 0
-    role_score = 0
-    perm_score = 0
+    fed_compat_score = 0.0
+    role_score = 0.0
+    perm_score = 0.0
+    matrix_score = None
     if _is_federation_card(card):
         fed_compat_score, fed_findings = check_federation_compatibility(card)
         role_score, role_findings = check_role_conflicts(card)
@@ -834,23 +1281,38 @@ def run_d3(card, tasks=None, golden_trajectory=None):
         all_findings.extend(fed_findings + role_findings + perm_findings)
         d3_score += fed_compat_score * 0.05 + role_score * 0.05 + perm_score * 0.05
 
+    all_cards = [card]
+    if federation_cards:
+        all_cards.extend(federation_cards)
+    if len(all_cards) >= 2:
+        matrix_score, matrix_raw, matrix_findings = (
+            check_federation_compatibility_matrix(all_cards)
+        )
+        all_findings.extend(matrix_findings)
+
     d3_score = min(100, d3_score)
+
+    subscores = {
+        "spawn": spawn_score,
+        "protocol": protocol_score,
+        "orchestration": orchestration_score,
+        "isolation": isolation_score,
+        "conflict": conflict_score,
+        "persistence": persistence_score,
+        "coordination_efficiency": coord_score,
+        "plan_quality": plan_score,
+        "federation_compat": fed_compat_score,
+        "federation_role": role_score,
+        "federation_permissions": perm_score,
+    }
+    if matrix_score is not None:
+        subscores["federation_matrix"] = matrix_score
 
     return {
         "domain": "D3",
         "name": "Multi-Agent Collaboration",
         "score": round(d3_score, 1),
-        "subscores": {
-            "spawn": spawn_score,
-            "protocol": protocol_score,
-            "orchestration": orchestration_score,
-            "isolation": isolation_score,
-            "conflict": conflict_score,
-            "persistence": persistence_score,
-            "federation_compat": fed_compat_score,
-            "federation_role": role_score,
-            "federation_permissions": perm_score,
-        },
+        "subscores": subscores,
         "findings": all_findings,
         "summary": {
             "total_findings": len(all_findings),

@@ -1,15 +1,17 @@
 # SPDX-FileCopyrightText: 2026 frankiehot-tech
 # SPDX-License-Identifier: Apache-2.0
-"""L0 Fast-Screen CI Gate for MAS-TS-001 v3.0.
+"""L0 Fast-Screen CI Gate for MAS-TS-001 v3.0-GA.
 
-5 stages, <5 minutes, zero LLM token cost.
+6 stages, <5 minutes, zero LLM token cost.
+Gold Standard: adds StepEfficiency fast-screen (v3.0-GA §9.1).
 """
 
 import logging
 import time
+from concurrent.futures import ThreadPoolExecutor
 
 from mas_eval.domains.d1_compliance import run_d1
-from mas_eval.domains.d2_single_agent import run_d2
+from mas_eval.domains.d2_single_agent import run_d2, run_step_efficiency
 from mas_eval.domains.d3_multi_agent import run_d3
 from mas_eval.scoring.absolute import score_to_grade
 
@@ -21,15 +23,18 @@ L0_STAGES = [
     "constitution_check",
     "mock_tasks",
     "agent_spawn",
+    "step_efficiency",
     "traffic_light",
 ]
 
 
 def run_l0_fast_screen(card, tasks=None):
-    """Run the L0 Fast-Screen CI gate (5 stages, <5 min).
+    """Run the L0 Fast-Screen CI gate (6 stages, <30s).
 
-    Evaluates an agent card across 5 stages: card_validation, constitution_check,
-    mock_tasks, agent_spawn, and traffic_light. Uses zero LLM tokens.
+    Evaluates an agent card across 6 stages: card_validation, constitution_check,
+    mock_tasks, step_efficiency, agent_spawn, and traffic_light.
+
+    Gold Standard: StepEfficiency gate at L0 warns if optimality < 0.5.
 
     Args:
     card: Agent card dict.
@@ -49,20 +54,30 @@ def run_l0_fast_screen(card, tasks=None):
     if card_validation["status"] == "FAIL":
         return _l0_result(stages, start)
 
-    t0 = time.time()
-    constitution = _stage_constitution_check(card)
-    constitution["duration_ms"] = int((time.time() - t0) * 1000)
-    stages.append(constitution)
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        constitution_future = executor.submit(_stage_constitution_check, card)
+        mock_tasks_future = executor.submit(_stage_mock_tasks, card, tasks)
+        agent_spawn_future = executor.submit(_stage_agent_spawn, card)
+
+        t0 = time.time()
+        constitution = constitution_future.result()
+        constitution["duration_ms"] = int((time.time() - t0) * 1000)
+        stages.append(constitution)
+
+        t0 = time.time()
+        mock_tasks = mock_tasks_future.result()
+        mock_tasks["duration_ms"] = int((time.time() - t0) * 1000)
+        stages.append(mock_tasks)
+
+        t0 = time.time()
+        agent_spawn = agent_spawn_future.result()
+        agent_spawn["duration_ms"] = int((time.time() - t0) * 1000)
+        stages.append(agent_spawn)
 
     t0 = time.time()
-    mock_tasks = _stage_mock_tasks(card, tasks)
-    mock_tasks["duration_ms"] = int((time.time() - t0) * 1000)
-    stages.append(mock_tasks)
-
-    t0 = time.time()
-    agent_spawn = _stage_agent_spawn(card)
-    agent_spawn["duration_ms"] = int((time.time() - t0) * 1000)
-    stages.append(agent_spawn)
+    step_eff = _stage_step_efficiency(mock_tasks.get("trajectory"))
+    step_eff["duration_ms"] = int((time.time() - t0) * 1000)
+    stages.append(step_eff)
 
     t0 = time.time()
     traffic_light = _stage_traffic_light(stages)
@@ -101,7 +116,8 @@ def _stage_constitution_check(card):
 
 
 def _stage_mock_tasks(card, tasks=None):
-    d2 = run_d2(card, tasks or [])
+    traj = tasks or []
+    d2 = run_d2(card, traj)
     score = d2.get("subscores", {}).get("task_completion", 0)
     return {
         "stage": "mock_tasks",
@@ -109,6 +125,35 @@ def _stage_mock_tasks(card, tasks=None):
         "score": score,
         "checks": ["d2.4"],
         "details": f"Mock task completion: {score:.1f}%",
+        "trajectory": traj if isinstance(traj, list) else list(traj) if traj else [],
+    }
+
+
+def _stage_step_efficiency(trajectory_data):
+    """Gold Standard L0 StepEfficiency check (v3.0-GA §9.1).
+
+    WARNING if step efficiency < 50 (indicates excessive step count).
+    """
+    if not trajectory_data:
+        return {
+            "stage": "step_efficiency",
+            "status": "SKIP",
+            "score": 0,
+            "checks": ["d2.5"],
+            "details": "No trajectory data",
+        }
+    score, findings = run_step_efficiency(
+        {"events": trajectory_data},
+        {"expected_steps": "1-50"},
+    )
+    return {
+        "stage": "step_efficiency",
+        "status": "PASS" if score >= 50 else "WARNING",
+        "score": score,
+        "checks": ["d2.5"],
+        "warnings": len([f for f in findings if f["severity"] == "WARNING"]),
+        "details": f"StepEfficiency={score:.1f}"
+        + (f" ({findings[-1]['detail']})" if findings else ""),
     }
 
 

@@ -4,7 +4,7 @@ This repository is part of the Athena ecosystem. All code must comply with
 the Athena System Constitution v1.5.
 
 ## Rules
-1. No internal paths (/Volumes/, /Users/) in committed code
+1. No internal machine-specific absolute paths in committed code
 2. No API keys, tokens, or credentials in source
 3. No exact timestamps with microsecond precision
 4. Follow existing code patterns (ruff + mypy strict for Python)

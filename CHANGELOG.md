@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.5.0] - 2026-06-22
+### Added
+- LangChain Adapter SDK (`adapters/langchain/`)
+- AutoGen Adapter SDK (`adapters/autogen/`)
+- Evaluation HTTP API v1.0 (`api/`) with FastAPI
+- L0 Fast Screen parallel execution optimization (<30s target)
+- Test coverage for adapters and API
+
+### Changed
+- L0 Fast Screen: parallel execution of constitution_check, mock_tasks, agent_spawn stages
+- absolute.py docstring: updated to reflect findings opt-in behavior
+- pyproject.toml: added fastapi, pydantic, uvicorn dependencies
+- pyproject.toml: updated version to 0.5.0
+- CI test.yml: extended lint/typecheck/coverage to include tests/
+
+### Fixed
+- Chinese filename moved from root to docs/
+- DeprecationWarning visibility: changed from ignore to default
+
 ## [0.1.0] - 2026-05-14
 ### Added
 - Initial release: MAS-TS-001 Evaluation Harness

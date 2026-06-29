@@ -27,10 +27,13 @@ jobs:
           pip install -e ".[ml,dev]"
 
       - name: Lint with ruff
-        run: ruff check mas_eval/ --statistics
+        run: ruff check mas_eval/ tests/ --statistics
+
+      - name: Type check with mypy
+        run: mypy mas_eval/ tests/ --strict --ignore-missing-imports --no-incremental
 
       - name: Test with pytest
-        run: pytest tests/ -v --tb=short --durations=10 --cov=mas_eval --cov-report=term-missing
+        run: pytest tests/ -v --tb=short --durations=10 --cov=mas_eval --cov=tests --cov-report=term-missing
 
       - name: Check coverage
         run: |
@@ -43,13 +46,33 @@ jobs:
           echo "✅ Coverage $COV% meets threshold"
 
       - name: Run federation scan (multi-vendor CI gate)
+        env:
+          # v0.4.0 threshold policy (Phase 7.2): allow documented staged rollout
+          # by overriding FEDERATION_MAX_BLOCKED / FEDERATION_ALLOW_CRITICAL.
+          # Default: 0 blocked, no CRITICAL, at least 3/5 passing.
+          FEDERATION_MAX_BLOCKED: ${{ vars.FEDERATION_MAX_BLOCKED || '0' }}
+          FEDERATION_MIN_PASSING: ${{ vars.FEDERATION_MIN_PASSING || '3' }}
+          FEDERATION_ALLOW_CRITICAL: ${{ vars.FEDERATION_ALLOW_CRITICAL || 'false' }}
         run: |
           echo "::group::Federation Scan"
-          python mas_full_run.py --multi-vendor mas_eval/data/multi_vendor_test/ --output reports/federation-scan.json
+          python mas_full_run.py --multi-vendor mas_eval/data/multi_vendor_test/ \
+            --output reports/federation-scan.json \
+            --compliance-format html
           echo "::endgroup::"
-          CRIT=$(python3 -c "import json; r=json.load(open('reports/federation-scan.json')); print(sum(1 for a in r['agents'].values() if a['d1']['verdict']=='NON-COMPLIANT (blocked)'))")
-          if [ "$CRIT" -gt 0 ]; then
-            echo "::error::$CRIT agents are NON-COMPLIANT (blocked)"
-            exit 1
+          ALLOW_CRITICAL_FLAG=""
+          if [ "$FEDERATION_ALLOW_CRITICAL" = "true" ]; then
+            ALLOW_CRITICAL_FLAG="--allow-critical"
           fi
-          echo "✅ All agents compliant"
+          python scripts/federation_threshold.py reports/federation-scan.json \
+            --max-blocked "$FEDERATION_MAX_BLOCKED" \
+            --min-passing "$FEDERATION_MIN_PASSING" \
+            $ALLOW_CRITICAL_FLAG
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: federation-compliance-report
+          path: |
+            reports/federation-scan.json
+            reports/federation-scan.html
+          retention-days: 14

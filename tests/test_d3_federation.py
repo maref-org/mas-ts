@@ -7,7 +7,15 @@ sys.path.insert(0, str(Path(__file__).parent.parent.resolve()))
 
 from mas_eval.domains.d3_multi_agent import (
     _is_federation_card,
+    _pair_a2a_compat,
+    _pair_auth_compat,
+    _pair_cross_border_compat,
+    _pair_mcp_compat,
+    _pair_role_compat,
+    _pair_schema_compat,
+    _pair_trust_compat,
     check_federation_compatibility,
+    check_federation_compatibility_matrix,
     check_permission_propagation,
     check_role_conflicts,
     run_d3,
@@ -226,6 +234,14 @@ class TestCheckRoleConflicts:
         assert any("conflicts" in f["detail"] for f in findings)
         assert score == 0
 
+    def test_primary_worker_conflict_with_arbitration_policy(self):
+        card = dict(BASE_CARD)
+        card["federation"] = {"role": "primary", "arbitration_policy": "human_review"}
+        card["orchestration_hints"] = {"preferred_role": "worker"}
+        score, findings = check_role_conflicts(card)
+        assert any("arbitration" in f["detail"] for f in findings)
+        assert score > 0
+
     def test_observer_no_compat_roles(self):
         card = dict(BASE_CARD)
         card["federation"] = {"role": "observer"}
@@ -333,3 +349,186 @@ class TestRunD3Federation:
     def test_federation_summary_none(self):
         result = run_d3(BASE_CARD)
         assert result["summary"]["federation_role"] == "none"
+
+
+class TestPairCompatFunctions:
+    def test_mcp_compat_both_enabled_known(self):
+        a = {
+            "federation_protocols": {"mcp": {"version": "2025-03-26", "enabled": True}}
+        }
+        b = {
+            "federation_protocols": {"mcp": {"version": "2024-11-05", "enabled": True}}
+        }
+        assert _pair_mcp_compat(a, b) == 20
+
+    def test_mcp_compat_one_disabled(self):
+        a = {
+            "federation_protocols": {"mcp": {"version": "2025-03-26", "enabled": True}}
+        }
+        b = {
+            "federation_protocols": {"mcp": {"version": "2024-10-01", "enabled": False}}
+        }
+        assert _pair_mcp_compat(a, b) == 0
+
+    def test_a2a_compat_both_enabled(self):
+        a = {"federation_protocols": {"a2a": {"version": "1.0", "enabled": True}}}
+        b = {"federation_protocols": {"a2a": {"version": "0.3", "enabled": True}}}
+        assert _pair_a2a_compat(a, b) == 20
+
+    def test_a2a_compat_one_disabled(self):
+        a = {"federation_protocols": {"a2a": {"version": "1.0", "enabled": True}}}
+        b = {"federation_protocols": {"a2a": {"version": "0.3", "enabled": False}}}
+        assert _pair_a2a_compat(a, b) == 0
+
+    def test_schema_compat_same(self):
+        a = {"card_version": "1.2"}
+        b = {"card_version": "1.2"}
+        assert _pair_schema_compat(a, b) == 15
+
+    def test_schema_compat_different(self):
+        a = {"card_version": "1.2"}
+        b = {"card_version": "2.0"}
+        assert _pair_schema_compat(a, b) == 5
+
+    def test_auth_compat_both_secure(self):
+        a = {"authentication": {"type": "mTLS"}}
+        b = {"authentication": {"type": "OAuth2"}}
+        assert _pair_auth_compat(a, b) == 15
+
+    def test_auth_compat_same_insecure(self):
+        a = {"authentication": {"type": "APIKey"}}
+        b = {"authentication": {"type": "APIKey"}}
+        assert _pair_auth_compat(a, b) == 10
+
+    def test_cross_border_compat_overlap(self):
+        a = {
+            "federation": {
+                "cross_border_policy": {"allowed_transfer_zones": ["US", "EU"]}
+            }
+        }
+        b = {
+            "federation": {
+                "cross_border_policy": {"allowed_transfer_zones": ["EU", "CN"]}
+            }
+        }
+        assert _pair_cross_border_compat(a, b) == 10
+
+    def test_cross_border_compat_no_overlap(self):
+        a = {"federation": {"cross_border_policy": {"allowed_transfer_zones": ["US"]}}}
+        b = {"federation": {"cross_border_policy": {"allowed_transfer_zones": ["CN"]}}}
+        assert _pair_cross_border_compat(a, b) == 0
+
+    def test_trust_compat_close(self):
+        a = {"federation": {"trust_score": 0.85}}
+        b = {"federation": {"trust_score": 0.80}}
+        assert _pair_trust_compat(a, b) == 10
+
+    def test_trust_compat_far(self):
+        a = {"federation": {"trust_score": 0.90}}
+        b = {"federation": {"trust_score": 0.30}}
+        assert _pair_trust_compat(a, b) == 0
+
+    def test_trust_compat_object_scores(self):
+        a = {"federation": {"trust_score": {"value": 0.85, "evaluated_by": "eval-a"}}}
+        b = {"federation": {"trust_score": {"value": 0.80, "evaluated_by": "eval-b"}}}
+        assert _pair_trust_compat(a, b) == 10
+
+    def test_role_compat_no_conflict(self):
+        a = {"federation": {"role": "primary"}}
+        b = {"federation": {"role": "secondary"}}
+        assert _pair_role_compat(a, b) == 10
+
+    def test_role_compat_primary_primary_conflict(self):
+        a = {"federation": {"role": "primary"}}
+        b = {"federation": {"role": "primary"}}
+        assert _pair_role_compat(a, b) == 0
+
+
+class TestFederationFixtures:
+    def test_v2_multi_vendor_role_conflicts_have_arbitration(self):
+        cards_dir = (
+            Path(__file__).parent.parent
+            / "mas_eval"
+            / "data"
+            / "multi_vendor_test"
+            / "v2_cards"
+        )
+        for path in cards_dir.glob("agent_card_*_v2.json"):
+            import json
+
+            card = json.loads(path.read_text())
+            score, findings = check_role_conflicts(card)
+            details = " ".join(f["detail"] for f in findings)
+            assert score > 0, f"{path.name}: {details}"
+
+
+class TestFederationCompatibilityMatrix:
+    def test_less_than_two_cards(self):
+        score, matrix, findings = check_federation_compatibility_matrix([BASE_CARD])
+        assert score == 100.0
+        assert matrix == []
+
+    def test_empty_cards(self):
+        score, matrix, findings = check_federation_compatibility_matrix([])
+        assert score == 100.0
+
+    def test_two_identical_cards(self):
+        cards = [BASE_CARD, BASE_CARD]
+        score, matrix, findings = check_federation_compatibility_matrix(cards)
+        assert 0 <= score <= 100
+        assert len(matrix) == 2
+
+    def test_matrix_shape(self):
+        cards = [BASE_CARD, BASE_CARD, BASE_CARD]
+        score, matrix, findings = check_federation_compatibility_matrix(cards)
+        assert len(matrix) == 3
+        assert len(matrix[0]) == 3
+
+    def test_diagonal_is_100(self):
+        cards = [BASE_CARD, BASE_CARD]
+        score, matrix, findings = check_federation_compatibility_matrix(cards)
+        assert matrix[0][0] == 100.0
+        assert matrix[1][1] == 100.0
+
+    def test_symmetric_matrix(self):
+        cards = [BASE_CARD, BASE_CARD]
+        score, matrix, findings = check_federation_compatibility_matrix(cards)
+        assert matrix[0][1] == matrix[1][0]
+
+    def test_findings_present(self):
+        cards = [BASE_CARD, BASE_CARD]
+        score, matrix, findings = check_federation_compatibility_matrix(cards)
+        assert len(findings) > 0
+
+    def test_findings_have_correct_structure(self):
+        cards = [BASE_CARD, BASE_CARD]
+        score, matrix, findings = check_federation_compatibility_matrix(cards)
+        for f in findings:
+            assert "severity" in f
+            assert "category" in f
+            assert "detail" in f
+
+    def test_summary_finding_present(self):
+        cards = [BASE_CARD, BASE_CARD]
+        score, matrix, findings = check_federation_compatibility_matrix(cards)
+        summaries = [f for f in findings if f["category"] == "fed_matrix_summary"]
+        assert len(summaries) >= 1
+
+    def test_matrix_returned(self):
+        cards = [BASE_CARD, BASE_CARD]
+        score, matrix, findings = check_federation_compatibility_matrix(cards)
+        assert isinstance(matrix, list)
+
+    def test_run_d3_with_federation_cards(self):
+        fed_card = dict(BASE_CARD)
+        fed_card["federation"] = {
+            "federation_protocols": {
+                "mcp": {"version": "2025-03-26", "enabled": True},
+                "a2a": {"version": "1.0", "enabled": True},
+            },
+            "role": "secondary",
+            "allowed_mcp_servers": ["fs-mcp"],
+        }
+        result = run_d3(fed_card, federation_cards=[BASE_CARD])
+        assert "federation_matrix" in result["subscores"]
+        assert result["subscores"]["federation_matrix"] >= 0

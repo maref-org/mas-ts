@@ -75,7 +75,7 @@
     },
     "constitution": {
       "type": "object",
-      "description": "OpenClaw Constitution compliance fields (Article 15-A, 27, 28)",
+      "description": "Constitution compliance fields (Article 15-A, 27, 28)",
       "required": [
         "envelope",
         "health_state",

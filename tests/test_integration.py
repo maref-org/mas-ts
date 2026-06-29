@@ -254,15 +254,16 @@ class TestL0Pipeline:
         run_l0_fast_screen(SAMPLE_CARD)
         assert time.time() - t0 < 2
 
-    def test_l0_has_5_stages(self):
+    def test_l0_has_6_stages(self):
         result = run_l0_fast_screen(SAMPLE_CARD)
-        assert len(result["stages"]) == 5
+        assert len(result["stages"]) == 6
         stage_names = [s["stage"] for s in result["stages"]]
         assert stage_names == [
             "card_validation",
             "constitution_check",
             "mock_tasks",
             "agent_spawn",
+            "step_efficiency",
             "traffic_light",
         ]
 

@@ -24,6 +24,7 @@ from mas_eval.domains.d1_compliance import (
     check_heartbeat,
     check_prompt_rot,
     check_schema,
+    check_trace_audit_chain,
     run_d1,
 )
 
@@ -424,6 +425,17 @@ def test_d1_cross_border_chain_no_policy():
     assert "No federation cross-border policy" in info[0]["detail"]
 
 
+def test_d1_cross_border_chain_missing_policy_with_mixed_residency():
+    card = dict(SAMPLE_CARD)
+    card["compliance"] = dict(card["compliance"])
+    card["compliance"]["data_residency"] = "US"
+    card["compliance"]["model_backend_location"] = "EU"
+    card["compliance"]["cross_border"] = True
+    findings = check_data_cross_border_chain(card)
+    high = [f for f in findings if f["severity"] == "HIGH"]
+    assert any("missing cross-border policy" in f["detail"] for f in high)
+
+
 def test_d1_cross_border_chain_valid():
     card = dict(SAMPLE_CARD)
     card["federation"] = {
@@ -502,6 +514,20 @@ def test_d1_cross_border_chain_no_zones():
     assert any("no allowed transfer zones" in f["detail"] for f in high)
 
 
+def test_d1_cross_border_chain_missing_policy_residency_no_crash():
+    card = dict(SAMPLE_CARD)
+    card["federation"] = {
+        "cross_border_policy": {
+            "allowed_transfer_zones": ["EU"],
+            "requires_approval": False,
+        },
+    }
+    card["compliance"] = dict(card["compliance"])
+    card["compliance"]["cross_border"] = True
+    findings = check_data_cross_border_chain(card)
+    assert all(f["check"] == "1.11" for f in findings)
+
+
 def test_d1_federation_version_no_protocols():
     card = dict(SAMPLE_CARD)
     findings = check_federation_version_compat(card)
@@ -574,6 +600,120 @@ def test_d1_run_includes_new_checks():
     check_ids = {f["check"] for f in result["findings"]}
     assert "1.11" in check_ids
     assert "1.12" in check_ids
+    assert "1.13" in check_ids
+
+
+def test_check_trace_audit_chain_full():
+    card = dict(SAMPLE_CARD)
+    card["constitution"] = dict(card["constitution"])
+    card["constitution"]["envelope"] = {
+        "message_id": "m1",
+        "correlation_id": "c1",
+        "timestamp": "2026-06-12T00:00:00Z",
+        "sender": "urn:agent:test:test-01",
+    }
+    card["federation"] = {
+        "audit": {"trace_enabled": True, "trace_version": "1.0"},
+    }
+    findings = check_trace_audit_chain(card)
+    check_ids = {f["check"] for f in findings}
+    assert "1.13" in check_ids
+    info_count = sum(1 for f in findings if f["severity"] == "INFO")
+    assert info_count >= 1
+
+
+def test_check_trace_audit_chain_missing_fields():
+    card = dict(SAMPLE_CARD)
+    card["constitution"] = dict(card["constitution"])
+    card["constitution"]["envelope"] = {
+        "message_id": "m1",
+        "timestamp": "2026-06-12T00:00:00Z",
+    }
+    findings = check_trace_audit_chain(card)
+    warnings = [f for f in findings if f["severity"] == "WARNING"]
+    warning_details = " ".join(f["detail"] for f in warnings)
+    assert any("missing" in w.get("detail", "").lower() for w in warnings), (
+        f"No missing-field warning found in: {warning_details}"
+    )
+
+
+def test_check_trace_audit_chain_federation_cards_all_enabled():
+    card = dict(SAMPLE_CARD)
+    card["federation"] = {"audit": {"trace_enabled": True}}
+    fed_cards = [
+        {"name": "agent_b", "federation": {"audit": {"trace_enabled": True}}},
+        {"name": "agent_c", "federation": {"audit": {"trace_enabled": True}}},
+    ]
+    findings = check_trace_audit_chain(card, federation_cards=fed_cards)
+    info_details = " ".join(
+        f.get("detail", "") for f in findings if f["severity"] == "INFO"
+    )
+    assert "full chain integrity" in info_details
+
+
+def test_check_trace_audit_chain_top_level_audit_flags_all_enabled():
+    card = dict(SAMPLE_CARD)
+    card["audit"] = {
+        "trace_id_required": True,
+        "timestamp_required": True,
+        "source_agent_required": True,
+        "target_agent_required": True,
+    }
+    fed_cards = [
+        {
+            "name": "agent_b",
+            "audit": {
+                "trace_id_required": True,
+                "timestamp_required": True,
+                "source_agent_required": True,
+                "target_agent_required": True,
+            },
+        }
+    ]
+    findings = check_trace_audit_chain(card, federation_cards=fed_cards)
+    assert not any(f["severity"] == "HIGH" for f in findings)
+    assert any("full chain integrity" in f["detail"] for f in findings)
+
+
+def test_check_trace_audit_chain_top_level_audit_flags_missing():
+    card = dict(SAMPLE_CARD)
+    card["audit"] = {"trace_id_required": True}
+    findings = check_trace_audit_chain(card)
+    high = [f for f in findings if f["severity"] == "HIGH"]
+    assert any("audit trace flags" in f["detail"] for f in high)
+
+
+def test_check_trace_audit_chain_federation_cards_none():
+    card = dict(SAMPLE_CARD)
+    card["federation"] = {"audit": {"trace_enabled": False}}
+    fed_cards = [
+        {"name": "agent_b", "federation": {"audit": {"trace_enabled": False}}},
+    ]
+    findings = check_trace_audit_chain(card, federation_cards=fed_cards)
+    highs = [f for f in findings if f["severity"] == "HIGH"]
+    assert len(highs) >= 1
+
+
+def test_check_trace_audit_chain_partial():
+    card = dict(SAMPLE_CARD)
+    card["federation"] = {"audit": {"trace_enabled": True}}
+    fed_cards = [
+        {"name": "agent_b", "federation": {"audit": {"trace_enabled": False}}},
+    ]
+    findings = check_trace_audit_chain(card, federation_cards=fed_cards)
+    warnings = [f for f in findings if f["severity"] == "WARNING"]
+    warning_details = " ".join(f.get("detail", "") for f in warnings)
+    assert any("partial" in w.get("detail", "").lower() for w in warnings), (
+        f"No partial-support warning found in: {warning_details}"
+    )
+
+
+def test_check_trace_audit_chain_no_federation_config():
+    card = dict(SAMPLE_CARD)
+    if "federation" in card:
+        del card["federation"]
+    findings = check_trace_audit_chain(card)
+    assert len(findings) >= 1
 
 
 def test_d1_full_compliant_with_federation():
@@ -588,6 +728,7 @@ def test_d1_full_compliant_with_federation():
             "a2a": {"version": "1.0", "enabled": True},
             "mcp": {"version": "2025-03-26", "enabled": True},
         },
+        "audit": {"trace_enabled": True, "trace_version": "1.0"},
     }
     card["compliance"] = dict(card["compliance"])
     card["compliance"]["cross_border"] = True

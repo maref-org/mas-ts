@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   check-exfil:
     runs-on: ubuntu-latest
@@ -15,33 +18,45 @@ jobs:
           fetch-depth: 0
       - name: Check for absolute paths
         run: |
-          FOUND=$(grep -rn '/Volumes/\|/Users/[A-Za-z]/\|file:///' \
+          FOUND=$(grep -rnE '(/Volumes/|/Users/[A-Za-z]/|file:///|/private/var/|/var/folders/)' \
             --include="*.py" --include="*.md" --include="*.yaml" --include="*.yml" \
-            --include="*.json" --include="*.jsonc" \
-            src/ tests/ docs/ scripts/ reports/ AGENTS.md CLAUDE.md .cursorrules opencode.jsonc .github/copilot-instructions.md .trae/rules/constitution.md 2>/dev/null || true)
+            --include="*.json" --include="*.jsonc" --include="*.toml" --include="*.txt" --include="*.lock" \
+            --exclude="check-exfiltration.yml" --exclude="CLAUDE.md" --exclude=".pre-commit-config.yaml" \
+            --exclude-dir=".git" --exclude-dir=".venv" --exclude-dir=".pytest_cache" \
+            --exclude-dir=".mypy_cache" --exclude-dir=".ruff_cache" --exclude-dir="__pycache__" \
+            --exclude-dir=".opencode" --exclude-dir=".trae" \
+            . 2>/dev/null || true)
           if [ -n "$FOUND" ]; then
-            echo "::error::Found hardcoded /Volumes/ or file:/// paths"
+            echo "::error::Found hardcoded local absolute paths"
             echo "$FOUND"
             exit 1
           fi
           echo "✅ No absolute paths found"
       - name: Check for organizational name leaks
         run: |
-          FOUND=$(grep -rn 'openclaw\|frankiehot-tech' \
+          FOUND=$(grep -rnEi 'openclaw|frankiehot-tech' \
             --include="*.py" --include="*.md" --include="*.yaml" --include="*.yml" \
-            src/ tests/ docs/ scripts/ reports/ AGENTS.md CLAUDE.md .cursorrules opencode.jsonc .github/copilot-instructions.md .trae/rules/constitution.md 2>/dev/null \
-            | grep -v 'CHANGELOG.md' || true)
+            --include="*.json" --include="*.jsonc" --include="*.toml" --include="*.txt" --include="*.lock" \
+            --exclude="check-exfiltration.yml" --exclude="CLAUDE.md" --exclude="athena-governance.jsonc" \
+            --exclude="agent_card_v1.2.json" --exclude="agent_card_v2.0.json" \
+            --exclude-dir=".git" --exclude-dir=".venv" --exclude-dir=".pytest_cache" \
+            --exclude-dir=".mypy_cache" --exclude-dir=".ruff_cache" --exclude-dir="__pycache__" \
+            --exclude-dir=".opencode" --exclude-dir=".trae" \
+            . 2>/dev/null | grep -v 'CHANGELOG.md' | grep -v 'SPDX-FileCopyrightText' || true)
           if [ -n "$FOUND" ]; then
-            echo "::warning::Found potential organizational name references"
+            echo "::error::Found potential organizational name references"
             echo "$FOUND"
+            exit 1
           fi
           echo "✅ Organizational name check complete"
       - name: Check for phone numbers
         run: |
-          FOUND=$(grep -rn '1[3-9][0-9]\{9\}' \
+          FOUND=$(grep -rnE '1[3-9][0-9]{9}' \
             --include="*.py" --include="*.md" --include="*.yaml" --include="*.yml" \
-            --include="*.json" --include="*.jsonc" --include="*.env" \
-            src/ tests/ docs/ scripts/ reports/ AGENTS.md CLAUDE.md .cursorrules opencode.jsonc .github/copilot-instructions.md .trae/rules/constitution.md 2>/dev/null || true)
+            --include="*.json" --include="*.jsonc" --include="*.env" --include="*.toml" --include="*.txt" --include="*.lock" \
+            --exclude-dir=".git" --exclude-dir=".venv" --exclude-dir=".pytest_cache" \
+            --exclude-dir=".mypy_cache" --exclude-dir=".ruff_cache" --exclude-dir="__pycache__" \
+            . 2>/dev/null || true)
           if [ -n "$FOUND" ]; then
             echo "::error::Found phone number leaks:"
             echo "$FOUND"
@@ -50,10 +65,12 @@ jobs:
           echo "✅ No phone number leaks found"
       - name: Check for API keys
         run: |
-          FOUND=$(grep -rn 'sk-[A-Za-z0-9]\{20,\}' \
+          FOUND=$(grep -rnE 'sk-[A-Za-z0-9]{20,}' \
             --include="*.py" --include="*.md" --include="*.yaml" --include="*.yml" \
-            --include="*.json" --include="*.jsonc" --include="*.env" \
-            src/ tests/ docs/ scripts/ reports/ AGENTS.md CLAUDE.md .cursorrules opencode.jsonc .github/copilot-instructions.md .trae/rules/constitution.md 2>/dev/null || true)
+            --include="*.json" --include="*.jsonc" --include="*.env" --include="*.toml" --include="*.txt" --include="*.lock" \
+            --exclude-dir=".git" --exclude-dir=".venv" --exclude-dir=".pytest_cache" \
+            --exclude-dir=".mypy_cache" --exclude-dir=".ruff_cache" --exclude-dir="__pycache__" \
+            . 2>/dev/null || true)
           if [ -n "$FOUND" ]; then
             echo "::error::Found potential API key leaks"
             echo "$FOUND"

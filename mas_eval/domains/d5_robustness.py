@@ -10,7 +10,7 @@ Scoring:
   ConvergenceCycle    × 0.25 — C1/C2/C3 cycles
 
 Usage:
-  ce = ChaosEngine()
+  ce = ChaosEngine(seed=42)
   ce.inject("network_partition")
   ce.record_healing(success=True)
 
@@ -35,6 +35,7 @@ Usage:
 """
 
 import collections
+import json
 import logging
 import math
 import os
@@ -69,7 +70,7 @@ class FaultInjector:
     falls back to simulation when tools/sudo are unavailable.
     """
 
-    def __init__(self, mode: str = "auto") -> None:
+    def __init__(self, mode: str = "sim") -> None:
         self.mode = mode
         self._cleanup_handlers: list[Callable[[], Any]] = []
         self._injection_mode: str | None = None
@@ -107,6 +108,12 @@ class FaultInjector:
         return "simulated"
 
     def inject_cpu_pressure(self, cores: int = 2, duration: int = 10) -> dict[str, Any]:
+        if self.mode == "sim":
+            return {
+                "fault": "cpu_pressure",
+                "mode": "simulated",
+                "detail": f"simulated cpu pressure {cores} cores for {duration}s",
+            }
         try:
             proc = subprocess.Popen(
                 ["stress-ng", "--cpu", str(cores), "--timeout", f"{duration}s"],
@@ -125,6 +132,12 @@ class FaultInjector:
     def inject_memory_pressure(
         self, megabytes: int = 256, duration: int = 10
     ) -> dict[str, Any]:
+        if self.mode == "sim":
+            return {
+                "fault": "memory_pressure",
+                "mode": "simulated",
+                "detail": (f"simulated memory pressure {megabytes}MB for {duration}s"),
+            }
         try:
             proc = subprocess.Popen(
                 [
@@ -149,6 +162,12 @@ class FaultInjector:
             return {"fault": "memory_pressure", "mode": "simulated"}
 
     def inject_disk_failure(self) -> dict[str, Any]:
+        if self.mode == "sim":
+            return {
+                "fault": "disk_failure",
+                "mode": "simulated",
+                "detail": "simulated read-only filesystem",
+            }
         try:
             tmpdir = Path(tempfile.mkdtemp())
             test_file = tmpdir / "test_write"
@@ -172,6 +191,16 @@ class FaultInjector:
             return {"fault": "disk_failure", "mode": "simulated"}
 
     def inject_process_kill(self, pid: int | None = None) -> dict[str, Any]:
+        if self.mode == "sim":
+            return {
+                "fault": "process_kill",
+                "mode": "simulated",
+                "detail": (
+                    f"simulated kill of PID {pid}"
+                    if pid is not None
+                    else "simulated kill of synthetic subprocess"
+                ),
+            }
         if pid is not None:
             try:
                 os.kill(pid, signal.SIGKILL)
@@ -198,6 +227,13 @@ class FaultInjector:
     def inject_network_partition(
         self, target_ip: str | None = None, duration: int = 30
     ) -> dict[str, Any]:
+        if self.mode == "sim":
+            target = target_ip or "127.0.0.2"
+            return {
+                "fault": "network_partition",
+                "mode": "simulated",
+                "detail": f"simulated partition blocking {target} for {duration}s",
+            }
         target = target_ip or "127.0.0.2"
         system = platform.system()
         try:
@@ -469,7 +505,7 @@ class ChaosEngine:
         self.rng = random.Random(seed)
         self.fault_history: list[dict[str, Any]] = []
         self.healing_results: defaultdict[str, list[dict[str, Any]]] = defaultdict(list)
-        self.injector = fault_injector or FaultInjector(mode="auto")
+        self.injector = fault_injector or FaultInjector(mode="sim")
         self._injection_mode = self.injector.injection_mode()
 
     def injection_mode(self) -> str:
@@ -842,12 +878,66 @@ CHAOS_WEIGHTS = {
 def _score_federation_cascade(
     ce: ChaosEngine | None = None, card: dict[str, Any] | None = None
 ) -> tuple[float, list[dict[str, Any]]]:
-    findings = []
+    """Evaluate federation cascade resilience (legacy compatibility wrapper).
+
+    Calls run_federation_cascade and returns same signature for backward compat.
+    """
+    result = run_federation_cascade(ce=ce, card=card)
+    return result["score"], result["findings"]
+
+
+# ═══════════════════════════════════════════════════════════════
+# Gold Standard: Federation Cascade (v3.0-GA §7.5)
+# ═══════════════════════════════════════════════════════════════
+
+FEDERATION_CASCADE_WEIGHTS = {
+    "containment": 0.20,
+    "depth_control": 0.20,
+    "isolation": 0.18,
+    "recovery": 0.15,
+    "detection_latency": 0.15,
+    "breaker_state": 0.12,
+}
+
+
+def run_federation_cascade(
+    ce: ChaosEngine | None = None,
+    card: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Evaluate federation cascade resilience (Gold Standard §7.5).
+
+    6 dimensions:
+      - Containment:       cascading failure isolation rate (20%)
+      - Depth control:     propagation depth limit (20%)
+      - Isolation:         unaffected agent ratio (18%)
+      - Recovery:          post-cascade healing success (15%)
+      - Detection latency: time to detect cascade onset (15%)
+      - Breaker state:     circuit breaker configuration validity (12%)
+
+    Returns dict with score, dimensions, findings.
+    """
+    findings: list[dict[str, Any]] = []
     fcb = FederationCircuitBreaker()
+
+    breaker_enabled = False
+    if card:
+        breaker_cfg = card.get("governance", {}).get("circuit_breaker", {}) or {}
+        breaker_enabled = bool(breaker_cfg.get("enabled", False))
+
+    if not breaker_enabled:
+        findings.append(
+            {
+                "severity": "HIGH",
+                "category": "federation_circuit_breaker",
+                "detail": (
+                    "Agent card lacks governance.circuit_breaker.enabled=true; "
+                    "cascade failures cannot be isolated by a configured breaker"
+                ),
+            }
+        )
 
     source_indices = [0, 3, 1]
     for source_idx in source_indices:
-        fcb.reset_all()
         result = fcb.trigger(source_idx)
         findings.append(
             {
@@ -867,28 +957,78 @@ def _score_federation_cascade(
 
     metrics = fcb.cascade_metrics()
 
-    containment_score = metrics["containment_rate"] * 40
+    dims: dict[str, float] = {}
+
+    containment_rate = metrics["containment_rate"]
+    dims["containment"] = round(containment_rate, 3)
+
     max_depth = fcb.n - 1
     depth_ratio = metrics["avg_depth"] / max_depth if max_depth > 0 else 0
-    depth_score = max(0, 1 - depth_ratio) * 30
-    affected_ratio = metrics["avg_affected_pct"] / 100
-    affected_score = max(0, 1 - affected_ratio) * 30
-    score = containment_score + depth_score + affected_score
+    dims["depth_control"] = round(max(0, 1 - depth_ratio), 3)
+
+    unaffected = max(0, 1 - metrics["avg_affected_pct"] / 100)
+    dims["isolation"] = round(unaffected, 3)
+
+    recovery_score = 0.5
+    if ce:
+        hr = ce.healing_rate()
+        recovery_score = min(1.0, hr * 1.2)
+    dims["recovery"] = round(recovery_score, 3)
+
+    detection_latency = 1.0
+    if not breaker_enabled:
+        detection_latency = 0.3
+    else:
+        threshold = 1.0
+        if card:
+            threshold = (
+                card.get("governance", {})
+                .get("circuit_breaker", {})
+                .get("threshold", 3)
+            )
+            detection_latency = min(1.0, max(0.1, 1.0 - (threshold - 1) * 0.2))
+    dims["detection_latency"] = round(detection_latency, 3)
+
+    dims["breaker_state"] = round(0.6 if breaker_enabled else 0.0, 3)
+
+    score = (
+        sum(dims[k] * FEDERATION_CASCADE_WEIGHTS[k] for k in FEDERATION_CASCADE_WEIGHTS)
+        * 100
+    )
+    score = round(max(0, min(100, score)), 1)
 
     findings.append(
         {
             "severity": "INFO",
             "category": "fed_cascade_summary",
             "detail": (
-                f"Cascade containment={metrics['containment_rate']:.0%}, "
-                f"avg_depth={metrics['avg_depth']:.1f}/{max_depth}, "
-                f"avg_affected={metrics['avg_affected_pct']:.0f}% "
-                f"({metrics['scenarios_run']} scenarios)"
+                f"containment={containment_rate:.0%}, "
+                f"depth={metrics['avg_depth']:.1f}/{max_depth}, "
+                f"isolation={unaffected:.0%}, "
+                f"recovery={recovery_score:.0%}, "
+                f"detection={detection_latency:.0%}, "
+                f"breaker={'enabled' if breaker_enabled else 'missing'}"
             ),
         }
     )
 
-    return round(score, 1), findings
+    if not breaker_enabled:
+        findings.append(
+            {
+                "severity": "HIGH",
+                "category": "fed_cascade_breaker_missing",
+                "detail": "Circuit breaker not configured — cascade detection latency degraded",
+            }
+        )
+
+    return {
+        "domain": "D5",
+        "component": "federation_cascade",
+        "name": "Federation Cascade (Gold Standard §7.5)",
+        "score": score,
+        "dimensions": dims,
+        "findings": findings,
+    }
 
 
 def _score_chaos(
@@ -1443,6 +1583,121 @@ def _score_convergence(
     return round(score, 1), findings
 
 
+# ═══════════════════════════════════════════════════════════════
+# Gold Standard: Consistency Index (v3.0-GA §7.4)
+# ═══════════════════════════════════════════════════════════════
+
+
+class ConsistencyIndex:
+    """Cross-domain consistency index for Gold Standard evaluation.
+
+    Measures how consistent an agent behaves across multiple runs
+    of the same task. Three dimensions:
+
+      C_TASK: result Jaccard similarity across runs (≥0.85)
+      C_TOOL: tool sequence edit distance (≤3)
+      C_TIME: execution time CV (≤0.25)
+
+    Usage:
+        ci = ConsistencyIndex()
+        ci.add_run({"result": {"status": "ok"}, "elapsed_seconds": 10.0,
+                    "events": [...]})
+        score = ci.score()  # {"ci": 0.85, "dimensions": {...}}
+    """
+
+    def __init__(self) -> None:
+        self.runs: list[dict[str, Any]] = []
+
+    def add_run(self, trajectory: dict[str, Any]) -> None:
+        self.runs.append(trajectory)
+
+    def score(self) -> dict[str, Any]:
+        if len(self.runs) < 2:
+            return {
+                "ci": 0.0,
+                "detail": "ConsistencyIndex requires ≥2 runs",
+                "dimensions": {},
+            }
+
+        dims: dict[str, float] = {}
+
+        results = [json.dumps(r.get("result", {}), sort_keys=True) for r in self.runs]
+        pairs = 0
+        matches = 0
+        for i in range(len(results)):
+            for j in range(i + 1, len(results)):
+                pairs += 1
+                if self._jaccard_str(results[i], results[j]) >= 0.85:
+                    matches += 1
+        task_sim = matches / max(pairs, 1)
+        dims["c_task"] = round(task_sim, 3)
+
+        sequences = [
+            [
+                e.get("action", {}).get("tool_id", "")
+                for e in r.get("events", [])
+                if e.get("action", {}).get("type") == "tool_call"
+            ]
+            for r in self.runs
+        ]
+        if sequences:
+            total_pairs = 0
+            close_pairs = 0
+            for i in range(len(sequences)):
+                for j in range(i + 1, len(sequences)):
+                    total_pairs += 1
+                    if self._edit_distance(sequences[i], sequences[j]) <= 3:
+                        close_pairs += 1
+            tool_cons = close_pairs / max(total_pairs, 1)
+            dims["c_tool"] = round(tool_cons, 3)
+        else:
+            dims["c_tool"] = 0.0
+
+        times = [
+            r.get("elapsed_seconds", 0)
+            for r in self.runs
+            if r.get("elapsed_seconds", 0) > 0
+        ]
+        if times:
+            mean = sum(times) / len(times)
+            std = (sum((t - mean) ** 2 for t in times) / len(times)) ** 0.5
+            cv = std / max(mean, 0.001)
+            dims["c_time"] = round(max(0, 1.0 - cv), 3)
+        else:
+            dims["c_time"] = 0.0
+
+        weights = {"c_task": 0.35, "c_tool": 0.35, "c_time": 0.30}
+        ci = sum(dims[k] * weights[k] for k in weights)
+        return {
+            "ci": round(ci, 3),
+            "dimensions": dims,
+            "detail": f"runs={len(self.runs)}, CI={ci:.3f}",
+        }
+
+    @staticmethod
+    def _jaccard_str(a: str, b: str) -> float:
+        set_a, set_b = set(a.split()), set(b.split())
+        if not set_a and not set_b:
+            return 1.0
+        return len(set_a & set_b) / max(len(set_a | set_b), 1)
+
+    @staticmethod
+    def _edit_distance(a: list[str], b: list[str]) -> int:
+        m, n = len(a), len(b)
+        dp = [[0] * (n + 1) for _ in range(m + 1)]
+        for i in range(m + 1):
+            dp[i][0] = i
+        for j in range(n + 1):
+            dp[0][j] = j
+        for i in range(1, m + 1):
+            for j in range(1, n + 1):
+                cost = 0 if a[i - 1] == b[j - 1] else 1
+                dp[i][j] = min(
+                    dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost
+                )
+        return dp[m][n]
+
+
 def run_d5_part1(
     ce: ChaosEngine | None = None,
     dd: DriftDetector | None = None,
@@ -1457,11 +1712,20 @@ def run_d5_part1(
 
     all_findings = chaos_findings + drift_findings
 
+    weights = {"chaos_engineering": 0.30, "drift_detection": 0.25}
+    weighted_contribution = round(
+        chaos_score * weights["chaos_engineering"]
+        + drift_score * weights["drift_detection"],
+        1,
+    )
     return {
         "domain": "D5",
         "component": "part1",
         "name": "Chaos Engineering + Drift Detection",
-        "score": round(chaos_score * 0.30 + drift_score * 0.25, 1),
+        "score": weighted_contribution,
+        "score_kind": "weighted_contribution",
+        "weighted_contribution": weighted_contribution,
+        "weights": weights,
         "subscores": {
             "chaos_engineering": chaos_score,
             "drift_detection": drift_score,
@@ -1486,11 +1750,20 @@ def run_d5_part2(
     convergence_score, convergence_findings = _score_convergence(cv, verifier_registry)
     all_findings = reflection_findings + convergence_findings
 
+    weights = {"reflection_loop": 0.20, "convergence_cycle": 0.25}
+    weighted_contribution = round(
+        reflection_score * weights["reflection_loop"]
+        + convergence_score * weights["convergence_cycle"],
+        1,
+    )
     return {
         "domain": "D5",
         "component": "part2",
         "name": "Reflection Loop + Convergence Verification",
-        "score": round(reflection_score * 0.20 + convergence_score * 0.25, 1),
+        "score": weighted_contribution,
+        "score_kind": "weighted_contribution",
+        "weighted_contribution": weighted_contribution,
+        "weights": weights,
         "subscores": {
             "reflection_loop": reflection_score,
             "convergence_cycle": convergence_score,

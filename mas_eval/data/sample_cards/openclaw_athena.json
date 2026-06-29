@@ -1,8 +1,8 @@
 {
   "card_version": "1.2",
-  "agent_id": "urn:agent:openclaw:athena:athena-0-7-0",
-  "name": "OpenClaw Athena",
-  "description": "OpenClaw's multi-agent platform with governance, cognitive DNA, MAREF compliance, and autonomous research capabilities. Supports multi-agent swarm coordination, state machine governance, PII firewall, and cost budget management.",
+  "agent_id": "urn:agent:example:governance:reference-0-7-0",
+  "name": "Example Governance Agent",
+  "description": "Reference multi-agent platform with governance, cognitive DNA, MAREF compliance, and autonomous research capabilities. Supports multi-agent swarm coordination, state machine governance, PII firewall, and cost budget management.",
   "version": "0.7.0",
   "compliance": {
     "data_residency": "CN",

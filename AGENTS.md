@@ -116,7 +116,7 @@ Score: C1×0.35 + C2×0.35 + C3×0.30
 - [x] 无 T3/T2 级内容（路径/Key/IP/时间戳）— rg 扫描零命中
 - [x] `git remote -v` 为授权远程 — 无远程（仅本地）
 - [x] pre-push hook 已就位
-- [x] CI: pytest 通过 — 997 passed, 0 failed
+- [x] CI: pytest 通过 — 1139 passed, 0 failed
 - [ ] MCP 工具含 `api_version`（第十五条）— 不适用
 - [ ] 跨边界 MCP 消息含 `trace_id`/`timestamp`/`source_agent`（第十五-A条）— 不适用
 - [ ] 跨边界 MCP 调用有 `FAIL_MODE` 降级（第七条）— 不适用
@@ -124,4 +124,4 @@ Score: C1×0.35 + C2×0.35 + C3×0.30
 - [ ] 进入 Track B 前经过叙事转化（第九条）— 不适用
 - [x] 不含 T3 级内容（第十一条）— 已扫描确认
 - [ ] Agent 已注册、心跳健康（第二十六~二十八条）— 不适用
-- [ ] 宪法引用路径正确（第三十二条）— AGENTS.md 引用路径正确
+- [x] 宪法引用路径正确（第三十二条）— AGENTS.md 引用路径正确

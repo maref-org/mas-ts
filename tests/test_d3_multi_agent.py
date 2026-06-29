@@ -16,7 +16,9 @@ from mas_eval.domains.d3_multi_agent import (
     _score_persistence,
     _score_protocol,
     _score_spawn,
+    run_coordination_efficiency,
     run_d3,
+    run_plan_quality,
 )
 
 FULL_MAS_CARD = {
@@ -240,6 +242,8 @@ class TestD3:
             "isolation",
             "conflict",
             "persistence",
+            "coordination_efficiency",
+            "plan_quality",
             "federation_compat",
             "federation_role",
             "federation_permissions",
@@ -493,3 +497,173 @@ class TestPersistence:
         }
         score, findings = _score_persistence(card)
         assert score >= 60
+
+
+# ═══════════════════════════════════════════════════════════════
+# Gold Standard: Coordination Efficiency (v3.0-GA §5.1)
+# ═══════════════════════════════════════════════════════════════
+
+
+class TestCoordinationEfficiencyGold:
+    """Gold Standard coordination efficiency tests (v3.0-GA)"""
+
+    def test_coordination_minimal(self):
+        score, findings = run_coordination_efficiency([])
+        assert score == 50.0
+        assert len(findings) == 0
+
+    def test_coordination_single_message(self):
+        msgs = [
+            {
+                "message_type": "request",
+                "source_agent": "a1",
+                "target_agent": "a2",
+                "latency_ms": 500,
+                "is_coordination": True,
+                "is_waiting_response": False,
+            },
+            {"action": {"type": "tool_call"}, "latency_ms": 200},
+        ]
+        score, findings = run_coordination_efficiency(msgs)
+        assert score >= 20
+
+    def test_coordination_all_optimal(self):
+        msgs = []
+        for i in range(10):
+            msgs.append(
+                {
+                    "message_type": "request",
+                    "source_agent": f"a{i % 2}",
+                    "target_agent": f"a{(i + 1) % 2}",
+                    "latency_ms": 100,
+                    "is_coordination": True,
+                    "is_waiting_response": False,
+                }
+            )
+            msgs.append({"action": {"type": "tool_call"}, "latency_ms": 100})
+        score, findings = run_coordination_efficiency(msgs)
+        assert score >= 80
+
+    def test_coordination_high_redundancy(self):
+        msgs = [
+            {
+                "message_type": "broadcast",
+                "latency_ms": 50,
+                "is_coordination": True,
+                "is_waiting_response": False,
+            }
+            for _ in range(50)
+        ]
+        msgs.append({"action": {"type": "tool_call"}, "latency_ms": 50})
+        score, findings = run_coordination_efficiency(msgs)
+        assert score < 80
+
+    def test_coordination_slow_response(self):
+        msgs = [
+            {
+                "message_type": "request",
+                "latency_ms": 5000,
+                "is_coordination": True,
+                "is_waiting_response": True,
+            },
+            {"action": {"type": "tool_call"}, "latency_ms": 100},
+        ]
+        score, findings = run_coordination_efficiency(msgs)
+        assert score < 70
+
+
+# ═══════════════════════════════════════════════════════════════
+# Gold Standard: Plan Quality (v3.0-GA §5.2)
+# ═══════════════════════════════════════════════════════════════
+
+
+class TestPlanQualityGold:
+    """Gold Standard plan quality tests (v3.0-GA)"""
+
+    def test_plan_quality_minimal(self):
+        score, findings = run_plan_quality([])
+        assert score == 50.0
+        assert len(findings) == 0
+
+    def test_plan_quality_no_golden(self):
+        steps = [
+            {"action": {"type": "tool_call", "tool_id": "step1"}},
+            {"action": {"type": "tool_call", "tool_id": "step2"}},
+        ]
+        score, findings = run_plan_quality(steps, actual_trajectory=steps)
+        assert score < 100
+        assert score >= 0
+
+    def test_plan_quality_golden_coverage(self):
+        steps = [
+            {"action": {"type": "tool_call", "tool_id": "analyze"}},
+            {"action": {"type": "tool_call", "tool_id": "design"}},
+            {"action": {"type": "tool_call", "tool_id": "implement"}},
+            {"action": {"type": "tool_call", "tool_id": "verify"}},
+        ]
+        score, findings = run_plan_quality(steps, actual_trajectory=steps)
+        assert score >= 85
+
+    def test_plan_quality_partial_coverage(self):
+        steps = [
+            {"action": {"type": "tool_call", "tool_id": "analyze"}},
+        ]
+        all_steps = [
+            {"action": {"type": "tool_call", "tool_id": "analyze"}},
+            {"action": {"type": "tool_call", "tool_id": "design"}},
+        ]
+        score, findings = run_plan_quality(steps, actual_trajectory=all_steps)
+        assert score < 90
+        assert 0 <= score <= 100
+
+    def test_plan_quality_extra_steps(self):
+        steps = [
+            {"action": {"type": "tool_call", "tool_id": "step1"}},
+            {"action": {"type": "tool_call", "tool_id": "step2"}},
+            {"action": {"type": "tool_call", "tool_id": "step_extra"}},
+        ]
+        actual = [
+            {"action": {"type": "tool_call", "tool_id": "step1"}},
+            {"action": {"type": "tool_call", "tool_id": "step2"}},
+        ]
+        score, findings = run_plan_quality(steps, actual_trajectory=actual)
+        assert score < 100
+
+    def test_plan_quality_empty_golden(self):
+        score, findings = run_plan_quality([], actual_trajectory=[])
+        assert score == 50.0
+
+
+# ═══════════════════════════════════════════════════════════════
+# Gold Standard: D3 Composite (v3.0-GA weights)
+# ═══════════════════════════════════════════════════════════════
+
+
+class TestD3CompositeGold:
+    """Gold Standard D3 composite scoring tests (v3.0-GA)"""
+
+    GOLD_WEIGHTS = {
+        "spawn": 0.05,
+        "protocol": 0.10,
+        "orchestration": 0.10,
+        "isolation": 0.10,
+        "conflict": 0.15,
+        "persistence": 0.10,
+        "coordination_efficiency": 0.22,
+        "plan_quality": 0.18,
+    }
+
+    def test_d3_gold_weights_sum_to_1(self):
+        total = sum(self.GOLD_WEIGHTS.values())
+        assert abs(total - 1.0) < 0.01
+
+    def test_d3_gold_run_with_coordination(self):
+        card = FULL_MAS_CARD
+        result = run_d3(card)
+        assert "score" in result
+        assert 0 <= result["score"] <= 100
+
+    def test_d3_gold_run_without_coordination(self):
+        card = FULL_MAS_CARD
+        result = run_d3(card)
+        assert "score" in result

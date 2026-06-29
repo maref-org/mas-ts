@@ -1,14 +1,18 @@
 # MAS-TS-001 Evaluation Harness
 
-**Version**: v0.1.0 | **Standard**: MAS-TS-001 v3.0 | **License**: Apache-2.0
+**Version**: v0.5.0 | **Standard**: MAS-TS-001 v3.0 | **License**: Apache-2.0
 
 Fast-Screen and Full-Run evaluation pipeline for multi-agent systems.
+
+[![Test Suite](https://github.com/anomalyco/mas-ts/actions/workflows/test.yml/badge.svg)](https://github.com/anomalyco/mas-ts/actions/workflows/test.yml)
+[![Type Check](https://github.com/anomalyco/mas-ts/actions/workflows/type-check.yml/badge.svg)](https://github.com/anomalyco/mas-ts/actions/workflows/type-check.yml)
+[![Security Scan](https://github.com/anomalyco/mas-ts/actions/workflows/security-scan.yml/badge.svg)](https://github.com/anomalyco/mas-ts/actions/workflows/security-scan.yml)
 
 ## Quick Start
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+pip install -e ".[ml,dev]"
 pytest tests/ -v
 ```
 
@@ -81,10 +85,16 @@ python mas_full_run.py --card <card.json> --level all   # runs L0 → L1 → L2 
 ## Test
 
 ```bash
-pytest tests/ -v           # 806 tests
-pytest --cov               # 94% coverage
+pytest tests/ -v           # 1139 tests (37 files)
+pytest --cov               # 94.16% coverage (gate: 85%)
+mypy mas_eval/ --strict    # 0 type errors
+ruff check mas_eval/       # 0 lint errors
 ```
 
 ## Docs
 
-Architecture documentation and audit reports: 内部知识库中 Agent 测试平台项目文档
+- `docs/api-contracts.md` — CLI + Python API contract documentation
+- `docs/release-gate.md` — Release gate checklist
+- `docs/operations-readiness.md` — Runbook and ops procedures
+- `docs/plans/` — Audit and remediation plans
+- `产品级发布全量验收标准与评审流程手册.md` — Full release acceptance handbook

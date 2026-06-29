@@ -9,8 +9,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent.resolve()))
 from mas_eval.domains.d4_governance_security import (
+    D4_WEIGHTS,
     FEDERATION_WEIGHTS,
+    GossipTrustProtocol,
     TrustScorer,
+    _score_gossip_trust,
     check_mcp_supply_chain,
     check_trust_score,
     check_vendor_diversity,
@@ -238,6 +241,13 @@ class TestTrustScorer:
         score = ts.score()
         assert score > 0.5
 
+    def test_with_object_base_score(self):
+        ts = TrustScorer(
+            trust_score={"value": 0.9, "evaluated_by": "urn:agent:mas-ts:evaluator"}
+        )
+        score = ts.score()
+        assert score > 0.5
+
     def test_with_history(self):
         history = [
             {"timestamp": "2026-06-01T00:00:00Z", "score": 0.5, "source": "self"},
@@ -363,6 +373,34 @@ class TestCheckTrustScore:
         score, findings = check_trust_score(FED_CARD)
         assert score > 50
         assert any("Trust score" in f["detail"] for f in findings)
+
+    def test_with_object_trust_score(self):
+        card = dict(FED_CARD)
+        card["federation"] = dict(FED_CARD["federation"])
+        card["federation"]["trust_score"] = {
+            "value": 0.85,
+            "evaluated_by": "urn:agent:mas-ts:evaluator",
+        }
+        score, findings = check_trust_score(card)
+        assert score > 50
+        assert any("Reputation baseline" in f["detail"] for f in findings)
+
+    def test_object_trust_score_reports_evaluator(self):
+        card = dict(FED_CARD)
+        card["federation"] = dict(FED_CARD["federation"])
+        card["federation"]["trust_score"] = {
+            "value": 0.85,
+            "evaluated_by": "urn:agent:mas-ts:evaluator",
+        }
+        score, findings = check_trust_score(card)
+        assert any("evaluated by" in f["detail"] for f in findings)
+
+    def test_object_trust_score_missing_evaluator_warns(self):
+        card = dict(FED_CARD)
+        card["federation"] = dict(FED_CARD["federation"])
+        card["federation"]["trust_score"] = {"value": 0.85}
+        score, findings = check_trust_score(card)
+        assert any(f["severity"] == "HIGH" for f in findings)
 
     def test_trend_improving(self):
         card = {
@@ -582,13 +620,18 @@ class TestRunD4Federation:
     def test_weighted_score(self):
         result = run_d4_federation([FED_CARD])
         expected_weighted = (
-            result["subscores"]["trust"] * FEDERATION_WEIGHTS["trust_scorer"]
+            result["subscores"]["trust"] * FEDERATION_WEIGHTS["trust"]
             + result["subscores"]["vendor_diversity"]
             * FEDERATION_WEIGHTS["vendor_diversity"]
             + result["subscores"]["mcp_supply_chain"]
             * FEDERATION_WEIGHTS["mcp_supply_chain"]
+            + result["subscores"]["gossip_trust"] * FEDERATION_WEIGHTS["gossip_trust"]
         )
         assert abs(result["score"] - expected_weighted) < 1.0
+
+    def test_federation_weights_include_all_subscores(self):
+        result = run_d4_federation([FED_CARD])
+        assert set(result["subscores"]) == set(FEDERATION_WEIGHTS)
 
     def test_findings_present(self):
         result = run_d4_federation([FED_CARD])
@@ -611,24 +654,150 @@ class TestRunD4FederationIntegration:
         assert "trust" in result["subscores"]
         assert "vendor_diversity" in result["subscores"]
         assert "mcp_supply_chain" in result["subscores"]
+        assert "gossip_trust" in result["subscores"]
 
     def test_federation_section_present(self):
         result = run_d4(FED_CARD)
         assert "trust_score" in result["federation"]
         assert "vendor_diversity" in result["federation"]
         assert "mcp_supply_chain" in result["federation"]
+        assert "gossip_trust" in result["federation"]
         assert "findings" in result["federation"]
+
+    def test_d4_weights_sum_to_one(self):
+        assert sum(D4_WEIGHTS.values()) == 1.0
 
     def test_new_weights_applied(self):
         result = run_d4(FED_CARD)
         gov = result["governance"]["score"]
         sec = result["security"]["score"]
+        action = result["subscores"].get("action_safety", 0)
         trust = result["subscores"]["trust"]
         vendor = result["subscores"]["vendor_diversity"]
         mcp = result["subscores"]["mcp_supply_chain"]
-        expected = gov * 0.50 + sec * 0.15 + trust * 0.20 + vendor * 0.05 + mcp * 0.10
+        gossip = result["subscores"]["gossip_trust"]
+        expected = (
+            gov * D4_WEIGHTS["governance"]
+            + sec * D4_WEIGHTS["security"]
+            + action * D4_WEIGHTS.get("action_safety", 0.08)
+            + trust * D4_WEIGHTS["trust"]
+            + vendor * D4_WEIGHTS["vendor_diversity"]
+            + mcp * D4_WEIGHTS["mcp_supply_chain"]
+            + gossip * D4_WEIGHTS["gossip_trust"]
+        )
         assert abs(result["score"] - expected) < 0.1
 
     def test_with_federation_cards_param(self):
         result = run_d4(FED_CARD, federation_cards=[VENDOR_A_CARD, VENDOR_B_CARD])
         assert result["score"] >= 0
+
+
+class TestGossipTrustProtocol:
+    def test_init_defaults(self):
+        gtp = GossipTrustProtocol()
+        assert gtp.n == 5
+        assert len(gtp.trust) == 5
+        assert len(gtp.trust[0]) == 5
+
+    def test_init_custom_agents(self):
+        gtp = GossipTrustProtocol(agents=["a", "b"])
+        assert gtp.n == 2
+        assert gtp.agents == ["a", "b"]
+
+    def test_self_trust_accurate(self):
+        gtp = GossipTrustProtocol()
+        for i in range(gtp.n):
+            name = gtp.agents[i]
+            assert gtp.trust[i][i] == gtp.ground_truth[name]
+
+    def test_add_malicious(self):
+        gtp = GossipTrustProtocol()
+        assert len(gtp.malicious) == 0
+        gtp.add_malicious(0)
+        assert 0 in gtp.malicious
+
+    def test_round_reduces_variance(self):
+        gtp = GossipTrustProtocol(seed=42)
+        initial_var = gtp.trust_variance()
+        for _ in range(10):
+            gtp.round()
+        later_var = gtp.trust_variance()
+        assert later_var < initial_var
+
+    def test_convergence_reduces_variance(self):
+        gtp = GossipTrustProtocol(seed=42)
+        rounds = gtp.run_until_convergence(max_rounds=100)
+        assert rounds <= 100
+        assert gtp.trust_variance() < 0.001
+
+    def test_accuracy_after_convergence(self):
+        gtp = GossipTrustProtocol(seed=42)
+        gtp.run_until_convergence()
+        accuracy = gtp.consensus_accuracy()
+        assert 0.0 <= accuracy <= 1.0
+        assert accuracy > 0.8
+
+    def test_malicious_detection_no_malicious(self):
+        gtp = GossipTrustProtocol(seed=42)
+        score = gtp.malicious_detection_score()
+        assert score == 1.0
+
+    def test_malicious_detection_with_malicious(self):
+        gtp = GossipTrustProtocol(seed=42)
+        gtp.add_malicious(4)
+        gtp.run_until_convergence()
+        score = gtp.malicious_detection_score()
+        assert 0.0 <= score <= 1.0
+
+    def test_reset_clears_state(self):
+        gtp = GossipTrustProtocol(seed=42)
+        gtp.run_until_convergence()
+        gtp.reset()
+        assert gtp.rounds_run == 0
+        assert gtp.converged_at is None
+        assert len(gtp.malicious) == 0
+
+    def test_reproducible_seed(self):
+        gtp1 = GossipTrustProtocol(seed=42)
+        gtp2 = GossipTrustProtocol(seed=42)
+        gtp1.run_until_convergence()
+        gtp2.run_until_convergence()
+        assert gtp1.rounds_run == gtp2.rounds_run
+        assert gtp1.consensus_accuracy() == gtp2.consensus_accuracy()
+
+
+class TestScoreGossipTrust:
+    def test_score_range(self):
+        score, findings = _score_gossip_trust()
+        assert 0 <= score <= 100
+
+    def test_has_findings(self):
+        score, findings = _score_gossip_trust()
+        assert len(findings) > 0
+
+    def test_findings_have_correct_structure(self):
+        score, findings = _score_gossip_trust()
+        for f in findings:
+            assert "severity" in f
+            assert "category" in f
+            assert "detail" in f
+
+    def test_clean_gossip_finding(self):
+        score, findings = _score_gossip_trust()
+        clean = [f for f in findings if f["category"] == "gossip_clean"]
+        assert len(clean) == 1
+
+    def test_malicious_gossip_finding(self):
+        score, findings = _score_gossip_trust()
+        mal = [f for f in findings if f["category"] == "gossip_malicious"]
+        assert len(mal) == 1
+
+    def test_summary_finding(self):
+        score, findings = _score_gossip_trust()
+        summary = [f for f in findings if f["category"] == "gossip_summary"]
+        assert len(summary) == 1
+
+    def test_reproducible_score(self):
+        s1, _ = _score_gossip_trust(seed=42)
+        s2, _ = _score_gossip_trust(seed=42)
+        assert s1 == s2
