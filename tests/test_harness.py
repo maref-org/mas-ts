@@ -51,6 +51,12 @@ SAMPLE_CARD = {
             "output_schema": {},
             "examples": ["ls"],
             "business_rule_version": "2026-05-01",
+            # v0.8.0 D1.14: declare sub_permissions for high-risk capabilities
+            "sub_permissions": {
+                "env_read": "bash can read environment variables (declared)",
+                "timezone_read": "bash can read timezone info (declared)",
+                "network_access": "bash can make network calls (declared)",
+            },
         },
         {
             "skill_id": "file_read",
@@ -59,6 +65,10 @@ SAMPLE_CARD = {
             "output_schema": {},
             "examples": ["read"],
             "business_rule_version": "2026-05-01",
+            "sub_permissions": {
+                "system_files": "file_read can access /etc, /proc, /sys (declared)",
+                "credential_files": "file_read can access ~/.ssh, ~/.aws (declared)",
+            },
         },
         {
             "skill_id": "file_edit",
@@ -67,6 +77,10 @@ SAMPLE_CARD = {
             "output_schema": {},
             "examples": ["edit"],
             "business_rule_version": "2026-05-01",
+            "sub_permissions": {
+                "system_files": "file_edit can modify /etc, /proc, /sys (declared)",
+                "credential_files": "file_edit can modify ~/.ssh, ~/.aws (declared)",
+            },
         },
         {
             "skill_id": "file_write",
@@ -188,6 +202,44 @@ class TestRunL0FastScreen:
         r2 = run_l0_fast_screen(SAMPLE_CARD)
         assert r1["status"] == r2["status"]
 
+    # ═══════════════════════════════════════════════════════════
+    # T1: Gold Standard L0 StepEfficiency gate — hard FAIL
+    # ═══════════════════════════════════════════════════════════
+    def test_step_efficiency_returns_fail_on_poor_score(self):
+        """A5: L0 step_efficiency returns FAIL (not WARNING) when <50."""
+        traj = [
+            {"action": {"type": "tool_call", "tool_id": "grep", "input": {}}}
+            for _ in range(200)
+        ]  # 200 steps → very poor efficiency
+        result = run_l0_fast_screen(SAMPLE_CARD, tasks=traj)
+        for stage in result["stages"]:
+            if stage["stage"] == "step_efficiency":
+                assert stage["status"] == "FAIL", (
+                    f"Expected FAIL for poor efficiency, got {stage['status']}"
+                )
+
+    def test_step_efficiency_passes_with_optimal_trajectory(self):
+        """Gold Standard L0: optimal step efficiency returns PASS.
+
+        A single tool call is optimal: optimality=1.0 (1 step vs expected 1),
+        redundancy=1.0 (no consecutive repeats), revisit=1.0 (no revisits).
+        Score = 1.0*40 + 1.0*30 + 1.0*30 = 100.0 ≥ 50 → PASS.
+        """
+        traj = [{"action": {"type": "tool_call", "tool_id": "grep", "input": {}}}]
+        result = run_l0_fast_screen(SAMPLE_CARD, tasks=traj)
+        for stage in result["stages"]:
+            if stage["stage"] == "step_efficiency" and stage["status"] != "SKIP":
+                assert stage["status"] == "PASS", (
+                    f"Expected PASS for optimal efficiency, got {stage['status']}"
+                )
+
+    def test_l0_threshold_check_present(self):
+        """L0 result includes threshold_check for CI gate."""
+        result = run_l0_fast_screen(SAMPLE_CARD)
+        assert "threshold_check" in result
+        assert isinstance(result["threshold_check"], dict)
+        assert "overall_pass" in result["threshold_check"]
+
 
 class TestRunL1Standard:
     def test_returns_dict(self):
@@ -252,6 +304,23 @@ class TestRunL2Deep:
         r = run_l2_deep(SAMPLE_CARD)
         assert 0 <= r["score"] <= 100
 
+    # ═══════════════════════════════════════════════════════════
+    # T4: Gold Standard threshold_compliance in L2
+    # ═══════════════════════════════════════════════════════════
+    def test_gold_standard_has_threshold_compliance(self):
+        """A3: L2 gold_standard includes threshold_compliance check."""
+        r = run_l2_deep(SAMPLE_CARD)
+        gs = r.get("gold_standard", {})
+        assert "threshold_compliance" in gs, (
+            "L2 result missing gold_standard.threshold_compliance"
+        )
+        tc = gs["threshold_compliance"]
+        assert tc["level"] == "L2"
+        assert "overall_pass" in tc
+        assert "passed_count" in tc
+        assert "total_count" in tc
+        assert "metrics" in tc
+
 
 class TestRunL3Comprehensive:
     def test_returns_dict(self):
@@ -278,6 +347,50 @@ class TestRunL3Comprehensive:
         r = run_l3_comprehensive(SAMPLE_CARD)
         assert 0 <= r["domain_scores"]["d5"] <= 100
 
+    # ═══════════════════════════════════════════════════════════
+    # T2: ConsistencyIndex from multi-run trajectories
+    # T3: Attribution report from v2 findings
+    # T4: Threshold compliance check
+    # ═══════════════════════════════════════════════════════════
+
+    def test_gold_standard_has_consistency_index_with_trajectories(self):
+        """S1/S3: L3 returns non-None consistency_index when trajectories
+        are provided, triggering the 5-weight D5 formula."""
+        event = {"action": {"type": "tool_call", "tool_id": "file_read", "input": {}}}
+        r = run_l3_comprehensive(
+            SAMPLE_CARD,
+            golden_trajectory=[event] * 3,
+            mock_trajectory=[event] * 2,
+        )
+        gs = r.get("gold_standard", {})
+        ci = gs.get("consistency_index")
+        assert ci is not None, (
+            "L3 consistency_index should be non-None when both "
+            "golden and mock trajectories are provided"
+        )
+
+    def test_attribution_report_present(self):
+        """A1: L3 result includes attribution_report for Bad-Case Attribution."""
+        r = run_l3_comprehensive(SAMPLE_CARD)
+        assert "attribution_report" in r, "L3 missing attribution_report"
+        ar = r["attribution_report"]
+        assert "total_findings" in ar
+        assert "by_root_cause" in ar
+        assert "by_layer" in ar
+
+    def test_gold_standard_has_threshold_compliance(self):
+        """A3: L3 gold_standard includes threshold_compliance check."""
+        r = run_l3_comprehensive(SAMPLE_CARD)
+        gs = r.get("gold_standard", {})
+        assert "threshold_compliance" in gs, (
+            "L3 result missing gold_standard.threshold_compliance"
+        )
+        tc = gs["threshold_compliance"]
+        assert tc["level"] == "L3"
+        assert "overall_pass" in tc
+        assert "passed_count" in tc
+        assert "total_count" in tc
+
 
 class TestRunL4Evolution:
     def test_returns_dict(self):
@@ -300,6 +413,16 @@ class TestRunL4Evolution:
         r = run_l4_evolution()
         assert isinstance(r["findings"], list)
         assert len(r["findings"]) > 0
+
+    def test_attribution_report_present(self):
+        """A1: L4 result includes attribution_report for Bad-Case Attribution."""
+        r = run_l4_evolution()
+        assert "attribution_report" in r, "L4 missing attribution_report"
+        ar = r["attribution_report"]
+        assert "total_findings" in ar
+        assert ar["total_findings"] > 0
+        assert "by_root_cause" in ar
+        assert "by_layer" in ar
 
 
 class TestTasksParameterDeprecation:

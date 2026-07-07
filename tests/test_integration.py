@@ -54,6 +54,12 @@ SAMPLE_CARD = {
             "output_schema": {},
             "examples": ["ls"],
             "business_rule_version": "2026-05-01",
+            # v0.8.0 D1.14: declare sub_permissions for high-risk capabilities
+            "sub_permissions": {
+                "env_read": "bash can read environment variables (declared)",
+                "timezone_read": "bash can read timezone info (declared)",
+                "network_access": "bash can make network calls (declared)",
+            },
         },
         {
             "skill_id": "file_read",
@@ -62,6 +68,10 @@ SAMPLE_CARD = {
             "output_schema": {},
             "examples": ["read"],
             "business_rule_version": "2026-05-01",
+            "sub_permissions": {
+                "system_files": "file_read can access /etc, /proc, /sys (declared)",
+                "credential_files": "file_read can access ~/.ssh, ~/.aws (declared)",
+            },
         },
         {
             "skill_id": "file_edit",
@@ -70,6 +80,10 @@ SAMPLE_CARD = {
             "output_schema": {},
             "examples": ["edit"],
             "business_rule_version": "2026-05-01",
+            "sub_permissions": {
+                "system_files": "file_edit can modify /etc, /proc, /sys (declared)",
+                "credential_files": "file_edit can modify ~/.ssh, ~/.aws (declared)",
+            },
         },
         {
             "skill_id": "file_write",
@@ -292,7 +306,7 @@ class TestL3Pipeline:
 
     def test_l3_has_verdict(self):
         result = run_l3_comprehensive(SAMPLE_CARD)
-        assert result["verdict"] in ("APPROVED", "CONDITIONAL", "BLOCKED")
+        assert result["verdict"] in ("GOLD", "SILVER", "BRONZE", "FAIL")
 
 
 class TestCLIEntryPoints:

@@ -6,9 +6,20 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).parent.parent.resolve()))
 
 from mas_eval.oracle.env import check_docker, check_playwright, check_stress_ng
+
+# Detect playwright availability for conditional test skipping
+_playwright_available = False
+try:
+    import playwright  # noqa: F401
+
+    _playwright_available = True
+except ImportError:
+    pass
 
 
 class TestCheckDockerEdgeCases:
@@ -68,6 +79,10 @@ class TestCheckPlaywrightEdgeCases:
         assert ok is False
         assert "not installed" in msg
 
+    @pytest.mark.skipif(
+        _playwright_available is False,
+        reason="playwright package not installed in this environment",
+    )
     def test_playwright_installed_returns_true(self):
         ok, msg = check_playwright()
         assert ok is True

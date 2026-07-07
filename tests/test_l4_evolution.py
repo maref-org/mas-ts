@@ -85,12 +85,22 @@ class TestRunL4EvolutionMultiEpoch:
             card: dict[str, Any] | None = None,
             seed: int | None = None,
             verifier_registry: Any = None,
+            multi_run_trajectories: list[dict[str, Any]] | None = None,
         ) -> dict[str, Any]:
             return {
                 "domain": "D5",
                 "score": 90.0,
                 "findings": [FINDING],
                 "summary": "stable warning",
+                "subscores": {
+                    "chaos_engineering": 90.0,
+                    "drift_detection": 90.0,
+                    "reflection_loop": 90.0,
+                    "convergence_cycle": 90.0,
+                    "consistency_index": 0.0,
+                },
+                "consistency_index_detail": {},
+                "consistency_index_enabled": False,
             }
 
         monkeypatch.setattr("mas_eval.harness.l4_evolution.run_d5", fake_run_d5)
@@ -100,3 +110,65 @@ class TestRunL4EvolutionMultiEpoch:
         assert r["score"] == 90.0
         assert r["domain_scores"]["d5"] == 90.0
         assert len(r["findings"]) == 3
+
+
+class TestRunL4EvolutionGoldStandardTrends:
+    """Gold Standard v3.0-GA §9.2/§11 — L4 trend + meta-evaluation coverage."""
+
+    def test_trends_block_present(self):
+        r = run_l4_evolution(max_epochs=3)
+        assert "trends" in r
+        for key in ("cost_trend", "ci_trend", "trust_trend"):
+            assert key in r["trends"], f"missing trend: {key}"
+
+    def test_trend_lengths_match_epoch_count(self):
+        r = run_l4_evolution(max_epochs=3, convergence_delta=0.0)
+        n = r["epoch_count"]
+        assert len(r["trends"]["cost_trend"]) == n
+        assert len(r["trends"]["ci_trend"]) == n
+        assert len(r["trends"]["trust_trend"]) == n
+
+    def test_meta_evaluation_has_5_dimensions(self):
+        r = run_l4_evolution(max_epochs=3)
+        meta = r["meta_evaluation"]
+        for dim in (
+            "reproducibility",
+            "discriminability",
+            "robustness",
+            "efficiency",
+            "anti_cheat",
+        ):
+            assert dim in meta, f"missing meta-eval dimension: {dim}"
+        assert "overall" in meta
+        assert "low_confidence" in meta
+        assert "eval_runs_count" in meta  # backward compat
+
+    def test_meta_evaluation_overall_not_none(self):
+        r = run_l4_evolution(max_epochs=3)
+        assert r["meta_evaluation"]["overall"] is not None
+        assert isinstance(r["meta_evaluation"]["overall"], float)
+
+    def test_cost_trend_5_epochs(self):
+        r = run_l4_evolution(max_epochs=5, convergence_delta=0.0)
+        # convergence_delta=0 forces all 5 epochs (no early break)
+        assert len(r["trends"]["cost_trend"]) == 5
+
+    def test_ci_trend_each_epoch_has_value(self):
+        r = run_l4_evolution(max_epochs=3, convergence_delta=0.0)
+        for entry in r["trends"]["ci_trend"]:
+            assert "epoch" in entry
+            assert "ci" in entry
+            assert isinstance(entry["ci"], float)
+
+    def test_trust_trend_each_epoch_has_value(self):
+        r = run_l4_evolution(max_epochs=3, convergence_delta=0.0)
+        for entry in r["trends"]["trust_trend"]:
+            assert "epoch" in entry
+            assert "trust" in entry
+            assert isinstance(entry["trust"], float)
+
+    def test_declining_flags_are_booleans(self):
+        r = run_l4_evolution(max_epochs=3, convergence_delta=0.0)
+        assert isinstance(r["trends"]["cost_declining"], bool)
+        assert isinstance(r["trends"]["ci_declining"], bool)
+        assert isinstance(r["trends"]["trust_declining"], bool)

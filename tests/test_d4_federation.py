@@ -665,7 +665,8 @@ class TestRunD4FederationIntegration:
         assert "findings" in result["federation"]
 
     def test_d4_weights_sum_to_one(self):
-        assert sum(D4_WEIGHTS.values()) == 1.0
+        # Use tolerance for floating-point summation (0.35+0.11+0.07+0.07+0.05+fed = 1.0±ε)
+        assert abs(sum(D4_WEIGHTS.values()) - 1.0) < 1e-9
 
     def test_new_weights_applied(self):
         result = run_d4(FED_CARD)
@@ -676,6 +677,8 @@ class TestRunD4FederationIntegration:
         vendor = result["subscores"]["vendor_diversity"]
         mcp = result["subscores"]["mcp_supply_chain"]
         gossip = result["subscores"]["gossip_trust"]
+        dl = result["subscores"].get("data_leakage", 0)
+        hitl = result["subscores"].get("hitl_gate", 0)
         expected = (
             gov * D4_WEIGHTS["governance"]
             + sec * D4_WEIGHTS["security"]
@@ -684,6 +687,8 @@ class TestRunD4FederationIntegration:
             + vendor * D4_WEIGHTS["vendor_diversity"]
             + mcp * D4_WEIGHTS["mcp_supply_chain"]
             + gossip * D4_WEIGHTS["gossip_trust"]
+            + dl * D4_WEIGHTS.get("data_leakage", 0.07)
+            + hitl * D4_WEIGHTS.get("hitl_gate", 0.05)
         )
         assert abs(result["score"] - expected) < 0.1
 

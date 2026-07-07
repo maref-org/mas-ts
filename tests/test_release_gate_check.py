@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Tests for executable release gate checklist (Phase 7.1).
 
-Verifies `scripts/release_gate_check.py` exposes a deterministic list of 10
+Verifies `scripts/release_gate_check.py` exposes a deterministic list of 12
 gate items, each with required metadata, and supports both auto and manual
 checks.
 
@@ -53,10 +53,10 @@ def results(rgc):
 
 
 class TestReleaseGateStructure:
-    def test_gate_items_count_is_ten(self, rgc):
+    def test_gate_items_count_is_twelve(self, rgc):
         items = rgc.GATE_ITEMS
-        assert len(items) == 10, (
-            f"Expected 10 gate items, got {len(items)}: {[i.get('id') for i in items]}"
+        assert len(items) == 12, (
+            f"Expected 12 gate items, got {len(items)}: {[i.get('id') for i in items]}"
         )
 
     def test_each_gate_has_required_fields(self, rgc):
@@ -94,6 +94,8 @@ class TestReleaseGateStructure:
             "G3.1",
             "G3.2",
             "G3.3",
+            "G3.4",
+            "G3.5",
         }
         assert {i["id"] for i in rgc.GATE_ITEMS} == expected_ids
 
@@ -116,7 +118,7 @@ class TestReleaseGateRun:
     @pytest.mark.slow
     def test_run_all_returns_list_of_results(self, results):
         assert isinstance(results, list)
-        assert len(results) == 10
+        assert len(results) == 12
 
     @pytest.mark.slow
     def test_result_has_required_fields(self, results):
@@ -146,8 +148,8 @@ class TestReleaseGateSummary:
     @pytest.mark.slow
     def test_summary_counts_total_matches_gate_count(self, rgc, results):
         summary = rgc.summarize(results)
-        assert summary["total"] == 10
-        assert summary["pass"] + summary["fail"] + summary["manual"] == 10
+        assert summary["total"] == 12
+        assert summary["pass"] + summary["fail"] + summary["manual"] == 12
 
     @pytest.mark.slow
     def test_summary_has_expected_keys(self, rgc, results):

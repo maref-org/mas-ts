@@ -219,6 +219,7 @@ def test_d2_full():
         "e2e_scenarios",
         "step_efficiency",
         "trajectory_quality",
+        "latency_pressure",
         "tool_selection_correctness",
     }
 
@@ -597,7 +598,7 @@ def test_tool_selection_correctness_warning():
 
 
 def test_d2_gold_subscores_present():
-    """Gold Standard run_d2 returns all 7 subscores."""
+    """Gold Standard run_d2 returns all 8 subscores (incl. latency_pressure)."""
     result = run_d2(FULL_CARD)
     expected_subs = [
         "model_quality",
@@ -606,6 +607,7 @@ def test_d2_gold_subscores_present():
         "e2e_scenarios",
         "step_efficiency",
         "trajectory_quality",
+        "latency_pressure",
         "tool_selection_correctness",
     ]
     for sub in expected_subs:

@@ -410,16 +410,18 @@ class TestRunD5Part1:
     def test_weights_field_exposed(self):
         result = run_d5_part1()
         assert "weights" in result
-        assert result["weights"] == {"chaos_engineering": 0.30, "drift_detection": 0.25}
+        # Gold Standard §7.4 — part1 weights mirror run_d5's 5-weight formula
+        # (chaos 0.25, drift 0.20) for consistency with the unified score.
+        assert result["weights"] == {"chaos_engineering": 0.25, "drift_detection": 0.20}
 
     def test_weights_sum_is_part1_share(self):
         result = run_d5_part1()
         total = sum(result["weights"].values())
-        assert abs(total - 0.55) < 0.001
+        assert abs(total - 0.45) < 0.001
 
     def test_weighted_contribution_below_part_share_max(self):
         result = run_d5_part1()
-        assert result["weighted_contribution"] <= 55.0 + 0.001
+        assert result["weighted_contribution"] <= 45.0 + 0.001
 
     def test_score_kind_is_explicit_not_zero_to_hundred(self):
         result = run_d5_part1()
@@ -429,8 +431,8 @@ class TestRunD5Part1:
     def test_combined_score_reasonableness(self):
         result = run_d5_part1()
         expected = round(
-            result["subscores"]["chaos_engineering"] * 0.30
-            + result["subscores"]["drift_detection"] * 0.25,
+            result["subscores"]["chaos_engineering"] * 0.25
+            + result["subscores"]["drift_detection"] * 0.20,
             1,
         )
         assert result["score"] == expected
@@ -766,16 +768,18 @@ class TestRunD5Part2:
     def test_weights_field_exposed(self):
         result = run_d5_part2()
         assert "weights" in result
-        assert result["weights"] == {"reflection_loop": 0.20, "convergence_cycle": 0.25}
+        # Gold Standard §7.4 — part2 weights mirror run_d5's 5-weight formula
+        # (reflection 0.15, convergence 0.20) for consistency with the unified score.
+        assert result["weights"] == {"reflection_loop": 0.15, "convergence_cycle": 0.20}
 
     def test_weights_sum_is_part2_share(self):
         result = run_d5_part2()
         total = sum(result["weights"].values())
-        assert abs(total - 0.45) < 0.001
+        assert abs(total - 0.35) < 0.001
 
     def test_weighted_contribution_below_part_share_max(self):
         result = run_d5_part2()
-        assert result["weighted_contribution"] <= 45.0 + 0.001
+        assert result["weighted_contribution"] <= 35.0 + 0.001
 
 
 class TestRunD5:
@@ -794,6 +798,7 @@ class TestRunD5:
             "drift_detection",
             "reflection_loop",
             "convergence_cycle",
+            "consistency_index",
         }
         assert expected == set(result["subscores"].keys())
 
@@ -835,6 +840,70 @@ class TestRunD5:
         assert r1["score"] == r2["score"]
         assert r1["subscores"] == r2["subscores"]
 
+    def test_consistency_index_default_zero_without_trajectories(self):
+        """Gold Standard §7.4: run_d5 without multi_run_trajectories must
+        expose ``consistency_index`` as 0.0 and use the legacy 4-weight
+        formula so existing consumers keep working."""
+        result = run_d5()
+        assert result["subscores"]["consistency_index"] == 0.0
+        assert result["consistency_index_enabled"] is False
+        # 4-weight legacy formula
+        expected = (
+            result["subscores"]["chaos_engineering"] * 0.30
+            + result["subscores"]["drift_detection"] * 0.25
+            + result["subscores"]["reflection_loop"] * 0.20
+            + result["subscores"]["convergence_cycle"] * 0.25
+        )
+        assert result["score"] == pytest.approx(expected, abs=0.1)
+
+    def test_consistency_index_nonzero_with_trajectories(self):
+        """Gold Standard §7.4: when ≥2 multi-run trajectories are supplied,
+        the ConsistencyIndex is computed and the 5-weight formula is used."""
+        runs = [
+            {
+                "result": {"status": "ok", "value": 1},
+                "elapsed_seconds": 10.0,
+                "events": [
+                    {"action": {"type": "tool_call", "tool_id": "a"}},
+                    {"action": {"type": "tool_call", "tool_id": "b"}},
+                ],
+            },
+            {
+                "result": {"status": "ok", "value": 1},
+                "elapsed_seconds": 10.5,
+                "events": [
+                    {"action": {"type": "tool_call", "tool_id": "a"}},
+                    {"action": {"type": "tool_call", "tool_id": "b"}},
+                ],
+            },
+            {
+                "result": {"status": "ok", "value": 1},
+                "elapsed_seconds": 10.2,
+                "events": [
+                    {"action": {"type": "tool_call", "tool_id": "a"}},
+                    {"action": {"type": "tool_call", "tool_id": "b"}},
+                ],
+            },
+        ]
+        result = run_d5(multi_run_trajectories=runs)
+        assert result["subscores"]["consistency_index"] > 0.0
+        assert result["consistency_index_enabled"] is True
+        assert result["consistency_index_detail"]  # non-empty dims
+        # 5-weight formula
+        expected = (
+            result["subscores"]["chaos_engineering"] * 0.25
+            + result["subscores"]["drift_detection"] * 0.20
+            + result["subscores"]["reflection_loop"] * 0.15
+            + result["subscores"]["convergence_cycle"] * 0.20
+            + result["subscores"]["consistency_index"] * 0.20
+        )
+        assert result["score"] == pytest.approx(expected, abs=0.1)
+        # CI finding should be present
+        ci_findings = [
+            f for f in result["findings"] if f["category"] == "consistency_index"
+        ]
+        assert len(ci_findings) == 1
+
 
 class TestCHAOSWEIGHTS:
     def test_weights_sum_to_one(self):
@@ -868,17 +937,17 @@ class TestFederationCircuitBreaker:
 
     def test_reset_all(self):
         fcb = FederationCircuitBreaker()
-        fcb._trip_breaker("claude_code")
-        assert fcb.agent_states["claude_code"] == "OPEN"
+        fcb._trip_breaker("vendor_a")
+        assert fcb.agent_states["vendor_a"] == "OPEN"
         fcb.reset_all()
-        assert fcb.agent_states["claude_code"] == "CLOSED"
+        assert fcb.agent_states["vendor_a"] == "CLOSED"
         assert fcb.cascade_history == []
 
     def test_trip_breaker(self):
         fcb = FederationCircuitBreaker()
-        fcb._trip_breaker("opencode")
-        assert fcb.agent_states["opencode"] == "OPEN"
-        assert fcb.agent_failures["opencode"] == 3
+        fcb._trip_breaker("vendor_d")
+        assert fcb.agent_states["vendor_d"] == "OPEN"
+        assert fcb.agent_failures["vendor_d"] == 3
 
     def test_default_mesh_size(self):
         fcb = FederationCircuitBreaker(agent_names=["a", "b", "c"])
@@ -903,7 +972,7 @@ class TestFederationCircuitBreaker:
         result = fcb.trigger(0)
         assert result["cascade_depth"] >= 0
         assert result["affected_count"] >= 1
-        assert result["cascade_path"][0][0] == "claude_code"
+        assert result["cascade_path"][0][0] == "vendor_a"
 
     def test_trigger_cascade_path_structure(self):
         fcb = FederationCircuitBreaker()
@@ -918,7 +987,7 @@ class TestFederationCircuitBreaker:
     def test_trigger_agent_state_changed(self):
         fcb = FederationCircuitBreaker()
         fcb.trigger(4)
-        assert fcb.agent_states["trae_cn"] == "OPEN"
+        assert fcb.agent_states["vendor_e"] == "OPEN"
 
     def test_cascade_metrics_empty(self):
         fcb = FederationCircuitBreaker()
@@ -965,7 +1034,7 @@ class TestFederationCircuitBreaker:
         fcb = FederationCircuitBreaker()
         fcb.trigger(4)
         fcb.reset_all()
-        assert fcb.agent_states["trae_cn"] == "CLOSED"
+        assert fcb.agent_states["vendor_e"] == "CLOSED"
 
 
 class TestScoreFederationCascade:

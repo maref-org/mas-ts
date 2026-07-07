@@ -12,8 +12,11 @@ sys.path.insert(0, str(Path(__file__).parent.parent.resolve()))
 
 from mas_eval.domains.d1_compliance import (
     CORE_TOOLS,
+    HIGH_RISK_CAPABILITIES,
+    REQUIRED_SUB_PERMISSIONS,
     check_authentication,
     check_capabilities_completeness,
+    check_capability_declaration_completeness,
     check_cross_border,
     check_dag_acyclicity,
     check_data_cross_border_chain,
@@ -65,6 +68,12 @@ SAMPLE_CARD = {
             "output_schema": {},
             "examples": ["ls"],
             "business_rule_version": "2026-05-01",
+            # v0.8.0 D1.14: high-risk capabilities must declare sub_permissions
+            "sub_permissions": {
+                "env_read": "bash can read environment variables (declared)",
+                "timezone_read": "bash can read timezone info (declared)",
+                "network_access": "bash can make network calls (declared)",
+            },
         },
         {
             "skill_id": "file_read",
@@ -73,6 +82,10 @@ SAMPLE_CARD = {
             "output_schema": {},
             "examples": ["read"],
             "business_rule_version": "2026-05-01",
+            "sub_permissions": {
+                "system_files": "file_read can access /etc, /proc, /sys (declared)",
+                "credential_files": "file_read can access ~/.ssh, ~/.aws (declared)",
+            },
         },
         {
             "skill_id": "file_edit",
@@ -81,6 +94,10 @@ SAMPLE_CARD = {
             "output_schema": {},
             "examples": ["edit"],
             "business_rule_version": "2026-05-01",
+            "sub_permissions": {
+                "system_files": "file_edit can modify /etc, /proc, /sys (declared)",
+                "credential_files": "file_edit can modify ~/.ssh, ~/.aws (declared)",
+            },
         },
         {
             "skill_id": "file_write",
@@ -735,3 +752,226 @@ def test_d1_full_compliant_with_federation():
     result = run_d1(card)
     assert result["score"] >= 90
     assert result["conformance_verdict"] in ("COMPLIANT", "COMPLIANT-WITH-NOTES")
+
+
+# ═══════════════════════════════════════════════════════════════
+# D1.14: Capability Declaration Completeness (v0.8.0)
+# Inspired by Claude Code 2026-06-30 incident — 'bash' was declared
+# but its ability to read timezone/env vars (used for backdoor) was not.
+# ═══════════════════════════════════════════════════════════════
+
+
+def test_d1_14_high_risk_capabilities_set():
+    """D1.14 HIGH_RISK_CAPABILITIES covers bash/shell_exec/file_read/file_edit."""
+    expected = {
+        "bash",
+        "shell_exec",
+        "os_exec",
+        "exec",
+        "subprocess",
+        "file_read",
+        "file_edit",
+    }
+    assert HIGH_RISK_CAPABILITIES == expected
+
+
+def test_d1_14_required_sub_permissions_cover_all_high_risk():
+    """All high-risk capabilities have required sub-permissions defined."""
+    for cap in HIGH_RISK_CAPABILITIES:
+        assert cap in REQUIRED_SUB_PERMISSIONS, (
+            f"High-risk capability '{cap}' missing from REQUIRED_SUB_PERMISSIONS"
+        )
+        assert isinstance(REQUIRED_SUB_PERMISSIONS[cap], dict)
+        assert len(REQUIRED_SUB_PERMISSIONS[cap]) >= 2, (
+            f"Capability '{cap}' should require at least 2 sub-permissions"
+        )
+
+
+def test_d1_14_compliant_card_no_findings():
+    """SAMPLE_CARD with full sub_permissions → no D1.14 findings."""
+    findings = check_capability_declaration_completeness(SAMPLE_CARD)
+    d1_14_findings = [f for f in findings if f.get("check") == "1.14"]
+    assert d1_14_findings == [], (
+        f"Compliant card should have no D1.14 findings, got: {d1_14_findings}"
+    )
+
+
+def test_d1_14_bash_missing_all_sub_permissions():
+    """bash without sub_permissions → HIGH finding (3 missing ≥ 2)."""
+    card = {"capabilities": [{"skill_id": "bash"}]}
+    findings = check_capability_declaration_completeness(card)
+    assert len(findings) == 1
+    f = findings[0]
+    assert f["check"] == "1.14"
+    assert f["severity"] == "HIGH"
+    assert f["category"] == "capability_declaration_incomplete"
+    assert f["root_cause"] == "declaration_inconsistency"
+    # All 3 sub-permissions mentioned in detail
+    assert "env_read" in f["detail"]
+    assert "timezone_read" in f["detail"]
+    assert "network_access" in f["detail"]
+
+
+def test_d1_14_bash_missing_one_sub_permission_warning():
+    """bash with 2/3 sub_permissions → WARNING finding (1 missing)."""
+    card = {
+        "capabilities": [
+            {
+                "skill_id": "bash",
+                "sub_permissions": {
+                    "env_read": "yes",
+                    "network_access": "yes",
+                },
+            }
+        ]
+    }
+    findings = check_capability_declaration_completeness(card)
+    assert len(findings) == 1
+    f = findings[0]
+    assert f["severity"] == "WARNING"
+    assert "timezone_read" in f["detail"]
+
+
+def test_d1_14_file_read_missing_sub_permissions():
+    """file_read without sub_permissions → HIGH finding (2 missing ≥ 2)."""
+    card = {"capabilities": [{"skill_id": "file_read"}]}
+    findings = check_capability_declaration_completeness(card)
+    assert len(findings) == 1
+    f = findings[0]
+    assert f["severity"] == "HIGH"
+    assert "system_files" in f["detail"]
+    assert "credential_files" in f["detail"]
+
+
+def test_d1_14_file_edit_missing_sub_permissions():
+    """file_edit without sub_permissions → HIGH finding."""
+    card = {"capabilities": [{"skill_id": "file_edit"}]}
+    findings = check_capability_declaration_completeness(card)
+    assert len(findings) == 1
+    assert findings[0]["severity"] == "HIGH"
+
+
+def test_d1_14_subprocess_shell_exec_os_exec_exec_all_high_risk():
+    """All shell-execution variants are treated as high-risk."""
+    for cap_name in ("shell_exec", "os_exec", "exec", "subprocess"):
+        card = {"capabilities": [{"skill_id": cap_name}]}
+        findings = check_capability_declaration_completeness(card)
+        assert len(findings) == 1, f"Expected finding for {cap_name}"
+        assert findings[0]["severity"] == "HIGH"
+
+
+def test_d1_14_non_high_risk_capability_no_finding():
+    """Non-high-risk capabilities (glob, grep, web_search) → no finding."""
+    card = {
+        "capabilities": [
+            {"skill_id": "glob"},
+            {"skill_id": "grep"},
+            {"skill_id": "web_search"},
+            {"skill_id": "web_fetch"},
+        ]
+    }
+    findings = check_capability_declaration_completeness(card)
+    assert findings == []
+
+
+def test_d1_14_run_d1_includes_check_1_14():
+    """run_d1 invokes check_capability_declaration_completeness."""
+    card = {
+        "card_version": "1.2",
+        "agent_id": "urn:agent:test:d1_14:01",
+        "name": "D1.14 Test Agent",
+        "version": "1.0.0",
+        "compliance": {
+            "data_residency": "US",
+            "model_backend_location": "US",
+            "cross_border": True,
+        },
+        "constitution": {
+            "envelope": {
+                "message_id": "m1",
+                "correlation_id": "c1",
+                "timestamp": "2026-07-06T00:00:00Z",
+                "sender": "a",
+            },
+            "health_state": "HEALTHY",
+            "heartbeat_interval_seconds": 30,
+        },
+        "model_backend": {
+            "provider": "anthropic",
+            "endpoint": "https://api.anthropic.com/v1/messages",
+        },
+        # bash declared without sub_permissions → D1.14 finding
+        "capabilities": [
+            {
+                "skill_id": "bash",
+                "description": "run",
+                "input_schema": {},
+                "output_schema": {},
+                "examples": ["ls"],
+            }
+        ],
+        "authentication": {"type": "APIKey"},
+    }
+    result = run_d1(card)
+    assert any(f.get("check") == "1.14" for f in result["findings"]), (
+        "run_d1 must include D1.14 findings for undeclared sub_permissions"
+    )
+
+
+def test_d1_14_claude_code_incident_scenario():
+    """Reproduce Claude Code incident: bash declared but sub_permissions missing.
+
+    Claude Code v2.1.91 declared 'bash' but did NOT declare that bash could
+    read timezone (Asia/Shanghai detection) or env vars (ANTHROPIC_BASE_URL).
+    D1.14 should catch this gap.
+    """
+    claude_code_like_card = {
+        "capabilities": [
+            {"skill_id": "bash", "description": "execute shell commands"},
+            {"skill_id": "file_read", "description": "read files"},
+            {"skill_id": "file_edit", "description": "edit files"},
+        ],
+    }
+    findings = check_capability_declaration_completeness(claude_code_like_card)
+    # All 3 capabilities missing sub_permissions
+    assert len(findings) == 3
+    # All should be HIGH (≥2 missing each)
+    assert all(f["severity"] == "HIGH" for f in findings)
+    # All should reference Claude Code incident
+    details = " ".join(f["detail"] for f in findings)
+    assert "Claude Code" in details or "Claude" in details, (
+        "D1.14 findings should reference the Claude Code incident as rationale"
+    )
+
+
+def test_d1_14_case_insensitive_skill_id():
+    """Skill IDs are matched case-insensitively (BASH, Bash, bash all match)."""
+    card = {
+        "capabilities": [
+            {"skill_id": "BASH"},
+            {"skill_id": "Bash"},
+        ]
+    }
+    findings = check_capability_declaration_completeness(card)
+    assert len(findings) == 2
+
+
+def test_d1_14_non_dict_capability_skipped():
+    """Non-dict entries in capabilities list are skipped gracefully."""
+    card = {"capabilities": ["invalid", None, 42, {"skill_id": "bash"}]}
+    findings = check_capability_declaration_completeness(card)
+    assert len(findings) == 1  # Only the valid bash entry
+
+
+def test_d1_14_empty_capabilities_no_finding():
+    """Empty capabilities list → no D1.14 findings."""
+    assert check_capability_declaration_completeness({"capabilities": []}) == []
+    assert check_capability_declaration_completeness({}) == []
+
+
+def test_d1_14_sub_permissions_not_dict_treated_as_missing():
+    """If sub_permissions is not a dict, treat as fully missing."""
+    card = {"capabilities": [{"skill_id": "bash", "sub_permissions": "yes"}]}
+    findings = check_capability_declaration_completeness(card)
+    assert len(findings) == 1
+    assert findings[0]["severity"] == "HIGH"
