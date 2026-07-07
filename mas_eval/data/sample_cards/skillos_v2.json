@@ -48,7 +48,12 @@
         "command: 'uv run skill'"
       ],
       "rate_limit": "60/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-05-01",
+      "sub_permissions": {
+        "env_read": "bash can read environment variables (declared)",
+        "timezone_read": "bash can read timezone info (declared)",
+        "network_access": "bash can make network calls (declared)"
+      }
     },
     {
       "skill_id": "file_read",
@@ -73,7 +78,11 @@
         "path: '/skillos/kernel/__init__.py'"
       ],
       "rate_limit": "120/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-05-01",
+      "sub_permissions": {
+        "system_files": "file_read can access /etc, /proc, /sys (declared)",
+        "credential_files": "file_read can access ~/.ssh, ~/.aws (declared)"
+      }
     },
     {
       "skill_id": "file_write",
@@ -132,7 +141,11 @@
         "path: '/skillos/kernel/entry_kernel.py'"
       ],
       "rate_limit": "60/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-05-01",
+      "sub_permissions": {
+        "system_files": "file_edit can modify /etc, /proc, /sys (declared)",
+        "credential_files": "file_edit can modify ~/.ssh, ~/.aws (declared)"
+      }
     },
     {
       "skill_id": "glob",
