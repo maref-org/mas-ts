@@ -228,6 +228,42 @@ python scripts/migrate_agent_card.py --dir cards/  # batch, in-place
 
 ---
 
+## Observability — /metrics 端点（R5 OPS）
+
+### 端点定义
+
+| 方法 | 路径 | 认证 | 响应 Content-Type |
+|------|------|------|-------------------|
+| GET | `/metrics` | 生产环境建议反向代理 Basic Auth | `text/plain; version=0.0.4; charset=utf-8` |
+
+### 暴露的指标（RED 模型 + 业务指标）
+
+| 指标名 | 类型 | 标签 | 说明 |
+|--------|------|------|------|
+| `mas_eval_http_requests_total` | Counter | method, endpoint, status | HTTP 请求总数（RED.Rate） |
+| `mas_eval_http_request_duration_seconds` | Histogram | method, endpoint | HTTP 请求延迟（RED.Duration），buckets 0.005-10.0s |
+| `mas_eval_evaluations_total` | Counter | level, verdict | 评估执行总数（业务指标） |
+| `mas_eval_hitl_tasks` | Gauge | state | HITL 任务按状态计数（pending/confirmed/cancelled/paused/awaiting） |
+
+### Prometheus 接入示例
+
+```yaml
+scrape_configs:
+  - job_name: 'mas-eval'
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['localhost:8000']
+    metrics_path: /metrics
+```
+
+### SLO 指标说明（RED 模型）
+
+- **Rate**: `rate(mas_eval_http_requests_total[5m])` — 每秒请求数
+- **Errors**: `rate(mas_eval_http_requests_total{status=~"5.."}[5m])` — 5xx 错误率
+- **Duration**: `histogram_quantile(0.99, rate(mas_eval_http_request_duration_seconds_bucket[5m]))` — P99 延迟
+
+---
+
 ## SLO / SLI — Execution Level Performance Targets
 
 | Level | Name | Domains | P50 Duration | P99 Duration | Error Rate Target |
@@ -238,4 +274,72 @@ python scripts/migrate_agent_card.py --dir cards/  # batch, in-place
 | L3 | Comprehensive | D1-D5 | ≤ 8 h | ≤ 12 h | ≤ 0.5% |
 | L4 | Evolution | D5 lifecycle | ≤ 72 h | ≤ 96 h | ≤ 1% |
 
+### SLO 补充 — 首 Token 延迟（TTFT）门禁（R4 — Handbook §4.4.2）
+
+| 指标 | 阈值 | Gold | Silver | Bronze | 来源 |
+|------|------|------|--------|--------|------|
+| 首 Token 延迟（TTFT）P99 | ≤ 500ms | ≤ 200ms | ≤ 350ms | ≤ 500ms | D2 `latency_pressure` 子域 + `gold_thresholds.py` `d2_ttft_p99` |
+
 > **Note**: These are CI-baseline targets for the zero-cost / mock-LLM path. Real LLM inference times will vary by model provider and API latency.
+
+---
+
+## Test Matrix
+
+测试矩阵映射 MAS-TS-001 评估维度到测试文件与覆盖范围。详细用例数以 `pytest --collect-only` 实测为准，下表中的数字为近似估算。
+
+### 单元测试
+
+| 域 | 测试文件 | 用例数（近似） | 覆盖范围 |
+|----|---------|--------------|---------|
+| D1 Compliance | tests/test_d1_compliance.py | ~60 | 10-check 静态合规（schema/residency/constitution/DAG） |
+| D2 Single Agent | tests/test_d2_single_agent.py | ~80 | 模型质量/工具覆盖/任务完成/E2E 场景 |
+| D2 Step Efficiency | tests/test_d2_step_efficiency.py | ~30 | 步骤效率子域 |
+| D2 Trajectory Quality | tests/test_d2_trajectory_quality.py | ~30 | 轨迹质量子域 |
+| D2 Latency Pressure | tests/test_d2_latency_pressure.py | 14 | TTFT P99 分级评分 Gold/Silver/Bronze/Decay/Critical + 字段回退（R4） |
+| D3 Multi-Agent | tests/test_d3_multi_agent.py | ~70 | Spawn/Protocol/Orchestration/Isolation/Conflict/Persistence |
+| D3 Plan Quality | tests/test_d3_plan_quality.py | ~25 | 计划质量子域 |
+| D3 Coordination Efficiency | tests/test_d3_coordination_efficiency.py | ~25 | 协调效率子域 |
+| D4 Governance | tests/test_d4_governance.py | ~80 | StateMachine/CircuitBreaker/Oscillation/Audit |
+| D4 Security | tests/test_d4_security.py | ~70 | PenTest/RedBlue/TrustChain/SAST/HITL gate |
+| D4 Federation | tests/test_d4_federation.py + tests/test_d3_federation.py | ~40 | TrustScorer/Vendor Diversity/MCP supply chain |
+| D4 Data Leakage | tests/test_d4_data_leakage.py | ~25 | 隐蔽采集/隐藏通道检测 |
+| D5 Robustness | tests/test_d5_robustness.py | ~90 | ChaosEngine/DriftDetector/ReflectiveAgent/ConvergenceVerifier |
+| HITL API + Metrics | tests/test_server.py | ~24 | cancel/confirm/pause 端点 + /metrics 端点 + HITL_STATE_GAUGE 刷新（FastAPI TestClient） |
+| Schema v2 | tests/test_schema_v2.py | ~50 | Federation + HITL schema 验证 |
+| Regression | tests/test_regression.py | 30 | 基线对比 5% 容差（R8 P0） |
+
+### 集成测试
+
+| 文件 | 用例数（近似） | 覆盖范围 |
+|------|--------------|---------|
+| tests/test_integration.py | 24 | L0-L3 全链路 |
+| tests/test_oracle_integration.py | ~15 | WebArena/SWE-bench/Tau-bench Oracle E2E |
+| tests/test_harness_aggregation.py | ~20 | 评分聚合 + Gold 报告 |
+
+### Gold Standard 门禁
+
+| 文件 | 用例数（近似） | 覆盖范围 |
+|------|--------------|---------|
+| tests/test_gold_standard.py | ~20 | L0-L4 阈值矩阵 + 证书生成 |
+| tests/test_release_gate_check.py | ~15 | 12 项发布门禁脚本（G0-G3.5） |
+| tests/test_federation_threshold.py | ~10 | 联邦阈值政策 |
+
+### 测试运行命令
+
+```bash
+# 全量测试
+pytest tests/ -v                              # 1739+ tests
+
+# 仅回归测试（R8 P0）
+pytest tests/test_regression.py -v -m regression
+
+# 仅 HITL 相关
+pytest tests/test_server.py tests/test_d4_security.py::TestHitlGate tests/test_schema_v2.py::TestSchemaV2Hitl -v
+
+# 发布门禁全量（含 G3.4 UAT + G3.5 regression）
+python3 scripts/release_gate_check.py --manual-ok
+
+# 单域快速验证
+pytest tests/test_d4_security.py -v -k "HitlGate"
+```

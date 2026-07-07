@@ -1,13 +1,17 @@
 # MAS-TS-001 Evaluation Harness — Runtime Dependencies
 # Auto-synced from pyproject.toml. DO NOT EDIT MANUALLY.
 
+argcomplete>=3.0
+fastapi>=0.109.0
 jsonschema>=4.20
 numpy>=1.24
+prometheus-client>=0.20
+pydantic>=2.0
 pyyaml>=6.0
 requests>=2.31
 rich>=13.0
-argcomplete>=3.0
 tenacity>=8.0
+uvicorn[standard]>=0.27.0
 
 # Optional: scipy>=1.10 (for D5 drift detection)
 # Install with: pip install -e ".[ml]"

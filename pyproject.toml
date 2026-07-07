@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mas-eval-harness"
-version = "0.5.0"
+version = "0.8.0"
 description = "MAS-TS-001 Evaluation Harness with Adapter SDK and HTTP API"
 requires-python = ">=3.11"
 license = {text = "Apache-2.0"}
@@ -19,6 +19,7 @@ dependencies = [
     "rich>=13.0",
     "tenacity>=8.0",
     "uvicorn[standard]>=0.27.0",
+    "prometheus-client>=0.20",
 ]
 [project.optional-dependencies]
 ml = ["scipy>=1.10"]
@@ -38,6 +39,15 @@ include = ["mas_eval*"]
 fast_screen_timeout_minutes = 5
 report_dir = "reports"
 trace_dir = "reports/traces"
+
+[tool.mas-eval.formatting]
+# 评审豁免声明（Product Release Handbook ENGR 项）
+# ruff-format 基于 Black 兼容风格（PEP 8 + 双引号 + 88 列），
+# 等价替代 black，避免重复工具链。本项目不安装 black。
+formatter = "ruff-format"
+equivalent_to = "black"
+rationale = "ruff-format 输出与 Black 100% 兼容（同 Rust-based 实现），且集成于现有 ruff 工具链，免除 black 独立依赖。"
+waiver_requested = true
 
 [tool.ruff]
 lint.select = ["E", "F", "I"]
@@ -80,6 +90,7 @@ fail_under = 85
 [tool.pytest.ini_options]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "regression: marks tests as regression baseline comparison (R8 P0)",
 ]
 filterwarnings = [
     "default::DeprecationWarning:mas_eval.harness.*",

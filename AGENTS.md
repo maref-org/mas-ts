@@ -50,29 +50,88 @@ Extends v1.1 with optional fields:
 |------|---------|
 | `mas_eval/domains/d1_compliance.py` | 10-check static compliance (schema, residency, constitution, DAG) |
 | `mas_eval/domains/d2_single_agent.py` | Model quality, tool coverage, task completion, E2E scenarios |
+| `mas_eval/domains/d2_step_efficiency.py` | D2 step efficiency sub-domain scoring |
+| `mas_eval/domains/d2_trajectory_quality.py` | D2 trajectory quality sub-domain scoring |
+| `mas_eval/domains/d2_latency_pressure.py` | D2 latency pressure sub-domain (R4 TTFT P99≤500ms) |
 | `mas_eval/domains/d3_multi_agent.py` | Spawn, protocol, orchestration, isolation, conflict, persistence |
-| `mas_eval/domains/d4_governance_security.py` | StateMachine, CircuitBreaker, Oscillation, Audit, Security scoring, TrustScorer, vendor diversity, MCP supply chain |
-| `mas_eval/schemas/agent_card_v2.0.json` | Federation-extended agent card schema (v2.0) |
+| `mas_eval/domains/d3_coordination_efficiency.py` | D3 coordination efficiency sub-domain scoring |
+| `mas_eval/domains/d3_plan_quality.py` | D3 plan quality sub-domain scoring |
+| `mas_eval/domains/d4_governance_security.py` | StateMachine, CircuitBreaker, Oscillation, Audit, Security scoring, TrustScorer, vendor diversity, MCP supply chain, HITL gate |
+| `mas_eval/domains/d4_data_leakage.py` | D4 data leakage detection (covert collection, hidden channels) |
+| `mas_eval/domains/d5_robustness.py` | ChaosEngine, DriftDetector, ReflectiveAgent, ConvergenceVerifier, FederationCascade |
+| `mas_eval/schemas/agent_card_v1.1.json` | Agent card schema v1.1 (baseline) |
+| `mas_eval/schemas/agent_card_v1.2.json` | Agent card schema v1.2 (constitution envelope, health_state) |
+| `mas_eval/schemas/agent_card_v2.0.json` | Federation-extended agent card schema (v2.0, with HITL field) |
 | `scripts/migrate_agent_card.py` | v1.2→v2.0 card migration tool |
-| `mas_eval/domains/d5_robustness.py` | ChaosEngine, DriftDetector, ReflectiveAgent, ConvergenceVerifier |
-| `mas_eval/harness/l0_fast_screen.py` | 5-stage CI gate runner |
+| `mas_eval/harness/l0_fast_screen.py` | 5-stage CI gate runner with Gold Standard threshold checks |
 | `mas_eval/harness/l1_standard.py` | D1-D3 aggregation |
-| `mas_eval/harness/l2_deep.py` | D1-D4 aggregation |
-| `mas_eval/harness/l3_comprehensive.py` | D1-D5 aggregation |
-| `mas_eval/harness/l4_evolution.py` | D5 lifecycle runner |
+| `mas_eval/harness/l2_deep.py` | D1-D4 aggregation with Gold Standard report and certificate |
+| `mas_eval/harness/l3_comprehensive.py` | D1-D5 aggregation with Gold Standard report and certificate |
+| `mas_eval/harness/l4_evolution.py` | D5 lifecycle runner with MetaEvaluator integration |
+| `mas_eval/harness/aggregation.py` | Score aggregation + Gold Standard report computation |
+| `mas_eval/harness/emergence_harness.py` | Emergence property harness |
+| `mas_eval/harness/stress_harness.py` | Stress test harness |
+| `mas_eval/harness/trajectory_builder.py` | Trajectory builder for golden vs actual comparison |
+| `mas_eval/harness/loop_engine.py` | Convergence loop engine with regression detection |
+| `mas_eval/harness/resource_governor.py` | Resource governor for evaluation runs |
+| `mas_eval/harness/epoch_state.py` | Epoch state management for L4 lifecycle |
 | `mas_eval/scoring/elo.py` | Pairwise Elo rating system |
 | `mas_eval/scoring/absolute.py` | Absolute scoring, grading, verdict |
-| `tests/` | 34 test files, 997+ tests |
-| `.github/workflows/test.yml` | pytest + ruff + coverage gate (80%→85%) with `--durations=10` |
-| `.github/workflows/security-scan.yml` | TruffleHog + bandit SAST + pip-audit dependency scan |
+| `mas_eval/scoring/gold_thresholds.py` | Gold Standard L0-L4 threshold matrix (with HITL metrics) |
+| `mas_eval/scoring/gold_certificate.py` | Gold Standard certificate generator |
+| `mas_eval/scoring/meta_evaluator.py` | Meta-Evaluator for self-assessment |
+| `mas_eval/scoring/multi_model.py` | Multi-model evaluation runner |
+| `mas_eval/scoring/verifier.py` | Verifier for evaluation results |
+| `mas_eval/scoring/attribution.py` | Attribution scoring |
+| `mas_eval/scoring/compliance_report.py` | Compliance report generator |
+| `mas_eval/scoring/compliance_formatter.py` | Compliance report formatter |
+| `mas_eval/scoring/findings.py` | Findings data structure (v1 + v2 attribution) |
+| `mas_eval/scoring/regression.py` | Regression baseline comparison tool (5% tolerance) |
+| `mas_eval/reporting/full_report.py` | Full evaluation report generator |
+| `mas_eval/reporting/html_report.py` | HTML report generator |
+| `mas_eval/reporting/coverage_report.py` | Coverage report generator |
+| `mas_eval/reporting/gold_report.py` | Gold Standard report generator |
+| `mas_eval/reporting/dashboard.py` | Dashboard report generator |
+| `mas_eval/cross_cutting/cost_efficiency.py` | Cost efficiency cross-cutting metric (CPT, token waste, hitl review cost) |
+| `mas_eval/security/hmac_manager.py` | HMAC-SHA256 signing + key rotation + derive_key |
+| `mas_eval/oracle/oracle_base.py` | Oracle ABC + OracleRegistry + run_d2_with_oracle |
+| `mas_eval/oracle/web_arena.py` | WebArena Oracle with Playwright real browser verification |
+| `mas_eval/oracle/swe_bench.py` | SWE-bench Oracle for code task E2E |
+| `mas_eval/oracle/tau_bench.py` | Tau-bench Oracle for tool-use E2E |
+| `mas_eval/oracle/env.py` | Oracle environment utilities |
+| `mas_eval/utils.py` | safe_get / safe_get_in / safe_get_list utilities |
+| `mas_eval/data/sample_cards/` | Sample Agent Cards (v1.2 + v2.0) |
+| `mas_eval/data/multi_vendor_test/` | 5 real vendor cards + federation scan results |
+| `mas_eval/data/golden_trajectories/` | 10 golden trajectory JSON files |
+| `mas_eval/data/baselines/v0.6.0_baseline.json` | v0.6.0 regression baseline snapshot |
+| `tests/` | 61 test files, 1799 tests (with regression + HITL + latency suites) |
+| `.github/workflows/test.yml` | pytest + ruff + coverage gate 85% + Gold L0 gate + federation scan |
+| `.github/workflows/security-scan.yml` | TruffleHog + bandit SAST + pip-audit + SBOM CycloneDX (daily cron) |
 | `.github/workflows/type-check.yml` | mypy strict type checking |
-| `docs/api-contracts.md` | CLI + Python API contract documentation |
+| `.github/workflows/check-exfiltration.yml` | T3/T2 anti-leak scan (paths/orgs/phones/API keys/timestamps) |
+| `.github/workflows/check-mcp-envelope.yml` | MCP envelope fields check (Article 15-A) |
+| `.github/workflows/check-api-version.yml` | MCP tool api_version check (Article 15) |
+| `.github/workflows/check-fail-mode.yml` | MCP cross-boundary FAIL_MODE check (Article 7) |
+| `.github/workflows/check-agent-config.yml` | Agent config constitution reference check (Article 31) |
+| `scripts/release_gate_check.py` | 12-item release gate runner (G0-G3, with G3.4 UAT + G3.5 regression) |
+| `scripts/gold_standard_gate.py` | Gold Standard L0 threshold gate |
+| `scripts/federation_threshold.py` | Multi-vendor federation scan threshold policy |
+| `scripts/emergency-rollback.sh` | Emergency rollback script (git revert + verify) |
+| `scripts/sanitize-for-push.sh` | Track B pre-push content safety check |
+| `scripts/full_audit.sh` | Full audit script |
+| `scripts/audit_deep_eval.py` | Deep evaluation audit script |
+| `api/server.py` | FastAPI service with /health + /evaluate + /hitl endpoints |
+| `docs/api-contracts.md` | CLI + Python API contract documentation (with Test Matrix) |
+| `docs/release-gate.md` | Release gate checklist (12 items) |
+| `docs/operations-readiness.md` | Runbook and ops procedures (8 scenarios) |
+| `docs/rtm.yaml` | Requirements Traceability Matrix (RTM) |
+| `docs/uat/` | UAT case docs and signoff records |
 
 ## Testing
 
 ```bash
 # Run all tests
-pytest tests/ -v           # 997 tests
+pytest tests/ -v           # 1799 tests (61 files)
 
 # Run specific domain
 pytest tests/test_d5_robustness.py -v
@@ -116,7 +175,7 @@ Score: C1×0.35 + C2×0.35 + C3×0.30
 - [x] 无 T3/T2 级内容（路径/Key/IP/时间戳）— rg 扫描零命中
 - [x] `git remote -v` 为授权远程 — 无远程（仅本地）
 - [x] pre-push hook 已就位
-- [x] CI: pytest 通过 — 1139 passed, 0 failed
+- [x] CI: pytest 通过 — 1798 passed, 1 skipped (playwright), 0 failed
 - [ ] MCP 工具含 `api_version`（第十五条）— 不适用
 - [ ] 跨边界 MCP 消息含 `trace_id`/`timestamp`/`source_agent`（第十五-A条）— 不适用
 - [ ] 跨边界 MCP 调用有 `FAIL_MODE` 降级（第七条）— 不适用

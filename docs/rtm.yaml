@@ -1,0 +1,353 @@
+# Requirements Traceability Matrix (RTM) — MAS-TS-001 v0.6.0
+# 依据: 产品级发布全量验收标准与评审流程手册 §4.1.1
+# 生成日期: 2026-07-03
+# 审计风险项: R9 (RTM 矩阵缺失)
+
+version: "0.6.0"
+generated: "2026-07-03"
+total_requirements: 28
+domains: [D1, D2, D3, D4, D5, X]
+
+requirements:
+  # ═══════════════════════════════════════════════════════════════
+  # D1 合规域 (Compliance) — 6 REQ
+  # ═══════════════════════════════════════════════════════════════
+  - req_id: REQ-D1-001
+    description: Agent Card schema 验证 (v1.1/v1.2/v2.0)
+    domain: D1
+    level: L0
+    test_cases:
+      - tests/test_d1_compliance.py::test_schema_v1_1_valid
+      - tests/test_d1_compliance.py::test_schema_v1_2_valid
+      - tests/test_d1_compliance.py::test_schema_v2_0_valid
+    coverage: 100%
+    acceptance_criteria: "所有 card_version 通过对应 JSON Schema 验证"
+
+  - req_id: REQ-D1-002
+    description: 数据驻留检查 (data_residency)
+    domain: D1
+    level: L0
+    test_cases:
+      - tests/test_d1_compliance.py::test_data_residency_check
+    coverage: 100%
+    acceptance_criteria: "data_residency 字段存在且为 CN/US/EU/SG/OTHER/LOCAL 之一"
+
+  - req_id: REQ-D1-003
+    description: 宪法合规检查 (constitution envelope)
+    domain: D1
+    level: L0
+    test_cases:
+      - tests/test_d1_compliance.py::test_constitution_envelope
+      - tests/test_d1_compliance.py::test_health_state
+    coverage: 100%
+    acceptance_criteria: "constitution.envelope 含 message_id/correlation_id/timestamp/sender"
+
+  - req_id: REQ-D1-004
+    description: DAG 无环验证 (依赖图)
+    domain: D1
+    level: L0
+    test_cases:
+      - tests/test_d1_compliance.py::test_dag_acyclic
+      - tests/test_d1_compliance.py::test_dag_cycle_detected
+    coverage: 100%
+    acceptance_criteria: "dependencies 形成有向无环图 (DAG)"
+
+  - req_id: REQ-D1-005
+    description: 审计链检查 (audit_trail_required)
+    domain: D1
+    level: L1
+    test_cases:
+      - tests/test_d1_compliance.py::test_audit_trail_required
+    coverage: 100%
+    acceptance_criteria: "audit_trail_required=true 时 agent 必须实现审计日志"
+
+  - req_id: REQ-D1-006
+    description: 联邦合规检查 (federation schema v2.0)
+    domain: D1
+    level: L2
+    test_cases:
+      - tests/test_d1_compliance.py::test_federation_fields
+      - tests/test_federation_threshold.py
+    coverage: 100%
+    acceptance_criteria: "federation 字段符合 v2.0 schema 且通过阈值门禁"
+
+  # ═══════════════════════════════════════════════════════════════
+  # D2 单 Agent 域 (Single Agent) — 5 REQ
+  # ═══════════════════════════════════════════════════════════════
+  - req_id: REQ-D2-001
+    description: 模型质量评估 (model quality)
+    domain: D2
+    level: L1
+    test_cases:
+      - tests/test_d2_single_agent.py::test_model_quality_scoring
+    coverage: 100%
+    acceptance_criteria: "model_backend.provider/model 在 MODEL_QUALITY_DB 中且有质量评分"
+
+  - req_id: REQ-D2-002
+    description: 工具覆盖评估 (tool coverage)
+    domain: D2
+    level: L1
+    test_cases:
+      - tests/test_d2_single_agent.py::test_tool_coverage
+    coverage: 100%
+    acceptance_criteria: "tool_coverage >= L1 阈值 75%"
+
+  - req_id: REQ-D2-003
+    description: 任务完成度评估 (task completion)
+    domain: D2
+    level: L1
+    test_cases:
+      - tests/test_d2_single_agent.py::test_task_completion
+      - tests/test_integration.py::test_d2_e2e
+    coverage: 100%
+    acceptance_criteria: "task_completion >= L1 阈值 75 分"
+
+  - req_id: REQ-D2-004
+    description: 轨迹质量评估 (trajectory quality)
+    domain: D2
+    level: L2
+    test_cases:
+      - tests/test_d2_trajectory_quality.py
+    coverage: 100%
+    acceptance_criteria: "trajectory_quality >= L2 阈值 0.65"
+
+  - req_id: REQ-D2-005
+    description: 步骤效率评估 (step efficiency)
+    domain: D2
+    level: L1
+    test_cases:
+      - tests/test_d2_step_efficiency.py
+    coverage: 100%
+    acceptance_criteria: "step_efficiency >= L1 阈值 0.55"
+
+  # ═══════════════════════════════════════════════════════════════
+  # D3 多 Agent 域 (Multi-Agent) — 6 REQ
+  # ═══════════════════════════════════════════════════════════════
+  - req_id: REQ-D3-001
+    description: Spawn 能力评估 (agent spawning)
+    domain: D3
+    level: L1
+    test_cases:
+      - tests/test_d3_multi_agent.py::test_spawn_rate
+    coverage: 100%
+    acceptance_criteria: "spawn_rate >= L1 阈值 95%"
+
+  - req_id: REQ-D3-002
+    description: 通信协议评估 (protocol compliance)
+    domain: D3
+    level: L1
+    test_cases:
+      - tests/test_d3_multi_agent.py::test_protocol_compliance
+    coverage: 100%
+    acceptance_criteria: "message_format 符合 json-rpc-2.0/a2a-v0.3/mcp-2024 之一"
+
+  - req_id: REQ-D3-003
+    description: 编排正确性 (orchestration)
+    domain: D3
+    level: L2
+    test_cases:
+      - tests/test_d3_multi_agent.py::test_orchestration
+      - tests/test_d3_plan_quality.py
+    coverage: 100%
+    acceptance_criteria: "任务分解/失败重试/状态机无死锁"
+
+  - req_id: REQ-D3-004
+    description: 隔离评估 (isolation)
+    domain: D3
+    level: L2
+    test_cases:
+      - tests/test_d3_multi_agent.py::test_isolation
+    coverage: 100%
+    acceptance_criteria: "permission_boundary 定义且无越权访问"
+
+  - req_id: REQ-D3-005
+    description: 冲突解决 (conflict resolution)
+    domain: D3
+    level: L2
+    test_cases:
+      - tests/test_d3_multi_agent.py::test_conflict_resolution
+    coverage: 100%
+    acceptance_criteria: "conflict_resolution >= L2 阈值 60%"
+
+  - req_id: REQ-D3-006
+    description: 持久化评估 (persistence)
+    domain: D3
+    level: L2
+    test_cases:
+      - tests/test_d3_multi_agent.py::test_persistence
+    coverage: 100%
+    acceptance_criteria: "stateful agent 支持状态持久化与恢复"
+
+  # ═══════════════════════════════════════════════════════════════
+  # D4 治理与安全域 (Governance & Security) — 7 REQ
+  # ═══════════════════════════════════════════════════════════════
+  - req_id: REQ-D4-001
+    description: Gray-code 状态机验证 (10 状态单比特翻转)
+    domain: D4
+    level: L2
+    test_cases:
+      - tests/test_d4_security.py::test_state_machine_transitions
+      - tests/test_d4_security.py::test_halt_absorbing
+    coverage: 100%
+    acceptance_criteria: "状态覆盖 >= L2 阈值 9/10，单比特翻转有效"
+
+  - req_id: REQ-D4-002
+    description: 断路器验证 (CircuitBreaker)
+    domain: D4
+    level: L2
+    test_cases:
+      - tests/test_d4_security.py::test_circuit_breaker_open
+      - tests/test_d4_security.py::test_circuit_breaker_half_open
+      - tests/test_d4_security.py::test_circuit_breaker_closed
+    coverage: 100%
+    acceptance_criteria: "3 失败→OPEN / 30s→HALF_OPEN / 2/2→CLOSED"
+
+  - req_id: REQ-D4-003
+    description: 振荡检测 (Oscillation Detection)
+    domain: D4
+    level: L2
+    test_cases:
+      - tests/test_d4_security.py::test_oscillation_detection
+    coverage: 100%
+    acceptance_criteria: "window_size 内状态振荡被识别"
+
+  - req_id: REQ-D4-004
+    description: HMAC 审计链 (Audit Trail)
+    domain: D4
+    level: L2
+    test_cases:
+      - tests/test_d4_security.py::test_audit_trail_hmac
+      - tests/test_d4_security.py::test_audit_trail_tamper_detection
+    coverage: 100%
+    acceptance_criteria: "HMAC-SHA256 签名链完整且篡改可检测"
+
+  - req_id: REQ-D4-005
+    description: 安全评分 (Penetration + Red-Blue + Trust Chain + SAST)
+    domain: D4
+    level: L3
+    test_cases:
+      - tests/test_d4_security.py::test_security_scoring
+    coverage: 100%
+    acceptance_criteria: "d4_pentest = 0 critical, d4_data_leakage = 0 leak"
+
+  - req_id: REQ-D4-006
+    description: 操作安全 (Action Safety — destructive action 防护)
+    domain: D4
+    level: L2
+    test_cases:
+      - tests/test_d4_security.py::test_action_safety
+      - tests/test_d4_security.py::test_action_safety_destructive
+    coverage: 100%
+    acceptance_criteria: "d4_action_safety >= L2 阈值 0.60"
+
+  - req_id: REQ-D4-007
+    description: HITL 人工门禁 (Human-in-the-Loop gate) [R3 P0 新增]
+    domain: D4
+    level: L2
+    test_cases:
+      - tests/test_d4_security.py::TestHitlGate
+      - tests/test_schema_v2.py::test_hitl_field
+      - tests/test_server.py::test_hitl_endpoints
+    coverage: 100%
+    acceptance_criteria: "hitl.enabled=true 时 destructive_action_gate=required; hitl_approval_rate >= L2 阈值 0.85"
+
+  # ═══════════════════════════════════════════════════════════════
+  # D5 鲁棒性域 (Evolution & Robustness) — 5 REQ
+  # ═══════════════════════════════════════════════════════════════
+  - req_id: REQ-D5-001
+    description: 混沌工程 (ChaosEngine — 15 类故障注入)
+    domain: D5
+    level: L3
+    test_cases:
+      - tests/test_d5_robustness.py::test_chaos_engine_infra
+      - tests/test_d5_robustness.py::test_chaos_engine_llm
+      - tests/test_d5_robustness.py::test_chaos_engine_federation
+    coverage: 100%
+    acceptance_criteria: "5 infra + 5 LLM + 5 federation 故障注入且自动恢复 <= 5 分钟"
+
+  - req_id: REQ-D5-002
+    description: 漂移检测 (Drift Detector)
+    domain: D5
+    level: L3
+    test_cases:
+      - tests/test_d5_robustness.py::test_drift_detector
+    coverage: 100%
+    acceptance_criteria: "d5_drift_fnr <= L3 阈值 8%"
+
+  - req_id: REQ-D5-003
+    description: 反思能力 (Reflective Agent)
+    domain: D5
+    level: L3
+    test_cases:
+      - tests/test_d5_robustness.py::test_reflective_agent
+    coverage: 100%
+    acceptance_criteria: "d5_reflection >= L3 阈值 0.88"
+
+  - req_id: REQ-D5-004
+    description: 收敛验证 (Convergence Verifier)
+    domain: D5
+    level: L3
+    test_cases:
+      - tests/test_d5_robustness.py::test_convergence_cycles
+    coverage: 100%
+    acceptance_criteria: "d5_consistency_index >= L3 阈值 0.75 (C1×0.35 + C2×0.35 + C3×0.30)"
+
+  - req_id: REQ-D5-005
+    description: 联邦级联测试 (Federation Cascade)
+    domain: D5
+    level: L3
+    test_cases:
+      - tests/test_d5_robustness.py::test_federation_cascade
+    coverage: 100%
+    acceptance_criteria: "d5_federation_cascade <= L3 阈值 3 跳，级联隔离 >= 90%"
+
+  # ═══════════════════════════════════════════════════════════════
+  # 横切需求 (Cross-Cutting) — 3 REQ
+  # ═══════════════════════════════════════════════════════════════
+  - req_id: REQ-X-001
+    description: API 服务契约 (FastAPI /health + /evaluate + /hitl)
+    domain: X
+    level: L0
+    test_cases:
+      - tests/test_server.py::test_health
+      - tests/test_server.py::test_evaluate_l0
+      - tests/test_server.py::test_hitl_endpoints
+    coverage: 100%
+    acceptance_criteria: "API 响应符合 EvaluationResponse schema; HITL 端点返回 cancel/confirm/pause 状态"
+
+  - req_id: REQ-X-002
+    description: CI/CD 流水线 (8 个 GitHub Actions workflow)
+    domain: X
+    level: L0
+    test_cases:
+      - tests/test_integration.py
+      - tests/test_gold_standard.py
+      - tests/test_release_gate_check.py
+    coverage: 100%
+    acceptance_criteria: "test + type-check + security-scan + 5 个宪法合规 workflow 全部通过"
+
+  - req_id: REQ-X-003
+    description: 回归测试套件 (Regression Baseline) [R8 P0 新增]
+    domain: X
+    level: L2
+    test_cases:
+      - tests/test_regression.py
+    coverage: 100%
+    acceptance_criteria: "5% 容差比对通过; JSON schema 验证通过; 3 类锚点 (d1_d5/federation/gold_trajectories) 全覆盖"
+
+# ═══════════════════════════════════════════════════════════════
+# 覆盖率汇总
+# ═══════════════════════════════════════════════════════════════
+coverage_summary:
+  total_requirements: 28
+  fully_covered: 28
+  partially_covered: 0
+  not_covered: 0
+  overall_coverage: 100%
+  by_domain:
+    D1: 6/6
+    D2: 5/5
+    D3: 6/6
+    D4: 7/7
+    D5: 5/5
+    X: 3/3

@@ -4,9 +4,9 @@
 
 Fast-Screen and Full-Run evaluation pipeline for multi-agent systems.
 
-[![Test Suite](https://github.com/anomalyco/mas-ts/actions/workflows/test.yml/badge.svg)](https://github.com/anomalyco/mas-ts/actions/workflows/test.yml)
-[![Type Check](https://github.com/anomalyco/mas-ts/actions/workflows/type-check.yml/badge.svg)](https://github.com/anomalyco/mas-ts/actions/workflows/type-check.yml)
-[![Security Scan](https://github.com/anomalyco/mas-ts/actions/workflows/security-scan.yml/badge.svg)](https://github.com/anomalyco/mas-ts/actions/workflows/security-scan.yml)
+[![Test Suite](https://github.com/maref-org/mas-ts/actions/workflows/test.yml/badge.svg)](https://github.com/maref-org/mas-ts/actions/workflows/test.yml)
+[![Type Check](https://github.com/maref-org/mas-ts/actions/workflows/type-check.yml/badge.svg)](https://github.com/maref-org/mas-ts/actions/workflows/type-check.yml)
+[![Security Scan](https://github.com/maref-org/mas-ts/actions/workflows/security-scan.yml/badge.svg)](https://github.com/maref-org/mas-ts/actions/workflows/security-scan.yml)
 
 ## Quick Start
 
@@ -85,7 +85,7 @@ python mas_full_run.py --card <card.json> --level all   # runs L0 → L1 → L2 
 ## Test
 
 ```bash
-pytest tests/ -v           # 1139 tests (37 files)
+pytest tests/ -v           # 1709 tests (59 files)
 pytest --cov               # 94.16% coverage (gate: 85%)
 mypy mas_eval/ --strict    # 0 type errors
 ruff check mas_eval/       # 0 lint errors

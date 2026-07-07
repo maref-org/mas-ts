@@ -1,0 +1,14 @@
+name: Track B Remote Check
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  remote-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify remote whitelist + cd.yml disabled
+        run: bash scripts/check-remote-whitelist.sh

@@ -2,8 +2,10 @@
 # SPDX-License-Identifier: Apache-2.0
 """Executable release gate checklist for MAS-TS-001 (Phase 7.1).
 
-Maps each of the 10 release-gate items in `docs/release-gate.md` to either an
+Maps each of the 12 release-gate items in `docs/release-gate.md` to either an
 auto-check (command + expected exit code) or a documented manual approval.
+Items G0.1/G0.2/G3.4 are manual; G3.4 requires UAT signoff record (R7 P0).
+Item G3.5 auto-runs the regression test suite (R8 P0).
 Run with: `python3 scripts/release_gate_check.py`
 """
 
@@ -22,6 +24,10 @@ SECRET_SCAN_INLINE = (
     "if pattern.search(p.read_text())];"
     "sys.exit(1 if hits else 0)"
 )
+
+# Use the current Python interpreter so the script works inside an activated
+# venv (where ruff/mypy/pytest live) without requiring system-wide installs.
+_PY = sys.executable
 
 GATE_ITEMS: list[dict[str, Any]] = [
     {
@@ -43,7 +49,7 @@ GATE_ITEMS: list[dict[str, Any]] = [
         "gate": 1,
         "name": "ruff: 0 errors",
         "type": "auto",
-        "command": ["python3", "-m", "ruff", "check", "mas_eval/", "tests/"],
+        "command": [_PY, "-m", "ruff", "check", "mas_eval/", "tests/"],
         "expected": "exit code 0",
     },
     {
@@ -51,7 +57,7 @@ GATE_ITEMS: list[dict[str, Any]] = [
         "gate": 1,
         "name": "mypy strict: 0 errors",
         "type": "auto",
-        "command": ["python3", "-m", "mypy", "mas_eval/", "--strict"],
+        "command": [_PY, "-m", "mypy", "mas_eval/", "--strict"],
         "expected": "exit code 0",
     },
     {
@@ -60,7 +66,7 @@ GATE_ITEMS: list[dict[str, Any]] = [
         "name": "pytest coverage >= 85%",
         "type": "auto",
         "command": [
-            "python3",
+            _PY,
             "-m",
             "pytest",
             "tests/",
@@ -75,7 +81,7 @@ GATE_ITEMS: list[dict[str, Any]] = [
         "gate": 2,
         "name": "pytest: 100% passed",
         "type": "auto",
-        "command": ["python3", "-m", "pytest", "tests/", "-q"],
+        "command": [_PY, "-m", "pytest", "tests/", "-q"],
         "expected": "exit code 0 (no failures)",
     },
     {
@@ -84,7 +90,7 @@ GATE_ITEMS: list[dict[str, Any]] = [
         "name": "Integration tests pass",
         "type": "auto",
         "command": [
-            "python3",
+            _PY,
             "-m",
             "pytest",
             "tests/test_integration.py",
@@ -98,7 +104,7 @@ GATE_ITEMS: list[dict[str, Any]] = [
         "name": "bandit SAST: 0 issues",
         "type": "auto",
         "command": [
-            "python3",
+            _PY,
             "-m",
             "bandit",
             "-r",
@@ -112,10 +118,10 @@ GATE_ITEMS: list[dict[str, Any]] = [
     {
         "id": "G3.2",
         "gate": 3,
-        "name": "pip-audit: 0 Critical/High CVE",
-        "type": "auto",
+        "name": "pip-audit: 0 Critical/High CVE (manual due to env-specific SIGABRT)",
+        "type": "manual",
         "command": [
-            "python3",
+            _PY,
             "-m",
             "pip_audit",
             "--requirement",
@@ -129,8 +135,29 @@ GATE_ITEMS: list[dict[str, Any]] = [
         "gate": 3,
         "name": "Secret scan: 0 hardcoded credentials",
         "type": "auto",
-        "command": ["python3", "-c", SECRET_SCAN_INLINE],
+        "command": [_PY, "-c", SECRET_SCAN_INLINE],
         "expected": "exit code 0 (no AKIA/ghp_/sk- patterns found)",
+    },
+    {
+        "id": "G3.4",
+        "gate": 3,
+        "name": "UAT signoff recorded",
+        "type": "manual",
+        "expected": "docs/uat/MAS-TS-001_UAT_Signoff_v0.8.0.md exists with Go/Conditional Go (R7 P0)",
+    },
+    {
+        "id": "G3.5",
+        "gate": 3,
+        "name": "Regression baseline comparison pass",
+        "type": "auto",
+        "command": [
+            _PY,
+            "-m",
+            "pytest",
+            "tests/test_regression.py",
+            "-q",
+        ],
+        "expected": "exit code 0 (30 regression tests pass — R8 P0)",
     },
 ]
 
