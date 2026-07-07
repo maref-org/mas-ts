@@ -18,6 +18,13 @@ repos:
           ' --
         language: system
         stages: [pre-commit]
+      - id: remote-whitelist
+        name: Track B remote whitelist (R1 P0)
+        entry: bash scripts/check-remote-whitelist.sh
+        language: system
+        stages: [pre-push]
+        pass_filenames: false
+        always_run: true
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.15.0

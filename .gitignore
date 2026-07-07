@@ -89,6 +89,19 @@ findings.md
 progress.md
 task_plan.md
 
+# Internal audit/planning reports (contain T3/T2 content — local paths/org names, not for publish)
+AUDIT_REPORT_*.md
+BACKDOOR_DETECTION_ENHANCEMENT_PLAN_*.md
+ITERATION_PLAN_*.md
+REMEDIATION_PLAN_*.md
+bandit-report.json
+可视化工程实施方案.md
+补强清单-v2.md
+金标规范工程补强实施方案.md
+
+# OpenCode internal config
+.opencode/
+
 # Trae AI config (local only)
 .trae/
 
