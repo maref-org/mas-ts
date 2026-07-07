@@ -3,11 +3,13 @@
 """
 MAS-TS-001 v3.0 — D5: Evolution & Robustness
 
-Scoring:
-  ChaosEngineering    × 0.30 — 5 infra faults × 5 LLM faults, self-heal rate
-  DriftDetection      × 0.25 — Triple-divergence (KL/JS/Hellinger), baseline auto-reset
-  ReflectionLoop      × 0.20 — 5-dim quality evaluation, CriticAgent loop
-  ConvergenceCycle    × 0.25 — C1/C2/C3 cycles
+Scoring (Gold Standard §7.4 — 5-weight formula with ConsistencyIndex):
+  ChaosEngineering    × 0.25 — 5 infra faults × 5 LLM faults, self-heal rate
+  DriftDetection      × 0.20 — Triple-divergence (KL/JS/Hellinger), baseline auto-reset
+  ReflectionLoop      × 0.15 — 5-dim quality evaluation, CriticAgent loop
+  ConvergenceCycle    × 0.20 — C1/C2/C3 cycles
+  ConsistencyIndex    × 0.20 — cross-domain consistency (CI); falls back to the
+                  legacy 4-weight formula (0.30/0.25/0.20/0.25) when CI is absent
 
 Usage:
   ce = ChaosEngine(seed=42)
@@ -85,6 +87,9 @@ class FaultInjector:
         return self._injection_mode
 
     def _probe_capabilities(self) -> str:
+        system = platform.system()
+        if system == "Windows":
+            return "simulated"
         has_stress = (
             subprocess.run(
                 ["which", "stress-ng"], capture_output=True, text=True
@@ -108,7 +113,7 @@ class FaultInjector:
         return "simulated"
 
     def inject_cpu_pressure(self, cores: int = 2, duration: int = 10) -> dict[str, Any]:
-        if self.mode == "sim":
+        if self.mode == "sim" or platform.system() == "Windows":
             return {
                 "fault": "cpu_pressure",
                 "mode": "simulated",
@@ -132,7 +137,7 @@ class FaultInjector:
     def inject_memory_pressure(
         self, megabytes: int = 256, duration: int = 10
     ) -> dict[str, Any]:
-        if self.mode == "sim":
+        if self.mode == "sim" or platform.system() == "Windows":
             return {
                 "fault": "memory_pressure",
                 "mode": "simulated",
@@ -162,7 +167,7 @@ class FaultInjector:
             return {"fault": "memory_pressure", "mode": "simulated"}
 
     def inject_disk_failure(self) -> dict[str, Any]:
-        if self.mode == "sim":
+        if self.mode == "sim" or platform.system() == "Windows":
             return {
                 "fault": "disk_failure",
                 "mode": "simulated",
@@ -191,7 +196,7 @@ class FaultInjector:
             return {"fault": "disk_failure", "mode": "simulated"}
 
     def inject_process_kill(self, pid: int | None = None) -> dict[str, Any]:
-        if self.mode == "sim":
+        if self.mode == "sim" or platform.system() == "Windows":
             return {
                 "fault": "process_kill",
                 "mode": "simulated",
@@ -216,6 +221,7 @@ class FaultInjector:
                 ["sleep", "60"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
             )
             os.kill(sleeper.pid, signal.SIGKILL)
+            sleeper.wait(timeout=5)
             return {
                 "fault": "process_kill",
                 "mode": "real",
@@ -227,7 +233,7 @@ class FaultInjector:
     def inject_network_partition(
         self, target_ip: str | None = None, duration: int = 30
     ) -> dict[str, Any]:
-        if self.mode == "sim":
+        if self.mode == "sim" or platform.system() == "Windows":
             target = target_ip or "127.0.0.2"
             return {
                 "fault": "network_partition",
@@ -246,20 +252,14 @@ class FaultInjector:
                 ).returncode
                 == 0
             ):
-                self._cleanup_handlers.append(
-                    lambda: subprocess.run(
-                        [
-                            "sudo",
-                            "pfctl",
-                            "-t",
-                            "blocked_hosts",
-                            "-T",
-                            "delete",
-                            target,
-                        ],
+                # FIX: 使用默认参数避免闭包陷阱
+                def _cleanup_pfctl(t: str = target) -> Any:
+                    return subprocess.run(
+                        ["sudo", "pfctl", "-t", "blocked_hosts", "-T", "delete", t],
                         capture_output=True,
                     )
-                )
+
+                self._cleanup_handlers.append(_cleanup_pfctl)
                 return {
                     "fault": "network_partition",
                     "mode": "real",
@@ -283,12 +283,14 @@ class FaultInjector:
                 ).returncode
                 == 0
             ):
-                self._cleanup_handlers.append(
-                    lambda: subprocess.run(
-                        ["sudo", "iptables", "-D", "INPUT", "-s", target, "-j", "DROP"],
+
+                def _cleanup_iptables(t: str = target) -> Any:
+                    return subprocess.run(
+                        ["sudo", "iptables", "-D", "INPUT", "-s", t, "-j", "DROP"],
                         capture_output=True,
                     )
-                )
+
+                self._cleanup_handlers.append(_cleanup_iptables)
                 return {
                     "fault": "network_partition",
                     "mode": "real",
@@ -774,11 +776,11 @@ class FederationCircuitBreaker:
         dependency_matrix: list[list[float]] | None = None,
     ) -> None:
         self.agent_names = agent_names or [
-            "claude_code",
-            "codex",
-            "cursor",
-            "opencode",
-            "trae_cn",
+            "vendor_a",
+            "vendor_b",
+            "vendor_c",
+            "vendor_d",
+            "vendor_e",
         ]
         self.n = len(self.agent_names)
         self.dependency_threshold = 0.4
@@ -1712,7 +1714,11 @@ def run_d5_part1(
 
     all_findings = chaos_findings + drift_findings
 
-    weights = {"chaos_engineering": 0.30, "drift_detection": 0.25}
+    # Gold Standard §7.4 — weights mirror run_d5's 5-weight formula so the
+    # part1 weighted_contribution stays consistent with the unified score
+    # (chaos 0.25, drift 0.20; the remaining 0.20 belongs to CI, handled in
+    # run_d5, and reflection/convergence belong to part2).
+    weights = {"chaos_engineering": 0.25, "drift_detection": 0.20}
     weighted_contribution = round(
         chaos_score * weights["chaos_engineering"]
         + drift_score * weights["drift_detection"],
@@ -1750,7 +1756,11 @@ def run_d5_part2(
     convergence_score, convergence_findings = _score_convergence(cv, verifier_registry)
     all_findings = reflection_findings + convergence_findings
 
-    weights = {"reflection_loop": 0.20, "convergence_cycle": 0.25}
+    # Gold Standard §7.4 — weights mirror run_d5's 5-weight formula so the
+    # part2 weighted_contribution stays consistent with the unified score
+    # (reflection 0.15, convergence 0.20; chaos/drift belong to part1 and CI
+    # is folded in by run_d5).
+    weights = {"reflection_loop": 0.15, "convergence_cycle": 0.20}
     weighted_contribution = round(
         reflection_score * weights["reflection_loop"]
         + convergence_score * weights["convergence_cycle"],
@@ -1783,8 +1793,15 @@ def run_d5(
     card: dict[str, Any] | None = None,
     seed: int = 42,
     verifier_registry: Any = None,
+    multi_run_trajectories: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Run D5 evaluation: chaos engineering + drift detection + reflection + convergence.
+
+    Gold Standard v3.0-GA §7.4: when ``multi_run_trajectories`` is supplied with
+    ≥2 runs, the ConsistencyIndex sub-domain is computed and the D5 score uses
+    the 5-weight formula (0.25/0.20/0.15/0.20/0.20). When omitted, the legacy
+    4-weight formula (0.30/0.25/0.20/0.25) is preserved for backward
+    compatibility and ``consistency_index`` defaults to 0.0.
 
     Args:
         ce: Optional ChaosEngine instance (created with seed if None).
@@ -1792,18 +1809,84 @@ def run_d5(
         card: Optional agent card dict.
         seed: Random seed for deterministic chaos injection (default 42).
         verifier_registry: Optional VerifierRegistry for cross-validated evaluation.
+        multi_run_trajectories: Optional list of ≥2 trajectory dicts used to
+            compute the Gold Standard ConsistencyIndex (v3.0-GA §7.4). Each
+            trajectory dict should contain ``result`` / ``elapsed_seconds`` /
+            ``events`` keys.
 
     Returns:
-        Dict with domain, score, subscores, findings.
+        Dict with domain, score, subscores (including ``consistency_index``),
+        findings.
     """
     p1 = run_d5_part1(ce, dd, card, seed=seed)
     p2 = run_d5_part2(verifier_registry=verifier_registry)
 
-    d5_score = (
-        p1["subscores"]["chaos_engineering"] * 0.30
-        + p1["subscores"]["drift_detection"] * 0.25
-        + p2["subscores"]["reflection_loop"] * 0.20
-        + p2["subscores"]["convergence_cycle"] * 0.25
+    # Gold Standard §7.4 — ConsistencyIndex
+    ci_score = 0.0
+    ci_dimensions: dict[str, Any] = {}
+    ci_detail = ""
+    ci_findings: list[dict[str, Any]] = []
+    ci_enabled = False
+    if multi_run_trajectories and len(multi_run_trajectories) >= 2:
+        ci = ConsistencyIndex()
+        for traj in multi_run_trajectories:
+            ci.add_run(traj)
+        ci_result = ci.score()
+        ci_enabled = ci_result["ci"] > 0
+        ci_score = ci_result["ci"] * 100
+        ci_dimensions = ci_result.get("dimensions", {})
+        ci_detail = ci_result.get("detail", "")
+        ci_findings.append(
+            {
+                "severity": "INFO",
+                "category": "consistency_index",
+                "detail": (
+                    f"ConsistencyIndex CI={ci_result['ci']:.3f} "
+                    f"({ci_detail}) — dimensions={ci_dimensions}"
+                ),
+            }
+        )
+    else:
+        ci_findings.append(
+            {
+                "severity": "INFO",
+                "category": "consistency_index_skipped",
+                "detail": (
+                    "ConsistencyIndex requires ≥2 multi-run trajectories; "
+                    "subscore defaulted to 0.0"
+                ),
+            }
+        )
+
+    chaos = p1["subscores"]["chaos_engineering"]
+    drift = p1["subscores"]["drift_detection"]
+    reflection = p2["subscores"]["reflection_loop"]
+    convergence = p2["subscores"]["convergence_cycle"]
+
+    if ci_enabled:
+        # Gold Standard 5-weight formula (CI data available)
+        d5_score = (
+            chaos * 0.25
+            + drift * 0.20
+            + reflection * 0.15
+            + convergence * 0.20
+            + ci_score * 0.20
+        )
+    else:
+        # Legacy 4-weight formula (backward compat)
+        d5_score = chaos * 0.30 + drift * 0.25 + reflection * 0.20 + convergence * 0.25
+
+    all_findings = p1["findings"] + p2["findings"] + ci_findings
+
+    # Gold Standard v3.0-GA §10 — augment findings with v2 attribution fields.
+    from mas_eval.scoring.findings import upgrade_findings_to_v2
+
+    all_findings = upgrade_findings_to_v2(
+        all_findings,
+        default_layer="model",
+        default_root_cause="network_failure",
+        default_reproducibility="stochastic",
+        default_mitigation="auto_recovery",
     )
 
     return {
@@ -1811,20 +1894,25 @@ def run_d5(
         "name": "Evolution & Robustness",
         "score": round(d5_score, 1),
         "subscores": {
-            "chaos_engineering": p1["subscores"]["chaos_engineering"],
-            "drift_detection": p1["subscores"]["drift_detection"],
-            "reflection_loop": p2["subscores"]["reflection_loop"],
-            "convergence_cycle": p2["subscores"]["convergence_cycle"],
+            "chaos_engineering": chaos,
+            "drift_detection": drift,
+            "reflection_loop": reflection,
+            "convergence_cycle": convergence,
+            "consistency_index": round(ci_score, 1),
         },
+        "consistency_index_detail": ci_dimensions,
+        "consistency_index_enabled": ci_enabled,
         "part1_detail": p1,
         "part2_detail": p2,
-        "findings": p1["findings"] + p2["findings"],
+        "findings": all_findings,
         "summary": {
-            "total_findings": len(p1["findings"]) + len(p2["findings"]),
-            "chaos_score": p1["subscores"]["chaos_engineering"],
-            "drift_score": p1["subscores"]["drift_detection"],
-            "reflection_score": p2["subscores"]["reflection_loop"],
-            "convergence_score": p2["subscores"]["convergence_cycle"],
+            "total_findings": len(all_findings),
+            "chaos_score": chaos,
+            "drift_score": drift,
+            "reflection_score": reflection,
+            "convergence_score": convergence,
+            "consistency_index": round(ci_score, 1),
+            "consistency_index_enabled": ci_enabled,
             "d5_score": round(d5_score, 1),
         },
     }

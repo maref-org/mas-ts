@@ -70,7 +70,7 @@ def score_domain(raw_score, findings=None, apply_penalties=False):
     return max(0, min(100, round(s, 1)))
 
 
-def score_to_grade(score):
+def score_to_grade(score: float) -> str:
     """Convert a numeric score to a letter grade.
 
     Thresholds: >=90 A, >=80 B, >=70 C, >=60 D, else F.

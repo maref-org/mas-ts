@@ -3,23 +3,32 @@
 """
 MAS-TS-001 v3.0-GA — D2: Single-Agent Capability (Gold Standard)
 
-7 subdomains:
+8 subdomains (v0.7.0 — R4 TTFT gate added):
   ModelQuality             × 0.20 — LLM quality DB lookup with weighted subscores
   ToolCoverage             × 0.15 — core=8 / advanced=7 tool taxonomy, schema completeness
   TaskCompletion           × 0.25 — trajectory comparison (sequence/set/param/route/output)
   E2EScenarios             × 0.20 — 8 predefined scenarios, each scored 0-100
-  StepEfficiency           × 0.10 — expected_steps / actual_steps, redundancy, revisitation
-  TrajectoryQuality        × 0.10 — semantic quality: optimality, coherence, determinism, recovery, transparency
+  StepEfficiency           × 0.05 — expected_steps / actual_steps, redundancy, revisitation
+  TrajectoryQuality        × 0.05 — semantic quality: optimality, coherence, determinism, recovery, transparency
+  LatencyPressure          × 0.10 — P99 TTFT against 500ms threshold (R4 — Handbook §4.4.2)
   ToolSelectionCorrectness × 0.00 — selection accuracy, argument correctness (bonus domain)
 
 D2 = ModelQuality×0.20 + ToolCoverage×0.15 + TaskCompletion×0.25
-     + E2EScenarios×0.20 + StepEfficiency×0.10 + TrajectoryQuality×0.10
+     + E2EScenarios×0.20 + StepEfficiency×0.05 + TrajectoryQuality×0.05
+     + LatencyPressure×0.10
      + ToolSelectionCorrectness×0.00 (bonus — adds up to +5 to overall if ≥70)
+
+Note (v0.7.0): When scenario_trajectories is None, the three trajectory-
+dependent subdomains (Step/Traj/Latency) are zeroed and the first four are
+renormalized (divided by 0.80) to preserve the 0-100 score range and avoid
+regressions in callers that do not supply scenario trajectories.
 """
 
 import logging
 from difflib import SequenceMatcher
 from typing import Any
+
+from .d2_latency_pressure import run_latency_pressure
 
 logger = logging.getLogger(__name__)
 
@@ -732,6 +741,8 @@ def run_d2(
     traj_findings: list[dict[str, Any]] = []
     tool_sel_score: float = 0.0
     tool_sel_findings: list[dict[str, Any]] = []
+    latency_score: float = 0.0
+    latency_findings: list[dict[str, Any]] = []
 
     if scenario_trajectories:
         step_scores = []
@@ -755,6 +766,17 @@ def run_d2(
             if scenario_trajectories
             else (0.0, [])
         )
+        # R4 — Latency pressure (Handbook §4.4.2 TTFT P99≤500ms)
+        # Average scores across all scenario trajectories for consistency
+        # with step_efficiency; accumulate ALL findings (not just first
+        # scenario) so CRITICAL latency findings from later scenarios are
+        # not silently dropped from the audit trail.
+        lat_scores: list[float] = []
+        for traj in scenario_trajectories:
+            s, f, _ = run_latency_pressure(traj.get("trajectory"))
+            lat_scores.append(s)
+            latency_findings.extend(f)
+        latency_score = sum(lat_scores) / len(lat_scores) if lat_scores else 0.0
 
     all_findings = (
         model_findings
@@ -764,16 +786,45 @@ def run_d2(
         + step_findings
         + traj_findings
         + tool_sel_findings
+        + latency_findings
     )
 
-    d2_score = (
-        model_score * 0.20
-        + tool_score * 0.15
-        + task_score * 0.25
-        + e2e_score * 0.20
-        + step_score * 0.10
-        + traj_score * 0.10
+    # Gold Standard v3.0-GA §10 — augment findings with v2 attribution fields.
+    from mas_eval.scoring.findings import upgrade_findings_to_v2
+
+    all_findings = upgrade_findings_to_v2(
+        all_findings,
+        default_layer="tool",
+        default_root_cause="tool_selection",
+        default_reproducibility="stochastic",
+        default_mitigation="auto_recovery",
     )
+
+    # Conditional weighting (v0.7.0): renormalize when trajectory data is
+    # absent (scenario_trajectories empty OR first trajectory is None) so
+    # that step/traj/latency=0 does not drag down the score.
+    has_traj_data = (
+        scenario_trajectories is not None
+        and len(scenario_trajectories) > 0
+        and scenario_trajectories[0].get("trajectory") is not None
+    )
+    if has_traj_data:
+        d2_score = (
+            model_score * 0.20
+            + tool_score * 0.15
+            + task_score * 0.25
+            + e2e_score * 0.20
+            + step_score * 0.05
+            + traj_score * 0.05
+            + latency_score * 0.10
+        )
+    else:
+        d2_score = (
+            model_score * 0.20
+            + tool_score * 0.15
+            + task_score * 0.25
+            + e2e_score * 0.20
+        ) / 0.80
 
     return {
         "domain": "D2",
@@ -786,6 +837,7 @@ def run_d2(
             "e2e_scenarios": e2e_score,
             "step_efficiency": step_score,
             "trajectory_quality": traj_score,
+            "latency_pressure": latency_score,
             "tool_selection_correctness": tool_sel_score,
         },
         "findings": all_findings,

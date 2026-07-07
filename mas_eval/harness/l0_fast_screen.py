@@ -14,6 +14,7 @@ from mas_eval.domains.d1_compliance import run_d1
 from mas_eval.domains.d2_single_agent import run_d2, run_step_efficiency
 from mas_eval.domains.d3_multi_agent import run_d3
 from mas_eval.scoring.absolute import score_to_grade
+from mas_eval.scoring.gold_thresholds import check_level_thresholds
 
 logger = logging.getLogger(__name__)
 
@@ -130,9 +131,10 @@ def _stage_mock_tasks(card, tasks=None):
 
 
 def _stage_step_efficiency(trajectory_data):
-    """Gold Standard L0 StepEfficiency check (v3.0-GA §9.1).
+    """Gold Standard L0 StepEfficiency gate (v3.0-GA §9.1, hardened).
 
-    WARNING if step efficiency < 50 (indicates excessive step count).
+    FAIL if step efficiency < 50 — L0 is a hard CI gate and must not allow
+    agents with poor step efficiency to pass. Previously returned WARNING.
     """
     if not trajectory_data:
         return {
@@ -148,7 +150,7 @@ def _stage_step_efficiency(trajectory_data):
     )
     return {
         "stage": "step_efficiency",
-        "status": "PASS" if score >= 50 else "WARNING",
+        "status": "PASS" if score >= 50 else "FAIL",
         "score": score,
         "checks": ["d2.5"],
         "warnings": len([f for f in findings if f["severity"] == "WARNING"]),
@@ -187,6 +189,22 @@ def _stage_traffic_light(stages):
 
 def _l0_result(stages, start_time):
     elapsed = time.time() - start_time
+
+    # 提取金标阈值检查所需的指标
+    metrics = {}
+    for stage in stages:
+        if stage["stage"] == "card_validation":
+            metrics["d1_compliance"] = stage["score"]
+        elif stage["stage"] == "step_efficiency" and stage["status"] != "SKIP":
+            metrics["d2_step_efficiency"] = stage["score"] / 100.0
+        elif stage["stage"] == "mock_tasks":
+            metrics["d2_tool_coverage"] = stage["score"]
+        elif stage["stage"] == "agent_spawn":
+            metrics["d3_spawn_rate"] = stage["score"]
+
+    # 执行金标阈值检查
+    threshold_check = check_level_thresholds(metrics, level="L0")
+
     return {
         "level": "L0",
         "name": "Fast-Screen",
@@ -195,4 +213,5 @@ def _l0_result(stages, start_time):
         "status": stages[-1]["status"] if stages else "FAIL",
         "stages": stages,
         "summary": {s["stage"]: s["status"] for s in stages},
+        "threshold_check": threshold_check,
     }

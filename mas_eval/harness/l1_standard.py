@@ -13,6 +13,7 @@ from mas_eval.domains.d1_compliance import run_d1
 from mas_eval.domains.d2_single_agent import run_d2
 from mas_eval.domains.d3_multi_agent import run_d3
 from mas_eval.harness.aggregation import aggregate_level
+from mas_eval.harness.trajectory_builder import build_scenario_trajectories
 from mas_eval.oracle.oracle_base import run_d2_with_oracle
 
 logger = logging.getLogger(__name__)
@@ -46,7 +47,13 @@ def run_l1_standard(card, tasks=None, golden_trajectory=None, mock_trajectory=No
     start = time.time()
     d1 = run_d1(card)
     trajectory = golden_trajectory if golden_trajectory is not None else tasks
-    d2 = run_d2(card, trajectory, mock_trajectory)
+    scenario_trajectories = build_scenario_trajectories(card, trajectory)
+    d2 = run_d2(
+        card,
+        trajectory,
+        mock_trajectory,
+        scenario_trajectories=scenario_trajectories,
+    )
     d3 = run_d3(card)
 
     return aggregate_level(

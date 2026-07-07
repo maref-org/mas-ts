@@ -1292,6 +1292,17 @@ def run_d3(
 
     d3_score = min(100, d3_score)
 
+    # Gold Standard v3.0-GA §10 — augment findings with v2 attribution fields.
+    from mas_eval.scoring.findings import upgrade_findings_to_v2
+
+    all_findings = upgrade_findings_to_v2(
+        all_findings,
+        default_layer="coordination",
+        default_root_cause="coordination_failure",
+        default_reproducibility="stochastic",
+        default_mitigation="auto_recovery",
+    )
+
     subscores = {
         "spawn": spawn_score,
         "protocol": protocol_score,
