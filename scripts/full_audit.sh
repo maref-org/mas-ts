@@ -5,9 +5,12 @@
 
 set -e
 
-PERCV_CARD="/Volumes/1TB-M2/public/mas-ts/mas_eval/data/sample_cards/percv.json"
-SCHEMA_V11="/Volumes/1TB-M2/public/mas-ts/mas_eval/schemas/agent_card_v1.1.json"
-SCHEMA_V12="/Volumes/1TB-M2/public/mas-ts/mas_eval/schemas/agent_card_v1.2.json"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+PERCV_CARD="$PROJECT_ROOT/mas_eval/data/sample_cards/percv.json"
+SCHEMA_V11="$PROJECT_ROOT/mas_eval/schemas/agent_card_v1.1.json"
+SCHEMA_V12="$PROJECT_ROOT/mas_eval/schemas/agent_card_v1.2.json"
 
 echo "=========================================="
 echo "  MAS-TS-001 全量审计报告"
@@ -118,7 +121,7 @@ echo ""
 echo "=== 6. 评估器 Schema 选择逻辑检查 ==="
 python3 -c "
 import sys
-sys.path.insert(0, '/Volumes/1TB-M2/public/mas-ts')
+sys.path.insert(0, '$PROJECT_ROOT')
 from mas_full_run import select_schema
 import json
 
@@ -135,7 +138,7 @@ else:
 
 echo ""
 echo "=== 7. 运行完整 MAS-TS-001 评估 ==="
-cd /Volumes/1TB-M2/public/mas-ts
+cd "$PROJECT_ROOT"
 python3 mas_full_run.py --card "$PERCV_CARD" --output /tmp/percv_audit_result.json 2>&1 | tail -30
 
 echo ""
