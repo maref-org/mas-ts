@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2026 frankiehot-tech
+# SPDX-FileCopyrightText: 2026 maref-org
 # SPDX-License-Identifier: Apache-2.0
 """
 MAS-TS-001 v3.0 — D3: Multi-Agent Collaboration
@@ -1248,6 +1248,13 @@ def run_d3(
         planned_trajectory, inter_agent_trajectory
     )
 
+    # v0.8.1 NEW — A2A security interaction (OWASP Agentic #4/#5/#9)
+    from mas_eval.domains.d3_security_interaction import run_d3_security_interaction
+
+    sec_result = run_d3_security_interaction(card)
+    sec_score = sec_result["score"]
+    sec_findings = sec_result.get("findings", [])
+
     all_findings = (
         spawn_findings
         + protocol_findings
@@ -1257,17 +1264,19 @@ def run_d3(
         + persistence_findings
         + coord_findings
         + plan_findings
+        + sec_findings
     )
 
     d3_score = (
         spawn_score * 0.15
         + protocol_score * 0.15
-        + orchestration_score * 0.20
+        + orchestration_score * 0.15  # v0.8.0: 0.20 → v0.8.1: 0.15 (rebalanced for security_interaction)
         + isolation_score * 0.15
         + conflict_score * 0.10
         + persistence_score * 0.10
         + coord_score * 0.10
         + plan_score * 0.05
+        + sec_score * 0.05  # v0.8.1 NEW — A2A security interaction
     )
 
     fed_compat_score = 0.0
@@ -1312,6 +1321,8 @@ def run_d3(
         "persistence": persistence_score,
         "coordination_efficiency": coord_score,
         "plan_quality": plan_score,
+        "security_interaction": sec_score,  # v0.8.1 NEW
+        "security_interaction_detail": sec_result.get("subscores", {}),  # v0.8.1 NEW
         "federation_compat": fed_compat_score,
         "federation_role": role_score,
         "federation_permissions": perm_score,

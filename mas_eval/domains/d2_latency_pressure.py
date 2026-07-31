@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2026 frankiehot-tech
+# SPDX-FileCopyrightText: 2026 maref-org
 # SPDX-License-Identifier: Apache-2.0
 """D2 latency pressure sub-domain (R4 — Handbook §4.4.2 TTFT P99≤500ms).
 

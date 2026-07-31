@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2026 frankiehot-tech
+# SPDX-FileCopyrightText: 2026 maref-org
 # SPDX-License-Identifier: Apache-2.0
 """Tests for MAS-TS-001 v3.0 Oracle Base Framework (Phase 1)."""
 
@@ -42,7 +42,7 @@ SAMPLE_CARD = {
             "input_schema": {},
             "output_schema": {},
             "examples": ["ls"],
-            "business_rule_version": "2026-05-01",
+            "business_rule_version": "2026-07-15",
         },
         {
             "skill_id": "file_read",
@@ -50,7 +50,7 @@ SAMPLE_CARD = {
             "input_schema": {},
             "output_schema": {},
             "examples": ["r"],
-            "business_rule_version": "2026-05-01",
+            "business_rule_version": "2026-07-15",
         },
         {
             "skill_id": "file_edit",
@@ -58,7 +58,7 @@ SAMPLE_CARD = {
             "input_schema": {},
             "output_schema": {},
             "examples": ["e"],
-            "business_rule_version": "2026-05-01",
+            "business_rule_version": "2026-07-15",
         },
         {
             "skill_id": "file_write",
@@ -66,7 +66,7 @@ SAMPLE_CARD = {
             "input_schema": {},
             "output_schema": {},
             "examples": ["w"],
-            "business_rule_version": "2026-05-01",
+            "business_rule_version": "2026-07-15",
         },
         {
             "skill_id": "glob",
@@ -74,7 +74,7 @@ SAMPLE_CARD = {
             "input_schema": {},
             "output_schema": {},
             "examples": ["g"],
-            "business_rule_version": "2026-05-01",
+            "business_rule_version": "2026-07-15",
         },
         {
             "skill_id": "grep",
@@ -82,7 +82,7 @@ SAMPLE_CARD = {
             "input_schema": {},
             "output_schema": {},
             "examples": ["gr"],
-            "business_rule_version": "2026-05-01",
+            "business_rule_version": "2026-07-15",
         },
         {
             "skill_id": "web_search",
@@ -90,7 +90,7 @@ SAMPLE_CARD = {
             "input_schema": {},
             "output_schema": {},
             "examples": ["s"],
-            "business_rule_version": "2026-05-01",
+            "business_rule_version": "2026-07-15",
         },
         {
             "skill_id": "web_fetch",
@@ -98,7 +98,7 @@ SAMPLE_CARD = {
             "input_schema": {"type": "object"},
             "output_schema": {"type": "object"},
             "examples": ["f"],
-            "business_rule_version": "2026-05-01",
+            "business_rule_version": "2026-07-15",
         },
         {
             "skill_id": "agent_tool",
@@ -106,7 +106,7 @@ SAMPLE_CARD = {
             "input_schema": {},
             "output_schema": {},
             "examples": ["a"],
-            "business_rule_version": "2026-05-01",
+            "business_rule_version": "2026-07-15",
         },
     ],
 }

@@ -84,7 +84,7 @@ V2_CARD: dict[str, Any] = {
             "input_schema": {},
             "output_schema": {},
             "examples": ["example1"],
-            "business_rule_version": "2026-05-01",
+            "business_rule_version": "2026-07-15",
         }
     ],
     "authentication": {"type": "OAuth2", "scopes": ["read", "write"]},
@@ -756,7 +756,7 @@ class TestSchemaV2BackwardCompat:
                     "input_schema": {},
                     "output_schema": {},
                     "examples": ["ls"],
-                    "business_rule_version": "2026-05-01",
+                    "business_rule_version": "2026-07-15",
                 }
             ],
             "authentication": {"type": "APIKey", "scopes": ["read"]},

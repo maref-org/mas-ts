@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2026 frankiehot-tech
+# SPDX-FileCopyrightText: 2026 maref-org
 # SPDX-License-Identifier: Apache-2.0
 """Trajectory builder for D2 Gold Standard sub-domains (v3.0-GA §4.2-4.4).
 

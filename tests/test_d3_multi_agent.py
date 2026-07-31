@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2026 frankiehot-tech
+# SPDX-FileCopyrightText: 2026 maref-org
 # SPDX-License-Identifier: Apache-2.0
 """Tests for D3: Multi-Agent Collaboration (MAS-TS-001 v3.0)"""
 
@@ -63,7 +63,7 @@ FULL_MAS_CARD = {
             "output_schema": {},
             "examples": ["spawn"],
             "rate_limit": "30/min",
-            "business_rule_version": "2026-05-01",
+            "business_rule_version": "2026-07-15",
         },
         {
             "skill_id": "mcp_tool",
@@ -72,7 +72,7 @@ FULL_MAS_CARD = {
             "output_schema": {},
             "examples": ["mcp"],
             "rate_limit": "30/min",
-            "business_rule_version": "2026-05-01",
+            "business_rule_version": "2026-07-15",
         },
         {
             "skill_id": "worktree",
@@ -244,6 +244,8 @@ class TestD3:
             "persistence",
             "coordination_efficiency",
             "plan_quality",
+            "security_interaction",  # v0.8.1 NEW
+            "security_interaction_detail",  # v0.8.1 NEW (nested dict)
             "federation_compat",
             "federation_role",
             "federation_permissions",
@@ -262,6 +264,8 @@ class TestD3:
     def test_d3_subscores_range(self):
         result = run_d3(FULL_MAS_CARD, tasks={})
         for subname, subscore in result["subscores"].items():
+            if isinstance(subscore, dict):
+                continue  # skip nested detail dicts (e.g. security_interaction_detail)
             assert 0 <= subscore <= 100, f"{subname} score {subscore} out of range"
 
     def test_d3_all_dimensions_have_findings(self):

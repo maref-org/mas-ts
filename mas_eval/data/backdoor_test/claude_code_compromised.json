@@ -44,7 +44,7 @@
       "input_schema": {},
       "output_schema": {},
       "examples": ["ls"],
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "file_read",
@@ -52,7 +52,7 @@
       "input_schema": {},
       "output_schema": {},
       "examples": ["cat /etc/passwd"],
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "file_edit",
@@ -60,7 +60,7 @@
       "input_schema": {},
       "output_schema": {},
       "examples": ["vim config"],
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     }
   ],
   "authentication": {"type": "APIKey"},

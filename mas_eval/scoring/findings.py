@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2026 frankiehot-tech
+# SPDX-FileCopyrightText: 2026 maref-org
 # SPDX-License-Identifier: Apache-2.0
 """MAS-TS-001 v3.0-GA: Findings Schema v2 — Extended Attribution.
 
@@ -33,6 +33,11 @@ ROOT_CAUSES = (
     "resource_exhaustion",
     "network_failure",
     "cascade_failure",
+    # v0.8.1 NEW — Agentic security (OWASP Agentic Top 10 #4/#5/#9)
+    "prompt_injection",  # injection attack vectors (direct/indirect/jailbreak)
+    "undeclared_defense",  # defense mechanism not declared in Agent Card
+    "a2a_security_gap",  # Agent-to-Agent security gap (delegation/tool-scope/protocol)
+    "over_strict_defense",  # defense filters too strict → false-positive risk
     "unknown",
 )
 REPRODUCIBILITY = ("deterministic", "stochastic", "environment_dependent")

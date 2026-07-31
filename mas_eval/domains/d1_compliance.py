@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2026 frankiehot-tech
+# SPDX-FileCopyrightText: 2026 maref-org
 # SPDX-License-Identifier: Apache-2.0
 """
 MAS-TS-001 v3.0 — D1: Static Compliance
@@ -12,6 +12,7 @@ Scoring: Base=100, deduct per severity CRITICAL(-25)/HIGH(-15)/WARNING(-5)/INFO(
 
 import json
 import logging
+import os
 import re
 import time
 from datetime import datetime
@@ -31,7 +32,7 @@ CORE_TOOLS = {
     "web_search",
     "web_fetch",
 }
-PROMPT_ROT_MAX_DAYS = 90
+PROMPT_ROT_MAX_DAYS = int(os.environ.get("PROMPT_ROT_MAX_DAYS", "90"))
 
 D1_CHECKS = [
     {"id": "1.1", "name": "agent_card_schema", "severity": "CRITICAL", "deduction": 25},

@@ -7,7 +7,7 @@
 #
 # 检查项:
 #   1. 绝对路径泄露 (/Volumes/, /Users/, file:///)
-#   2. 组织名泄露 (openclaw, frankiehot-tech, Athena 知识库路径)
+#   2. 组织名泄露 (openclaw, maref-org, Athena 知识库路径)
 #   3. 专有文件名泄露 (SOUL.md, IDENTITY.md, .openclaw/)
 #   4. API Key/Token 泄露 (环境变量值, sk- 模式)
 # =============================================================================
@@ -52,7 +52,7 @@ fi
 # ── Check 2: 组织名泄露 ────────────────────────────────────────────
 echo ""
 echo "─── 检查 2: 组织名泄露 ───"
-ORG_PATTERN='(openclaw|frankiehot-tech|frankiehot@)'
+ORG_PATTERN='(openclaw|maref-org|frankiehot@)'
 ORG_MATCHES=$(grep -rn "$ORG_PATTERN" \
     --include="*.py" --include="*.md" --include="*.yaml" --include="*.yml" \
     --include="*.json" --include="*.jsonc" \

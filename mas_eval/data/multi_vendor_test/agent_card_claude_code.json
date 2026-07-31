@@ -69,7 +69,7 @@
         "command: 'npm test'"
       ],
       "rate_limit": "60/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "file_read",
@@ -103,7 +103,7 @@
         "path: '/src/main.ts'"
       ],
       "rate_limit": "120/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "file_edit",
@@ -137,7 +137,7 @@
         "path: '/src/app.ts', old_str: 'foo()', new_str: 'bar()'"
       ],
       "rate_limit": "60/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "tool_orchestration",
@@ -168,7 +168,7 @@
         "plan: [{tool: 'grep', input: {pattern: 'TODO'}}]"
       ],
       "rate_limit": "30/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "skill_invoke",
@@ -199,7 +199,7 @@
         "skill_name: 'debug'"
       ],
       "rate_limit": "10/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "memory",
@@ -238,7 +238,7 @@
         "action: 'read', topic: 'project'"
       ],
       "rate_limit": "60/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "bridge",
@@ -272,7 +272,7 @@
         "action: 'create_session', config: {mode: 'worktree'}"
       ],
       "rate_limit": "10/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "agent_tool",
@@ -303,7 +303,7 @@
         "task: 'search for auth patterns', subagent_type: 'search'"
       ],
       "rate_limit": "5/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     }
   ],
   "endpoints": {

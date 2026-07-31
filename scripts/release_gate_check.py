@@ -1,8 +1,8 @@
-# SPDX-FileCopyrightText: 2026 frankiehot-tech
+# SPDX-FileCopyrightText: 2026 maref-org
 # SPDX-License-Identifier: Apache-2.0
 """Executable release gate checklist for MAS-TS-001 (Phase 7.1).
 
-Maps each of the 12 release-gate items in `docs/release-gate.md` to either an
+Maps each of the 15 release-gate items in `docs/release-gate.md` to either an
 auto-check (command + expected exit code) or a documented manual approval.
 Items G0.1/G0.2/G3.4 are manual; G3.4 requires UAT signoff record (R7 P0).
 Item G3.5 auto-runs the regression test suite (R8 P0).
@@ -158,6 +158,42 @@ GATE_ITEMS: list[dict[str, Any]] = [
             "-q",
         ],
         "expected": "exit code 0 (30 regression tests pass — R8 P0)",
+    },
+    {
+        "id": "G3.6",
+        "gate": 3,
+        "name": "SLO error budget check",
+        "type": "auto",
+        "command": [
+            _PY,
+            "-c",
+            "from mas_eval.scoring.slo import check_slo, reset_slo_state; reset_slo_state(); r=check_slo({'d1_compliance':100}); assert r['overall_pass']",
+        ],
+        "expected": "exit code 0 (SLO budget not exhausted)",
+    },
+    {
+        "id": "G3.7",
+        "gate": 3,
+        "name": "Security headers present",
+        "type": "auto",
+        "command": [
+            _PY,
+            "-c",
+            "from api.security_headers import SECURITY_HEADERS; assert len(SECURITY_HEADERS) >= 5",
+        ],
+        "expected": "exit code 0 (>= 5 security headers defined)",
+    },
+    {
+        "id": "G3.8",
+        "gate": 3,
+        "name": "Trace middleware present",
+        "type": "auto",
+        "command": [
+            _PY,
+            "-c",
+            "from api.tracing import TracingMiddleware; assert TracingMiddleware",
+        ],
+        "expected": "exit code 0 (TracingMiddleware importable)",
     },
 ]
 

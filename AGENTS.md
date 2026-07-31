@@ -56,8 +56,11 @@ Extends v1.1 with optional fields:
 | `mas_eval/domains/d3_multi_agent.py` | Spawn, protocol, orchestration, isolation, conflict, persistence |
 | `mas_eval/domains/d3_coordination_efficiency.py` | D3 coordination efficiency sub-domain scoring |
 | `mas_eval/domains/d3_plan_quality.py` | D3 plan quality sub-domain scoring |
+| `mas_eval/domains/d3_security_interaction.py` | D3 Agent-to-Agent security interaction (cross-agent injection, delegation spoof, tool-scope exploit, coordination attack) |
 | `mas_eval/domains/d4_governance_security.py` | StateMachine, CircuitBreaker, Oscillation, Audit, Security scoring, TrustScorer, vendor diversity, MCP supply chain, HITL gate |
 | `mas_eval/domains/d4_data_leakage.py` | D4 data leakage detection (covert collection, hidden channels) |
+| `mas_eval/domains/d4_injection_detection.py` | D4 prompt-injection detection (direct/indirect vectors, jailbreak resistance, defense-declaration audit) |
+| `mas_eval/domains/d4_runtime_consistency.py` | D4 runtime consistency check (undeclared network, cross-border violation, steganography) |
 | `mas_eval/domains/d5_robustness.py` | ChaosEngine, DriftDetector, ReflectiveAgent, ConvergenceVerifier, FederationCascade |
 | `mas_eval/schemas/agent_card_v1.1.json` | Agent card schema v1.1 (baseline) |
 | `mas_eval/schemas/agent_card_v1.2.json` | Agent card schema v1.2 (constitution envelope, health_state) |
@@ -69,6 +72,7 @@ Extends v1.1 with optional fields:
 | `mas_eval/harness/l3_comprehensive.py` | D1-D5 aggregation with Gold Standard report and certificate |
 | `mas_eval/harness/l4_evolution.py` | D5 lifecycle runner with MetaEvaluator integration |
 | `mas_eval/harness/aggregation.py` | Score aggregation + Gold Standard report computation |
+| `mas_eval/harness/sidecar_bridge.py` | Sidecar runtime security bridge — flattens HMAC audit chain, fuses runtime consistency + injection into D4 (Phase 2 v0.8.2) |
 | `mas_eval/harness/emergence_harness.py` | Emergence property harness |
 | `mas_eval/harness/stress_harness.py` | Stress test harness |
 | `mas_eval/harness/trajectory_builder.py` | Trajectory builder for golden vs actual comparison |
@@ -79,7 +83,7 @@ Extends v1.1 with optional fields:
 | `mas_eval/scoring/absolute.py` | Absolute scoring, grading, verdict |
 | `mas_eval/scoring/gold_thresholds.py` | Gold Standard L0-L4 threshold matrix (with HITL metrics) |
 | `mas_eval/scoring/gold_certificate.py` | Gold Standard certificate generator |
-| `mas_eval/scoring/meta_evaluator.py` | Meta-Evaluator for self-assessment |
+| `mas_eval/scoring/meta_evaluator.py` | Meta-Evaluator: auto_red_team (4 probes incl. adversarial_prompt_mutation) + score_reproducibility_variance |
 | `mas_eval/scoring/multi_model.py` | Multi-model evaluation runner |
 | `mas_eval/scoring/verifier.py` | Verifier for evaluation results |
 | `mas_eval/scoring/attribution.py` | Attribution scoring |
@@ -87,6 +91,7 @@ Extends v1.1 with optional fields:
 | `mas_eval/scoring/compliance_formatter.py` | Compliance report formatter |
 | `mas_eval/scoring/findings.py` | Findings data structure (v1 + v2 attribution) |
 | `mas_eval/scoring/regression.py` | Regression baseline comparison tool (5% tolerance) |
+| `mas_eval/scoring/standards_mapping.py` | External standards mapping engine (OWASP Agentic / MITRE ATLAS / NIST RMF) |
 | `mas_eval/reporting/full_report.py` | Full evaluation report generator |
 | `mas_eval/reporting/html_report.py` | HTML report generator |
 | `mas_eval/reporting/coverage_report.py` | Coverage report generator |
@@ -104,7 +109,7 @@ Extends v1.1 with optional fields:
 | `mas_eval/data/multi_vendor_test/` | 5 real vendor cards + federation scan results |
 | `mas_eval/data/golden_trajectories/` | 10 golden trajectory JSON files |
 | `mas_eval/data/baselines/v0.6.0_baseline.json` | v0.6.0 regression baseline snapshot |
-| `tests/` | 61 test files, 1799 tests (with regression + HITL + latency suites) |
+| `tests/` | 82 test files, 2042 tests (with regression + HITL + latency + agentic-security + runtime-bridge + standards-mapping + API-hardening suites) |
 | `.github/workflows/test.yml` | pytest + ruff + coverage gate 85% + Gold L0 gate + federation scan |
 | `.github/workflows/security-scan.yml` | TruffleHog + bandit SAST + pip-audit + SBOM CycloneDX (daily cron) |
 | `.github/workflows/type-check.yml` | mypy strict type checking |
@@ -113,16 +118,26 @@ Extends v1.1 with optional fields:
 | `.github/workflows/check-api-version.yml` | MCP tool api_version check (Article 15) |
 | `.github/workflows/check-fail-mode.yml` | MCP cross-boundary FAIL_MODE check (Article 7) |
 | `.github/workflows/check-agent-config.yml` | Agent config constitution reference check (Article 31) |
-| `scripts/release_gate_check.py` | 12-item release gate runner (G0-G3, with G3.4 UAT + G3.5 regression) |
+| `.github/workflows/check-remote.yml` | Remote origin verification pre-push |
+| `.github/workflows/codeql.yml` | CodeQL static analysis (weekly) |
+| `.github/workflows/semgrep.yml` | Semgrep SAST rule scan (weekly) |
+| `scripts/release_gate_check.py` | 15-item release gate runner (G0-G3, with G3.4 UAT + G3.5 regression + G3.6 SLO + G3.7 security-headers + G3.8 tracing) |
 | `scripts/gold_standard_gate.py` | Gold Standard L0 threshold gate |
 | `scripts/federation_threshold.py` | Multi-vendor federation scan threshold policy |
 | `scripts/emergency-rollback.sh` | Emergency rollback script (git revert + verify) |
 | `scripts/sanitize-for-push.sh` | Track B pre-push content safety check |
 | `scripts/full_audit.sh` | Full audit script |
 | `scripts/audit_deep_eval.py` | Deep evaluation audit script |
-| `api/server.py` | FastAPI service with /health + /evaluate + /hitl endpoints |
+| `api/server.py` | FastAPI service with /health + /evaluate + /hitl + /metrics + /slo-status endpoints |
+| `api/error_codes.py` | 8 standardized error codes + build_error_response factory |
+| `api/ratelimit.py` | Token bucket rate limiter middleware (RATE_LIMIT_RATE/RATE_LIMIT_BURST) |
+| `api/security_headers.py` | 5 security response headers (CSP/XFO/XCTO/Permissions/Referrer) |
+| `api/tracing.py` | X-Trace-ID request/response tracing middleware |
+| `mas_eval/scoring/context_window.py` | 3 truncation strategies + context utilization check |
+| `mas_eval/scoring/degradation.py` | 5-level degradation state machine (normal→blocked) |
+| `mas_eval/scoring/slo.py` | Prometheus SLO error budget + /slo-status endpoint |
 | `docs/api-contracts.md` | CLI + Python API contract documentation (with Test Matrix) |
-| `docs/release-gate.md` | Release gate checklist (12 items) |
+| `docs/release-gate.md` | Release gate checklist (15 items) |
 | `docs/operations-readiness.md` | Runbook and ops procedures (8 scenarios) |
 | `docs/rtm.yaml` | Requirements Traceability Matrix (RTM) |
 | `docs/uat/` | UAT case docs and signoff records |
@@ -131,7 +146,7 @@ Extends v1.1 with optional fields:
 
 ```bash
 # Run all tests
-pytest tests/ -v           # 1799 tests (61 files)
+pytest tests/ -v           # 2042 tests (82 files)
 
 # Run specific domain
 pytest tests/test_d5_robustness.py -v
@@ -175,7 +190,7 @@ Score: C1×0.35 + C2×0.35 + C3×0.30
 - [x] 无 T3/T2 级内容（路径/Key/IP/时间戳）— rg 扫描零命中
 - [x] `git remote -v` 为授权远程 — 无远程（仅本地）
 - [x] pre-push hook 已就位
-- [x] CI: pytest 通过 — 1798 passed, 1 skipped (playwright), 0 failed
+- [x] CI: pytest 通过 — 2042 passed, 0 failed
 - [ ] MCP 工具含 `api_version`（第十五条）— 不适用
 - [ ] 跨边界 MCP 消息含 `trace_id`/`timestamp`/`source_agent`（第十五-A条）— 不适用
 - [ ] 跨边界 MCP 调用有 `FAIL_MODE` 降级（第七条）— 不适用

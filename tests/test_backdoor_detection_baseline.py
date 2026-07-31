@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2026 frankiehot-tech
+# SPDX-FileCopyrightText: 2026 maref-org
 # SPDX-License-Identifier: Apache-2.0
 """Regression tests for v0.8.0 backdoor detection baseline.
 
@@ -304,3 +304,52 @@ class TestBaselineFileIntegrity:
         for name, card in BASELINE["test_cards"].items():
             card_path = Path(__file__).parent.parent / card["card_path"]
             assert card_path.exists(), f"{name}: card file not found at {card_path}"
+
+
+# ═══════════════════════════════════════════════════════════════
+# Phase 3 (v0.8.3) — Probe 4: adversarial_prompt_mutation
+# ═══════════════════════════════════════════════════════════════
+
+
+class TestProbe4AdversarialMutation:
+    """Probe 4 (framework self-assessment) always runs and reports robustness."""
+
+    @pytest.fixture(scope="class")
+    def card(self) -> dict:
+        return _load_card(
+            BASELINE["test_cards"]["claude_code_clean"]["card_path"]
+        )
+
+    def test_auto_red_team_probe4_always_runs(self, card):
+        """Without sidecar_log, probe_count must be 3 (was 2 pre-Phase-3).
+
+        Probe 4 (adversarial_prompt_mutation) always runs regardless of
+        sidecar_log, so the no-sidecar probe_count is 3 (steg + leakage +
+        probe4), not 2.
+        """
+        result = auto_red_team(card)
+        assert result["probe_count"] == 3
+
+    def test_auto_red_team_framework_robustness_field(self, card):
+        """framework_robustness dict must be present with escape_rate/score."""
+        result = auto_red_team(card)
+        fr = result["framework_robustness"]
+        assert "escape_rate" in fr
+        assert "score" in fr
+        assert "total_mutations" in fr
+        assert "escapes" in fr
+        assert "verdict" in fr
+        assert fr["total_mutations"] == 70  # 14 canonical × 5 operators
+        assert 0.0 <= fr["escape_rate"] <= 1.0
+        assert 0.0 <= fr["score"] <= 100.0
+        assert fr["verdict"] in ("excellent", "good", "fair", "poor")
+        # Probe 4 is framework self-assessment → must NOT affect anti_cheat
+        # (clean card → anti_cheat unchanged by probe 4)
+        assert "framework_robustness_score" in result["summary"]
+
+    def test_auto_red_team_probe4_not_in_detected(self, card):
+        """Probe 4 must not appear in detected_behaviors (it tests the
+        framework, not the agent card)."""
+        result = auto_red_team(card)
+        types = {d["type"] for d in result["detected_behaviors"]}
+        assert "adversarial_prompt_mutation" not in types

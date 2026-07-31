@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2026 frankiehot-tech
+# SPDX-FileCopyrightText: 2026 maref-org
 # SPDX-License-Identifier: Apache-2.0
 """Tests for D4: Security (MAS-TS-001 v3.0)
 
@@ -64,7 +64,7 @@ SECURE_CARD = {
             "input_schema": {},
             "output_schema": {},
             "examples": ["ls"],
-            "business_rule_version": "2026-05-01",
+            "business_rule_version": "2026-07-15",
         },
         {
             "skill_id": "file_edit",
@@ -259,7 +259,7 @@ class TestSAST:
     def test_business_rules_boost_score(self):
         many_rules = {
             "capabilities": [
-                {"skill_id": f"t{i}", "business_rule_version": "2026-05-01"}
+                {"skill_id": f"t{i}", "business_rule_version": "2026-07-15"}
                 for i in range(10)
             ],
             "authentication": {"type": "APIKey"},
@@ -286,6 +286,7 @@ class TestD4SecurityIntegration:
             "red_blue_exercise",
             "trust_chain",
             "sast_scanning",
+            "injection_detection",  # v0.8.1 NEW
         }
         assert set(result["subscores"].keys()) == expected
 
@@ -340,6 +341,66 @@ class TestD4Full:
             + result["subscores"].get("gossip_trust", 0) * 0.05
         )
         assert abs(result["score"] - expected) < 0.1
+
+    # --- Phase 2 (v0.8.2) runtime_log integration ---
+
+    def test_d4_runtime_log_none_unchanged(self):
+        """runtime_log=None → no runtime keys, byte-for-byte backward compat."""
+        result = run_d4(SECURE_CARD)
+        assert "runtime_security" not in result
+        assert not any(k.startswith("runtime_") for k in result["subscores"])
+        assert not any(k.startswith("runtime_") for k in result["summary"])
+        # findings list contains no runtime_violation-attributed entries
+        assert not any(
+            f.get("root_cause") == "runtime_violation" for f in result["findings"]
+        )
+
+    def test_d4_runtime_log_clean_no_penalty(self):
+        """Clean runtime_log (no CRITICAL/HIGH) → score unchanged but runtime keys present."""
+        baseline = run_d4(SECURE_CARD)
+        clean_log = [
+            {
+                "url": "https://api.anthropic.com/v1/agents",
+                "domain_allowed": True,
+                "findings": [],
+                "region": "US",
+            }
+        ]
+        result = run_d4(SECURE_CARD, runtime_log=clean_log)
+        # Score unchanged (no CRITICAL/HIGH runtime findings → penalty 0)
+        assert result["score"] == baseline["score"]
+        # But runtime_security sub-result is surfaced
+        assert "runtime_security" in result
+        assert "runtime_security" in result["subscores"]
+        assert "runtime_consistency" in result["subscores"]
+        assert "runtime_injection" in result["subscores"]
+        assert "runtime_consistency_critical_count" in result["summary"]
+        assert result["summary"]["runtime_consistency_critical_count"] == 0
+
+    def test_d4_runtime_log_malicious_penalty(self):
+        """CRITICAL cross-border runtime_log → score drops, runtime keys present."""
+        baseline = run_d4(SECURE_CARD)
+        mal_log = [
+            {
+                "url": "https://api.anthropic.com/v1/agents",
+                "domain_allowed": False,  # triggers CRITICAL cross-border
+                "findings": [],
+                "region": "CN",
+            }
+        ]
+        result = run_d4(SECURE_CARD, runtime_log=mal_log)
+        # Score must drop (1 CRITICAL → penalty 8.0)
+        assert result["score"] < baseline["score"]
+        assert abs((baseline["score"] - result["score"]) - 8.0) < 0.1
+        # Runtime keys present with CRITICAL count
+        assert "runtime_security" in result
+        assert result["summary"]["runtime_consistency_critical_count"] >= 1
+        # Findings include the runtime cross-border violation
+        rt_findings = [
+            f for f in result["findings"] if "runtime" in str(f.get("category", ""))
+        ]
+        assert len(rt_findings) >= 1
+
 
 
 # ═══════════════════════════════════════════════════════════════

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2026 frankiehot-tech
+# SPDX-FileCopyrightText: 2026 maref-org
 # SPDX-License-Identifier: Apache-2.0
 """Gold Standard Certification JSON Report Generator.
 
@@ -27,6 +27,7 @@ from mas_eval.scoring.gold_certificate import (
 from mas_eval.scoring.gold_thresholds import (
     GOLD_THRESHOLD_MATRIX,
 )
+from mas_eval.scoring.standards_mapping import map_findings_to_standards
 
 DEFAULT_REPORT_DIR = "reports"
 
@@ -123,6 +124,7 @@ def generate_report(
             for f in findings
         ],
         "execution": exec_meta,
+        "standards_mapping": map_findings_to_standards(findings) if findings else None,
     }
 
 

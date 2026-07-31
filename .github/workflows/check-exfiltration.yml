@@ -34,7 +34,7 @@ jobs:
           echo "✅ No absolute paths found"
       - name: Check for organizational name leaks
         run: |
-          FOUND=$(grep -rnEi 'openclaw|frankiehot-tech' \
+          FOUND=$(grep -rnEi 'openclaw|maref-org' \
             --include="*.py" --include="*.md" --include="*.yaml" --include="*.yml" \
             --include="*.json" --include="*.jsonc" --include="*.toml" --include="*.txt" --include="*.lock" \
             --exclude="check-exfiltration.yml" --exclude="CLAUDE.md" --exclude="athena-governance.jsonc" \

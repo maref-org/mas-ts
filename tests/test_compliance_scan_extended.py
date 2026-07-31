@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2026 frankiehot-tech
+# SPDX-FileCopyrightText: 2026 maref-org
 # SPDX-License-Identifier: Apache-2.0
 import importlib.util
 import json
@@ -60,7 +60,7 @@ class TestScanAgentCard:
             "model_backend": {"endpoint": "https://dashscope.aliyuncs.com/v1"},
             "compliance": {"data_residency": "CN", "model_backend_location": "CN"},
             "capabilities": [
-                {"skill_id": "bash", "business_rule_version": "2026-05-01"}
+                {"skill_id": "bash", "business_rule_version": "2026-07-15"}
             ],
         }
         p = tmp_path / "card.json"
@@ -103,7 +103,7 @@ class TestScanDirectory:
             "name": "good",
             "model_backend": {"endpoint": "https://dashscope.aliyuncs.com/v1"},
             "capabilities": [
-                {"skill_id": "bash", "business_rule_version": "2026-05-01"}
+                {"skill_id": "bash", "business_rule_version": "2026-07-15"}
             ],
             "compliance": {"data_residency": "CN", "model_backend_location": "CN"},
         }

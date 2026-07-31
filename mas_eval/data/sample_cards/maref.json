@@ -51,7 +51,7 @@
         "command: 'ruff check src/'"
       ],
       "rate_limit": "60/min",
-      "business_rule_version": "2026-05-01",
+      "business_rule_version": "2026-07-15",
       "sub_permissions": {
         "env_read": "bash can read environment variables (declared)",
         "timezone_read": "bash can read timezone info (declared)",
@@ -82,7 +82,7 @@
         "path: '/AGENTS.md'"
       ],
       "rate_limit": "120/min",
-      "business_rule_version": "2026-05-01",
+      "business_rule_version": "2026-07-15",
       "sub_permissions": {
         "system_files": "file_read can access /etc, /proc, /sys (declared)",
         "credential_files": "file_read can access ~/.ssh, ~/.aws (declared)"
@@ -114,7 +114,7 @@
         "path: '/src/maref/module.py', content: 'class Module: pass'"
       ],
       "rate_limit": "60/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "file_edit",
@@ -145,7 +145,7 @@
         "path: '/src/maref/core.py', old_str: 'old_code', new_str: 'new_code'"
       ],
       "rate_limit": "60/min",
-      "business_rule_version": "2026-05-01",
+      "business_rule_version": "2026-07-15",
       "sub_permissions": {
         "system_files": "file_edit can modify /etc, /proc, /sys (declared)",
         "credential_files": "file_edit can modify ~/.ssh, ~/.aws (declared)"
@@ -175,7 +175,7 @@
         "pattern: 'tests/**/*.py'"
       ],
       "rate_limit": "120/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "grep",
@@ -201,7 +201,7 @@
         "pattern: '@security_critical'"
       ],
       "rate_limit": "120/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "test_runner",
@@ -236,7 +236,7 @@
         "test_path: 'tests/' --cov"
       ],
       "rate_limit": "10/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "type_check",
@@ -265,7 +265,7 @@
         "target: 'tests/'"
       ],
       "rate_limit": "10/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "lint",
@@ -294,7 +294,7 @@
         "target: 'tests/'"
       ],
       "rate_limit": "10/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "governance_api",
@@ -328,7 +328,7 @@
         "endpoint: '/api/v1/governance/state'"
       ],
       "rate_limit": "30/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "security_scan",
@@ -359,7 +359,7 @@
         "target: 'src/', scan_type: 'static'"
       ],
       "rate_limit": "5/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "agent_tool",
@@ -388,7 +388,7 @@
         "task: 'validate governance state'"
       ],
       "rate_limit": "5/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "trust_boundary",
@@ -416,7 +416,7 @@
         "action: 'check', domain: 'security'"
       ],
       "rate_limit": "30/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "audit_log",
@@ -447,7 +447,7 @@
         "action: 'write', entry: {event: 'auth_check'}"
       ],
       "rate_limit": "60/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "mission_control",
@@ -478,7 +478,7 @@
         "action: 'create', mission_id: 'v0.28.0'"
       ],
       "rate_limit": "10/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "knowledge_vault",
@@ -509,7 +509,7 @@
         "action: 'search', topic: 'security_patterns'"
       ],
       "rate_limit": "30/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "tlaplus_verify",
@@ -540,7 +540,7 @@
         "spec: 'governance.tla'"
       ],
       "rate_limit": "5/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "drift_detection",
@@ -571,7 +571,7 @@
         "baseline: 'v0.27.0', current: 'v0.28.0'"
       ],
       "rate_limit": "10/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "todo_write",
@@ -596,7 +596,7 @@
         "todos: [{content: 'Fix security issue', status: 'in_progress'}]"
       ],
       "rate_limit": "30/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "docker_build",
@@ -627,7 +627,7 @@
         "action: 'build', tag: 'maref:latest'"
       ],
       "rate_limit": "5/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "worktree",

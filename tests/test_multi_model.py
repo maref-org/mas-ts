@@ -20,7 +20,7 @@ SAMPLE_CARD = {
             "input_schema": {},
             "output_schema": {},
             "examples": ["ls"],
-            "business_rule_version": "2026-05-01",
+            "business_rule_version": "2026-07-15",
         },
         {
             "skill_id": "file_read",
@@ -28,7 +28,7 @@ SAMPLE_CARD = {
             "input_schema": {},
             "output_schema": {},
             "examples": ["read"],
-            "business_rule_version": "2026-05-01",
+            "business_rule_version": "2026-07-15",
         },
         {
             "skill_id": "file_edit",
@@ -36,7 +36,7 @@ SAMPLE_CARD = {
             "input_schema": {},
             "output_schema": {},
             "examples": ["edit"],
-            "business_rule_version": "2026-05-01",
+            "business_rule_version": "2026-07-15",
         },
         {
             "skill_id": "file_write",
@@ -44,7 +44,7 @@ SAMPLE_CARD = {
             "input_schema": {},
             "output_schema": {},
             "examples": ["write"],
-            "business_rule_version": "2026-05-01",
+            "business_rule_version": "2026-07-15",
         },
         {
             "skill_id": "glob",
@@ -52,7 +52,7 @@ SAMPLE_CARD = {
             "input_schema": {},
             "output_schema": {},
             "examples": ["glob"],
-            "business_rule_version": "2026-05-01",
+            "business_rule_version": "2026-07-15",
         },
         {
             "skill_id": "grep",
@@ -60,7 +60,7 @@ SAMPLE_CARD = {
             "input_schema": {},
             "output_schema": {},
             "examples": ["grep"],
-            "business_rule_version": "2026-05-01",
+            "business_rule_version": "2026-07-15",
         },
         {
             "skill_id": "web_search",
@@ -68,7 +68,7 @@ SAMPLE_CARD = {
             "input_schema": {},
             "output_schema": {},
             "examples": ["search"],
-            "business_rule_version": "2026-05-01",
+            "business_rule_version": "2026-07-15",
         },
         {
             "skill_id": "web_fetch",
@@ -76,7 +76,7 @@ SAMPLE_CARD = {
             "input_schema": {},
             "output_schema": {},
             "examples": ["fetch"],
-            "business_rule_version": "2026-05-01",
+            "business_rule_version": "2026-07-15",
         },
     ],
     "authentication": {"type": "OAuth2", "scopes": ["read", "write"]},

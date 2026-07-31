@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2026 frankiehot-tech
+# SPDX-FileCopyrightText: 2026 maref-org
 # SPDX-License-Identifier: Apache-2.0
 """Tests for Loop Engineering — ConvergenceLoop, Adaptive Escalation, Verifier."""
 
@@ -22,7 +22,7 @@ SAMPLE_CARD = {
             "input_schema": {},
             "output_schema": {},
             "examples": ["ls"],
-            "business_rule_version": "2026-05-01",
+            "business_rule_version": "2026-07-15",
         }
     ],
     "authentication": {"type": "OAuth2", "scopes": ["read", "write"]},

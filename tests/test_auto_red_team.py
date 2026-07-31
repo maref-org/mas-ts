@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2026 frankiehot-tech
+# SPDX-FileCopyrightText: 2026 maref-org
 # SPDX-License-Identifier: Apache-2.0
 """Tests for v0.8.0 Phase 4: auto_red_team automated red-team probes.
 
@@ -65,7 +65,7 @@ def clean_card() -> dict:
                 "input_schema": {},
                 "output_schema": {},
                 "examples": ["ls"],
-                "business_rule_version": "2026-05-01",
+                "business_rule_version": "2026-07-15",
                 "sub_permissions": {
                     "env_read": "declared",
                     "timezone_read": "declared",
@@ -181,8 +181,9 @@ class TestAutoRedTeam:
         ]
         assert len(runtime_behaviors) == 1
         assert runtime_behaviors[0]["severity"] == "CRITICAL"
-        # probe_count should be 3 when sidecar_log is provided
-        assert result["probe_count"] == 3
+        # probe_count should be 4 when sidecar_log is provided
+        # (steg + leakage + runtime + probe4 framework self-assessment)
+        assert result["probe_count"] == 4
 
     def test_combined_probes_score_computation(
         self, claude_code_v2_card, malicious_sidecar_log
@@ -228,11 +229,11 @@ class TestAutoRedTeam:
             )
 
     def test_probe_count_without_sidecar_log(self, clean_card):
-        """Without sidecar log, only 2 static probes run."""
+        """Without sidecar log, 3 probes run (2 static + probe4 self-assessment)."""
         result = auto_red_team(clean_card)
-        assert result["probe_count"] == 2
-        # Summary should reflect 2 probes
-        assert result["summary"]["probes_clean"] == 2
+        assert result["probe_count"] == 3
+        # Summary should reflect 3 probes (clean → all clean)
+        assert result["summary"]["probes_clean"] == 3
 
     def test_summary_fields_complete(self, clean_card):
         """Summary contains all required fields."""
@@ -245,7 +246,7 @@ class TestAutoRedTeam:
         # For clean card
         assert summary["total_critical"] == 0
         assert summary["probes_run"] == 0
-        assert summary["probes_clean"] == 2
+        assert summary["probes_clean"] == 3
 
     def test_claude_code_incident_end_to_end(
         self, claude_code_v2_card, malicious_sidecar_log

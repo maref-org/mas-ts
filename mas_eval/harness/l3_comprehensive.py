@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2026 frankiehot-tech
+# SPDX-FileCopyrightText: 2026 maref-org
 # SPDX-License-Identifier: Apache-2.0
 """L3 Comprehensive Evaluation for MAS-TS-001 v3.0.
 
@@ -66,6 +66,7 @@ def run_l3_comprehensive(
     federation_cards=None,
     golden_trajectory=None,
     mock_trajectory=None,
+    runtime_log=None,
 ):
     """Run L3 Comprehensive evaluation (D1-D5, ~1 day).
 
@@ -78,6 +79,10 @@ def run_l3_comprehensive(
     federation_cards: Optional list of agent cards for cross-agent federation scoring.
     golden_trajectory: Optional expected trajectory for D2 task completion.
     mock_trajectory: Optional observed trajectory for D2 task completion.
+    runtime_log: Optional sidecar runtime audit log (Phase 2 v0.8.2). When
+        provided, D4 fuses runtime consistency + injection findings as an
+        additive penalty and surfaces a runtime_security sub-result; the
+        d4_runtime_consistency_critical Gold metric is then populated.
 
     Returns:
     Dict with keys: level, name, elapsed_seconds, score, grade, verdict,
@@ -102,7 +107,7 @@ def run_l3_comprehensive(
         scenario_trajectories=scenario_trajectories,
     )
     d3 = run_d3(card)
-    d4 = run_d4(card, federation_cards=federation_cards)
+    d4 = run_d4(card, federation_cards=federation_cards, runtime_log=runtime_log)
     # Gold Standard §7.4 — feed multi-run trajectories so ConsistencyIndex is computed.
     multi_run_trajectories = _build_multi_run_trajectories(
         golden_trajectory, mock_trajectory

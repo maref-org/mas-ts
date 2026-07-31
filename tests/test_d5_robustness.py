@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2026 frankiehot-tech
+# SPDX-FileCopyrightText: 2026 maref-org
 # SPDX-License-Identifier: Apache-2.0
 """Tests for MAS-TS-001 D5: Evolution & Robustness (Part 1 — Chaos Engineering + Drift Detection, Part 2 — Reflection Loop + Convergence Verification)."""
 

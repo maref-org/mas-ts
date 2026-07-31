@@ -41,7 +41,7 @@
         "query: 'latest AI regulations EU 2026'"
       ],
       "rate_limit": "10/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "pdf_parser",

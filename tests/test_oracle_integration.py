@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2026 frankiehot-tech
+# SPDX-FileCopyrightText: 2026 maref-org
 # SPDX-License-Identifier: Apache-2.0
 """End-to-end integration tests for MAS-TS-001 v3.0 Oracle Framework.
 
@@ -36,49 +36,49 @@ SAMPLE_CARD = {
             "skill_id": "bash",
             "input_schema": {},
             "output_schema": {},
-            "business_rule_version": "2026-05-01",
+            "business_rule_version": "2026-07-15",
         },
         {
             "skill_id": "file_read",
             "input_schema": {},
             "output_schema": {},
-            "business_rule_version": "2026-05-01",
+            "business_rule_version": "2026-07-15",
         },
         {
             "skill_id": "file_edit",
             "input_schema": {},
             "output_schema": {},
-            "business_rule_version": "2026-05-01",
+            "business_rule_version": "2026-07-15",
         },
         {
             "skill_id": "file_write",
             "input_schema": {},
             "output_schema": {},
-            "business_rule_version": "2026-05-01",
+            "business_rule_version": "2026-07-15",
         },
         {
             "skill_id": "glob",
             "input_schema": {},
             "output_schema": {},
-            "business_rule_version": "2026-05-01",
+            "business_rule_version": "2026-07-15",
         },
         {
             "skill_id": "grep",
             "input_schema": {},
             "output_schema": {},
-            "business_rule_version": "2026-05-01",
+            "business_rule_version": "2026-07-15",
         },
         {
             "skill_id": "web_search",
             "input_schema": {},
             "output_schema": {},
-            "business_rule_version": "2026-05-01",
+            "business_rule_version": "2026-07-15",
         },
         {
             "skill_id": "web_fetch",
             "input_schema": {},
             "output_schema": {},
-            "business_rule_version": "2026-05-01",
+            "business_rule_version": "2026-07-15",
         },
     ],
 }

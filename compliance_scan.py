@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-FileCopyrightText: 2026 frankiehot-tech
+# SPDX-FileCopyrightText: 2026 maref-org
 # SPDX-License-Identifier: Apache-2.0
 """
 Compliance Auto-Guard - Static Agent Card Scanner (v2.0)
@@ -113,7 +113,7 @@ OVERSEAS_PATTERNS = [
     r"api\.mistral\.ai",
 ]
 
-PROMPT_ROT_MAX_DAYS = 90
+PROMPT_ROT_MAX_DAYS = int(os.environ.get("PROMPT_ROT_MAX_DAYS", "90"))
 
 
 def resolve_endpoint_region(endpoint):

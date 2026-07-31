@@ -338,7 +338,17 @@ class TestRunD3Federation:
         }
         fed_result = run_d3(fed_card)
         base_result = run_d3(BASE_CARD)
-        assert fed_result["score"] >= base_result["score"]
+        # v0.8.1: federation capability is recognized (federation subscores
+        # become non-zero), but total D3 score may now be LOWER than non-fed
+        # because security_interaction correctly flags the larger A2A attack
+        # surface (federation role + weak auth "None" + no delegation_audit)
+        # as elevated risk. The test now asserts federation recognition rather
+        # than total-score dominance.
+        assert fed_result["subscores"]["federation_compat"] > 0
+        assert (
+            fed_result["subscores"]["federation_compat"]
+            > base_result["subscores"]["federation_compat"]
+        )
 
     def test_federation_summary_field(self):
         card = dict(BASE_CARD)

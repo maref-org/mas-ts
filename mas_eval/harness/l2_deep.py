@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2026 frankiehot-tech
+# SPDX-FileCopyrightText: 2026 maref-org
 # SPDX-License-Identifier: Apache-2.0
 """L2 Deep Evaluation for MAS-TS-001 v3.0.
 
@@ -32,6 +32,7 @@ def run_l2_deep(
     federation_cards=None,
     golden_trajectory=None,
     mock_trajectory=None,
+    runtime_log=None,
 ):
     """Run L2 Deep evaluation (D1-D4, ~2 hours).
 
@@ -44,6 +45,9 @@ def run_l2_deep(
     federation_cards: Optional list of agent cards for cross-agent federation scoring.
     golden_trajectory: Optional expected trajectory for D2 task completion.
     mock_trajectory: Optional observed trajectory for D2 task completion.
+    runtime_log: Optional sidecar runtime audit log (Phase 2 v0.8.2). When
+        provided, D4 fuses runtime consistency + injection findings as an
+        additive penalty and surfaces a runtime_security sub-result.
 
     Returns:
     Dict with keys: level, name, elapsed_seconds, score, grade, verdict,
@@ -68,7 +72,7 @@ def run_l2_deep(
         scenario_trajectories=scenario_trajectories,
     )
     d3 = run_d3(card)
-    d4 = run_d4(card, federation_cards=federation_cards)
+    d4 = run_d4(card, federation_cards=federation_cards, runtime_log=runtime_log)
 
     # L2 不运行 D5，consistency_index 为 None
     consistency_index_value = None
@@ -134,7 +138,12 @@ def run_l2_deep(
 
 
 def run_l2_with_oracle(
-    card, oracle_name, task_id=None, mock_trajectory=None, federation_cards=None
+    card,
+    oracle_name,
+    task_id=None,
+    mock_trajectory=None,
+    federation_cards=None,
+    runtime_log=None,
 ):
     """Run L2 Deep evaluation with an executable oracle.
 
@@ -146,6 +155,7 @@ def run_l2_with_oracle(
     task_id: Optional specific oracle task ID.
     mock_trajectory: Optional agent trajectory for comparison.
     federation_cards: Optional list of agent cards for cross-agent federation scoring.
+    runtime_log: Optional sidecar runtime audit log (Phase 2 v0.8.2).
 
     Returns:
     Dict with keys: level, name, elapsed_seconds, score, grade, verdict,
@@ -155,7 +165,7 @@ def run_l2_with_oracle(
     d1 = run_d1(card)
     d2 = run_d2_with_oracle(card, oracle_name, task_id, mock_trajectory)
     d3 = run_d3(card)
-    d4 = run_d4(card, federation_cards=federation_cards)
+    d4 = run_d4(card, federation_cards=federation_cards, runtime_log=runtime_log)
 
     # L2 不运行 D5，consistency_index 为 None
     consistency_index_value = None

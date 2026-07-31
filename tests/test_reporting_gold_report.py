@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2026 frankiehot-tech
+# SPDX-FileCopyrightText: 2026 maref-org
 # SPDX-License-Identifier: Apache-2.0
 """Tests for mas_eval.reporting.gold_report module."""
 
@@ -110,6 +110,44 @@ class TestGenerateReport:
         )
         assert report["certificate"]["ci"] == 0.9
         assert report["certificate"]["ce"] == 0.8
+
+    def test_standards_mapping_none_when_no_findings(self):
+        report = generate_report(
+            agent_id="a1",
+            domain_scores={"d1": 90.0},
+        )
+        assert "standards_mapping" in report
+        assert report["standards_mapping"] is None
+
+    def test_standards_mapping_present_with_findings(self):
+        findings = [
+            {"severity": "CRITICAL", "category": "direct_injection_critical", "detail": "x"},
+        ]
+        report = generate_report(
+            agent_id="a1",
+            domain_scores={"d1": 90.0},
+            findings=findings,
+        )
+        assert report["standards_mapping"] is not None
+        assert report["standards_mapping"]["summary"]["total_findings"] == 1
+
+    def test_standards_mapping_content_shape(self):
+        findings = [
+            {"severity": "CRITICAL", "category": "direct_injection_critical", "detail": "x"},
+            {"severity": "HIGH", "category": "audit_hmac_missing", "detail": "y"},
+        ]
+        report = generate_report(
+            agent_id="a1",
+            domain_scores={"d1": 90.0},
+            findings=findings,
+        )
+        sm = report["standards_mapping"]
+        assert "mappings" in sm
+        assert "coverage" in sm
+        assert "summary" in sm
+        assert "frameworks" in sm
+        assert len(sm["mappings"]) == 2
+        assert sm["summary"]["owasp_top_hit"] is not None
 
 
 class TestSaveLoadReport:

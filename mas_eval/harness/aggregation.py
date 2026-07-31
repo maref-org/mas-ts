@@ -23,87 +23,83 @@ def _subscore(result: dict[str, Any], key: str) -> float | None:
         return None
 
 
-def extract_gold_metrics(
-    domain_results: dict[str, dict[str, Any]],
-    consistency_index: float | None = None,
-    cost_efficiency: float | None = None,
-    overall_score: float | None = None,
-) -> dict[str, Any]:
-    """Extract Gold Standard threshold metrics from domain results.
+def _pct_to_ratio(value: float | None) -> float | None:
+    return None if value is None else value / 100.0
 
-    Maps each domain's subscores to the metric names used by
-    ``GOLD_THRESHOLD_MATRIX``, normalizing units (subscores are 0-100;
-    ratio-style thresholds expect 0-1, so we divide those by 100). Metrics
-    that cannot be derived from the available domain output are simply
-    omitted — ``check_level_thresholds`` skips missing metrics gracefully.
 
-    Args:
-        domain_results: Dict of domain keys (d1..d5) to their result dicts.
-        consistency_index: Optional ConsistencyIndex (0.0-1.0).
-        cost_efficiency: Optional Cost Efficiency (0.0-1.0).
-        overall_score: Optional overall score (0-100).
-
-    Returns:
-        Dict of metric_name -> value for every metric that could be derived.
-    """
-    metrics: dict[str, Any] = {}
-
-    def _pct_to_ratio(value: float | None) -> float | None:
-        return None if value is None else value / 100.0
-
-    # --- D1 ---
+def _extract_d1_metrics(
+    domain_results: dict[str, dict[str, Any]], metrics: dict[str, Any]
+) -> None:
     d1 = domain_results.get("d1") or {}
     if d1.get("score") is not None:
         metrics["d1_compliance"] = float(d1["score"])
 
-    # --- D2 ---
-    d2 = domain_results.get("d2") or {}
-    if (v := _subscore(d2, "task_completion")) is not None:
-        metrics["d2_task_completion"] = v
-    if (v := _subscore(d2, "step_efficiency")) is not None:
-        metrics["d2_step_efficiency"] = _pct_to_ratio(v)
-    if (v := _subscore(d2, "tool_coverage")) is not None:
-        metrics["d2_tool_coverage"] = v
-    if (v := _subscore(d2, "trajectory_quality")) is not None:
-        metrics["d2_trajectory_quality"] = _pct_to_ratio(v)
-    if (v := _subscore(d2, "tool_selection_correctness")) is not None:
-        metrics["d2_tool_select_accuracy"] = _pct_to_ratio(v)
 
-    # --- D3 ---
+def _extract_d2_metrics(
+    domain_results: dict[str, dict[str, Any]], metrics: dict[str, Any]
+) -> None:
+    d2 = domain_results.get("d2") or {}
+    for key, sub_key in [
+        ("d2_task_completion", "task_completion"),
+        ("d2_tool_coverage", "tool_coverage"),
+    ]:
+        if (v := _subscore(d2, sub_key)) is not None:
+            metrics[key] = v
+    for key, sub_key in [
+        ("d2_step_efficiency", "step_efficiency"),
+        ("d2_trajectory_quality", "trajectory_quality"),
+        ("d2_tool_select_accuracy", "tool_selection_correctness"),
+    ]:
+        if (v := _subscore(d2, sub_key)) is not None:
+            metrics[key] = _pct_to_ratio(v)
+
+
+def _extract_d3_metrics(
+    domain_results: dict[str, dict[str, Any]], metrics: dict[str, Any]
+) -> None:
     d3 = domain_results.get("d3") or {}
     if (v := _subscore(d3, "spawn")) is not None:
         metrics["d3_spawn_rate"] = v
-    if (v := _subscore(d3, "coordination_efficiency")) is not None:
-        metrics["d3_coordination_efficiency"] = _pct_to_ratio(v)
-    # Gold Standard §9.2 — d3 "conflict" subscore is conflict-resolution
-    # capability (0-100, higher is better); kept on the 0-100 scale to match
-    # the d3_conflict_resolution thresholds (40/60/80/90).
     if (v := _subscore(d3, "conflict")) is not None:
         metrics["d3_conflict_resolution"] = v
-    if (v := _subscore(d3, "plan_quality")) is not None:
-        metrics["d3_plan_adherence"] = _pct_to_ratio(v)
+    for key, sub_key in [
+        ("d3_coordination_efficiency", "coordination_efficiency"),
+        ("d3_plan_adherence", "plan_quality"),
+    ]:
+        if (v := _subscore(d3, sub_key)) is not None:
+            metrics[key] = _pct_to_ratio(v)
 
-    # --- D4 ---
+
+def _extract_d4_metrics(
+    domain_results: dict[str, dict[str, Any]], metrics: dict[str, Any]
+) -> None:
     d4 = domain_results.get("d4") or {}
     if (v := _subscore(d4, "action_safety")) is not None:
         metrics["d4_action_safety"] = _pct_to_ratio(v)
-    # d4_state_coverage: proxy via state_machine subscore (0-100 -> 0-10 scale).
     gov_detail = (d4.get("subscores") or {}).get("governance_detail") or {}
     if (v := _subscore({"subscores": gov_detail}, "state_machine")) is not None:
         metrics["d4_state_coverage"] = v / 10.0
-    # d4_data_leakage: critical leak count (lower is better, threshold 0).
     dl = d4.get("data_leakage") or {}
     dl_crit = (dl.get("summary") or {}).get("critical_count")
     if dl_crit is not None:
         metrics["d4_data_leakage"] = int(dl_crit)
-    # d4_pentest: critical security findings count (lower is better, threshold 0).
     sec = d4.get("security") or {}
     sec_crit = sum(
         1 for f in (sec.get("findings") or []) if f.get("severity") == "CRITICAL"
     )
     metrics["d4_pentest"] = int(sec_crit)
+    rt = d4.get("runtime_security") or {}
+    if rt:
+        rt_summary = rt.get("summary") or {}
+        rt_crit = int(rt_summary.get("runtime_consistency_critical_count", 0)) + int(
+            rt_summary.get("runtime_injection_critical_count", 0)
+        )
+        metrics["d4_runtime_consistency_critical"] = rt_crit
 
-    # --- D5 ---
+
+def _extract_d5_metrics(
+    domain_results: dict[str, dict[str, Any]], metrics: dict[str, Any]
+) -> None:
     d5 = domain_results.get("d5") or {}
     if (v := _subscore(d5, "consistency_index")) is not None:
         metrics["d5_consistency_index"] = _pct_to_ratio(v)
@@ -111,7 +107,6 @@ def extract_gold_metrics(
         metrics["d5_reflection"] = _pct_to_ratio(v)
     if (v := _subscore(d5, "chaos_engineering")) is not None:
         metrics["d5_self_heal_rate"] = v
-    # d5_drift_fnr: parse the "N.NN%" string from the D5 summary.
     drift_fnr = (d5.get("summary") or {}).get("drift_fnr")
     if isinstance(drift_fnr, str) and drift_fnr.endswith("%"):
         try:
@@ -119,7 +114,13 @@ def extract_gold_metrics(
         except ValueError:
             pass
 
-    # --- Cross-cutting ---
+
+def _extract_cross_cutting_metrics(
+    metrics: dict[str, Any],
+    consistency_index: float | None = None,
+    cost_efficiency: float | None = None,
+    overall_score: float | None = None,
+) -> None:
     if consistency_index is not None:
         metrics["d5_consistency_index"] = float(consistency_index)
     if cost_efficiency is not None:
@@ -127,6 +128,20 @@ def extract_gold_metrics(
     if overall_score is not None:
         metrics["overall_score"] = float(overall_score)
 
+
+def extract_gold_metrics(
+    domain_results: dict[str, dict[str, Any]],
+    consistency_index: float | None = None,
+    cost_efficiency: float | None = None,
+    overall_score: float | None = None,
+) -> dict[str, Any]:
+    metrics: dict[str, Any] = {}
+    _extract_d1_metrics(domain_results, metrics)
+    _extract_d2_metrics(domain_results, metrics)
+    _extract_d3_metrics(domain_results, metrics)
+    _extract_d4_metrics(domain_results, metrics)
+    _extract_d5_metrics(domain_results, metrics)
+    _extract_cross_cutting_metrics(metrics, consistency_index, cost_efficiency, overall_score)
     return metrics
 
 

@@ -43,7 +43,7 @@
       "input_schema": {},
       "output_schema": {},
       "examples": ["ls"],
-      "business_rule_version": "2026-05-01",
+      "business_rule_version": "2026-07-15",
       "sub_permissions": {
         "env_read": "declared",
         "timezone_read": "declared",

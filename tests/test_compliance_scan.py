@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2026 frankiehot-tech
+# SPDX-FileCopyrightText: 2026 maref-org
 # SPDX-License-Identifier: Apache-2.0
 import importlib.util
 from pathlib import Path
@@ -88,7 +88,7 @@ class TestCheckPromptRot:
         monkeypatch.setattr(cs, "PROMPT_ROT_MAX_DAYS", 90)
         card = {
             "capabilities": [
-                {"skill_id": "test_skill", "business_rule_version": "2026-05-01"}
+                {"skill_id": "test_skill", "business_rule_version": "2026-07-15"}
             ]
         }
         issues = cs.check_prompt_rot(card)

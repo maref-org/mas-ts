@@ -51,7 +51,7 @@
         "command: 'percv research topic'"
       ],
       "rate_limit": "60/min",
-      "business_rule_version": "2026-05-01",
+      "business_rule_version": "2026-07-15",
       "sub_permissions": {
         "env_read": "bash can read environment variables (declared)",
         "timezone_read": "bash can read timezone info (declared)",
@@ -82,7 +82,7 @@
         "path: '/README.md'"
       ],
       "rate_limit": "120/min",
-      "business_rule_version": "2026-05-01",
+      "business_rule_version": "2026-07-15",
       "sub_permissions": {
         "system_files": "file_read can access /etc, /proc, /sys (declared)",
         "credential_files": "file_read can access ~/.ssh, ~/.aws (declared)"
@@ -115,7 +115,7 @@
         "path: '/reports/analysis.md'"
       ],
       "rate_limit": "60/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "file_edit",
@@ -146,7 +146,7 @@
         "path: '/src/percv/scout.py', old_str: 'old', new_str: 'new'"
       ],
       "rate_limit": "60/min",
-      "business_rule_version": "2026-05-01",
+      "business_rule_version": "2026-07-15",
       "sub_permissions": {
         "system_files": "file_edit can modify /etc, /proc, /sys (declared)",
         "credential_files": "file_edit can modify ~/.ssh, ~/.aws (declared)"
@@ -176,7 +176,7 @@
         "pattern: 'tests/**/*.py'"
       ],
       "rate_limit": "120/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "grep",
@@ -202,7 +202,7 @@
         "pattern: 'def research'"
       ],
       "rate_limit": "120/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "web_search",
@@ -227,7 +227,7 @@
         "query: 'AI trends 2026'"
       ],
       "rate_limit": "30/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "web_fetch",
@@ -252,7 +252,7 @@
         "url: 'https://arxiv.org/abs/2026.12345'"
       ],
       "rate_limit": "30/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "scout",
@@ -280,7 +280,7 @@
         "topic: 'quantum computing'"
       ],
       "rate_limit": "10/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "distill",
@@ -305,7 +305,7 @@
         "signals: [signal1, signal2]"
       ],
       "rate_limit": "10/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "project",
@@ -330,7 +330,7 @@
         "kdp_cards: [kdp1, kdp2]"
       ],
       "rate_limit": "10/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "validate",
@@ -355,7 +355,7 @@
         "forecast_id: 'fc-001'"
       ],
       "rate_limit": "10/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "archive",
@@ -380,7 +380,7 @@
         "validated_forecasts: [vf1, vf2]"
       ],
       "rate_limit": "10/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "pattern",
@@ -405,7 +405,7 @@
         "archived_data: [ad1, ad2]"
       ],
       "rate_limit": "10/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "verify",
@@ -430,7 +430,7 @@
         "claims: [claim1, claim2]"
       ],
       "rate_limit": "10/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "ratchet_loop",
@@ -461,7 +461,7 @@
         "program: 'research_optimization.md'"
       ],
       "rate_limit": "5/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "gateway",
@@ -493,7 +493,7 @@
         "provider: 'bailian'"
       ],
       "rate_limit": "60/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "cost_tracker",
@@ -521,7 +521,7 @@
         "period: '2026-05'"
       ],
       "rate_limit": "10/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "test_runner",
@@ -553,7 +553,7 @@
         "test_path: 'tests/' --cov"
       ],
       "rate_limit": "10/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "synthesize",
@@ -578,7 +578,7 @@
         "studies: [study1, study2, study3]"
       ],
       "rate_limit": "5/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "todo_write",
@@ -603,7 +603,7 @@
         "todos: [{content: 'Harvest signals', status: 'in_progress'}]"
       ],
       "rate_limit": "30/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "docker_build",
@@ -631,7 +631,7 @@
         "action: 'build', tag: 'percv:latest'"
       ],
       "rate_limit": "5/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "agent_tool",

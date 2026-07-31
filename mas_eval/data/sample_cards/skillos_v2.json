@@ -48,7 +48,7 @@
         "command: 'uv run skill'"
       ],
       "rate_limit": "60/min",
-      "business_rule_version": "2026-05-01",
+      "business_rule_version": "2026-07-15",
       "sub_permissions": {
         "env_read": "bash can read environment variables (declared)",
         "timezone_read": "bash can read timezone info (declared)",
@@ -78,7 +78,7 @@
         "path: '/skillos/kernel/__init__.py'"
       ],
       "rate_limit": "120/min",
-      "business_rule_version": "2026-05-01",
+      "business_rule_version": "2026-07-15",
       "sub_permissions": {
         "system_files": "file_read can access /etc, /proc, /sys (declared)",
         "credential_files": "file_read can access ~/.ssh, ~/.aws (declared)"
@@ -110,7 +110,7 @@
         "path: '/skillos/skills/new-skill/SKILL.md'"
       ],
       "rate_limit": "60/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "file_edit",
@@ -141,7 +141,7 @@
         "path: '/skillos/kernel/entry_kernel.py'"
       ],
       "rate_limit": "60/min",
-      "business_rule_version": "2026-05-01",
+      "business_rule_version": "2026-07-15",
       "sub_permissions": {
         "system_files": "file_edit can modify /etc, /proc, /sys (declared)",
         "credential_files": "file_edit can modify ~/.ssh, ~/.aws (declared)"
@@ -170,7 +170,7 @@
         "pattern: 'skills/**/*.md'"
       ],
       "rate_limit": "120/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "grep",
@@ -195,7 +195,7 @@
         "pattern: 'class.*Kernel'"
       ],
       "rate_limit": "120/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "entry_kernel",
@@ -223,7 +223,7 @@
         "task: 'create a marketing plan'"
       ],
       "rate_limit": "30/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "skill_kernel",
@@ -251,7 +251,7 @@
         "skill_name: 'brainstorming'"
       ],
       "rate_limit": "30/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "agent_scheduler",
@@ -279,7 +279,7 @@
         "task_complexity: 0.7"
       ],
       "rate_limit": "10/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "session_manager",
@@ -308,7 +308,7 @@
         "action: 'close'"
       ],
       "rate_limit": "30/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "model_router",
@@ -340,7 +340,7 @@
         "budget: 0.01"
       ],
       "rate_limit": "30/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "byzantine_consensus",
@@ -368,7 +368,7 @@
         "task: 'evaluate this design'"
       ],
       "rate_limit": "5/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "skill_registry",
@@ -397,7 +397,7 @@
         "action: 'register'"
       ],
       "rate_limit": "10/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "identity_client",
@@ -422,7 +422,7 @@
         "action: 'authenticate'"
       ],
       "rate_limit": "10/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "matcher_client",
@@ -447,7 +447,7 @@
         "task: 'generate UI'"
       ],
       "rate_limit": "10/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "settlement_client",
@@ -475,7 +475,7 @@
         "skill_name: 'ui-ux-pro-max'"
       ],
       "rate_limit": "10/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "test_runner",
@@ -503,7 +503,7 @@
         "test_path: 'tests/'"
       ],
       "rate_limit": "10/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "agent_tool",
@@ -528,7 +528,7 @@
         "task: 'run multiple skills in parallel'"
       ],
       "rate_limit": "5/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "todo_write",
@@ -553,7 +553,7 @@
         "todos: [{content: 'Execute skill', status: 'in_progress'}]"
       ],
       "rate_limit": "30/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "web_search",
@@ -578,7 +578,7 @@
         "query: 'best practices for skill design'"
       ],
       "rate_limit": "10/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "web_fetch",
@@ -628,7 +628,7 @@
         "url: 'https://docs.example.com', extract_mode: 'metadata'"
       ],
       "rate_limit": "30/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "session_isolation",
@@ -670,7 +670,7 @@
         "session_id: 'xyz789', command: 'npm run build'"
       ],
       "rate_limit": "20/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "state_persistence",
@@ -721,7 +721,7 @@
         "action: 'load', session_id: 'abc123', key: 'context'"
       ],
       "rate_limit": "60/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "task_scheduler",
@@ -775,7 +775,7 @@
         "action: 'list'"
       ],
       "rate_limit": "10/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "remote_bridge",
@@ -827,7 +827,7 @@
         "command: 'bridge_connect', params: {remote_url: 'http://remote:8000'}"
       ],
       "rate_limit": "30/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "worktree",
@@ -866,7 +866,7 @@
         "worktree_path: '/tmp/worktree-002', repo_path: '/project', branch: 'feature-1'"
       ],
       "rate_limit": "20/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "memory",
@@ -917,7 +917,7 @@
         "action: 'load', key: 'context'"
       ],
       "rate_limit": "60/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "cron",
@@ -968,7 +968,7 @@
         "action: 'list'"
       ],
       "rate_limit": "10/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "task_management",
@@ -1016,7 +1016,7 @@
         "action: 'list'"
       ],
       "rate_limit": "30/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "bridge",
@@ -1067,7 +1067,7 @@
         "command: 'execute', session_id: 'sess-001', params: {task: 'build'}"
       ],
       "rate_limit": "30/min",
-      "business_rule_version": "2026-05-01"
+      "business_rule_version": "2026-07-15"
     },
     {
       "skill_id": "mcp_tool",

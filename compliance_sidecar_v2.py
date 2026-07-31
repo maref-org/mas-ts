@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-FileCopyrightText: 2026 frankiehot-tech
+# SPDX-FileCopyrightText: 2026 maref-org
 # SPDX-License-Identifier: Apache-2.0
 """Compliance Sidecar v2 — Runtime HTTP Request Interceptor with Content Audit
 
@@ -46,6 +46,11 @@ import argcomplete
 
 sys.path.insert(0, str(Path(__file__).parent.resolve()))
 from mas_eval import __version__ as VERSION
+from mas_eval.domains.d4_injection_detection import (
+    DIRECT_INJECTION_VECTORS,
+    INDIRECT_INJECTION_VECTORS,
+    JAILBREAK_VECTORS,
+)
 from mas_eval.domains.d4_steganography_audit import (
     SUSPICIOUS_PROMPT_PATTERNS,
     _count_unicode_variants,
@@ -160,6 +165,69 @@ class HMACAuditChain:
         return self.chain
 
 
+class InjectionScanner:
+    """Scan request body text for Prompt-Injection patterns at runtime (v0.8.2).
+
+    Reuses the static vector library from d4_injection_detection (Phase 1) but
+    applies an INDEPENDENT severity model tuned for live traffic: a pattern hit
+    in an actual request body is direct evidence of an injection attempt, so
+    direct/jailbreak vectors are CRITICAL (block in content mode) and indirect
+    vectors are HIGH (block only in strict mode). Findings carry
+    root_cause="prompt_injection" so they flow through upgrade_findings_to_v2
+    with correct attribution.
+
+    FP risk: patterns like "ignore previous instructions" may legitimately
+    appear in user-edited prompts. Mitigated by reserving content-mode blocks
+    for CRITICAL only; a future allowlist escape hatch is reserved.
+    """
+
+    _VECTOR_GROUPS = (
+        (DIRECT_INJECTION_VECTORS, "CRITICAL", "runtime_injection_direct"),
+        (JAILBREAK_VECTORS, "CRITICAL", "runtime_injection_jailbreak"),
+        (INDIRECT_INJECTION_VECTORS, "HIGH", "runtime_injection_indirect"),
+    )
+
+    def __init__(self) -> None:
+        self._compiled: list[tuple[Any, str, str, str]] = []
+        for vectors, severity, cat in self._VECTOR_GROUPS:
+            for v in vectors:
+                pattern = v.get("pattern", "")
+                if not pattern:
+                    continue
+                try:
+                    compiled = re.compile(pattern, re.IGNORECASE)
+                except re.error:
+                    continue
+                self._compiled.append((compiled, severity, cat, v.get("id", "")))
+
+    def scan(self, text: str) -> list[dict[str, Any]]:
+        """Return injection findings for any vector pattern hit in ``text``."""
+        results: list[dict[str, Any]] = []
+        if not text:
+            return results
+        seen: set[tuple[str, str]] = set()
+        for compiled, severity, category, vid in self._compiled:
+            match = compiled.search(text)
+            if match is None:
+                continue
+            key = (category, match.group(0))
+            if key in seen:
+                continue
+            seen.add(key)
+            results.append(
+                {
+                    "severity": severity,
+                    "category": category,
+                    "detail": (
+                        f"Runtime injection pattern matched in request body: "
+                        f"{vid} {match.group(0)!r}"
+                    ),
+                    "root_cause": "prompt_injection",
+                }
+            )
+        return results
+
+
 class ContentAuditor:
     """Audit HTTP request body for steganographic backdoor markers.
 
@@ -176,6 +244,7 @@ class ContentAuditor:
         if audit_level not in AUDIT_LEVELS:
             raise ValueError(f"Invalid audit_level: {audit_level}")
         self.audit_level = audit_level
+        self.injection_scanner = InjectionScanner()
 
     def audit_body(self, body: bytes, url: str) -> dict[str, Any]:
         """Audit request body. Returns {allowed, findings, score}.
@@ -306,6 +375,17 @@ class ContentAuditor:
                     ),
                 }
             )
+
+        # Check 6: Prompt-injection patterns (runtime detection, v0.8.2).
+        # Direct/jailbreak hits in a live request body are CRITICAL (block in
+        # content mode); indirect hits are HIGH (block only in strict mode).
+        injection_findings = self.injection_scanner.scan(text_content)
+        for f in injection_findings:
+            if f["severity"] == "CRITICAL":
+                score -= 25
+            else:  # HIGH
+                score -= 10
+        findings.extend(injection_findings)
 
         # Determine allowed based on audit level
         if self.audit_level == "strict":
