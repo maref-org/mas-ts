@@ -1,5 +1,47 @@
 # Changelog
 
+## [0.10.0] - 2026-07-31
+### Added — Gold Foundation (D4 ActionSafety + D5 故障补丁 + D1 扩展 + 社区基础设施)
+
+Gold Standard v3.0-GA Phase 1 补强交付。新增 D4 ActionSafety 子域（业界首次定义 Agent 行动安全 = 行动合规），补全 D5 联邦故障路由，扩展 D1 许可证兼容性检查，添加金标测试 13 项。
+
+#### D4 ActionSafety 子域（新文件）
+- `mas_eval/domains/d4_action_safety.py` (~210 行) — 6 维度 Agent 行动安全检查：
+  - HITL 保护 (权重 0.25) — `cross_border_policy.requires_approval` + `blocked_operations`
+  - 权限最小化 (权重 0.20) — `authentication.scopes` + `authentication.type`
+  - 副作用检测 (权重 0.15) — `blocked_operations` + `circuit_breaker` + `state_machine_version`
+  - 数据泄露防护 (权重 0.15) — `data_residency` + `allowed_transfer_zones`
+  - 操作可撤销 (权重 0.15) — `circuit_breaker.cooldown_seconds` + `audit` 配置
+  - Prompt 注入防护 (权重 0.10) — `envelope.protocol` + `envelope.sender` + `authentication.type`
+  - HITL 缺失 → 整域 0 分（CRITICAL 红线）
+  - Findings 自动升级 v2 归因（layer/root_cause/reproducibility/mitigation）
+- `integrate_action_safety()` — D4 = GovernanceSecurity × 0.70 + ActionSafety × 0.30
+
+#### D5 联邦故障路由补全
+- `FaultInjector.inject_trust_breach()` — 模拟信任凭证篡改 → 签名验证失败
+- `FaultInjector.inject_federation_split()` — 模拟联邦网络分割 → 本地子集继续运行
+- `ChaosEngine._expected_recovery()` 添加 `trust_breach: 30s` / `federation_split: 120s`
+
+#### D1 扩展 — 许可证兼容性检查
+- `check_license_compatibility()` (check_id 1.15) — 扫描依赖许可证兼容性（Apache-2.0 vs AGPL/SSPL/BUSL）
+- D1 总检查数：14 → 15
+
+#### 金标测试 (13 新增)
+- `tests/test_d4_action_safety.py` — 6 测试（完全合规/最低合规/HITL 红线/D4 集成/v2 归因）
+- `tests/test_d1_extended.py` — 5 测试（空依赖/干净依赖/限制性许可/混合许可/check_id）
+- `tests/test_d5_robustness.py` — 2 测试（FaultInjector trust_breach + federation_split 路由）
+
+#### 社区基础设施
+- `.github/ISSUE_TEMPLATE/bug_report.md` — Bug 报告模板
+- `.github/ISSUE_TEMPLATE/feature_request.md` — 功能请求模板
+- `.github/PULL_REQUEST_TEMPLATE.md` — PR 模板
+
+#### 文档
+- `ROADMAP-v1.0.0.md` — 从 v0.9.0 到 v1.0.0 的完整迭代路线图（3 阶段）
+
+### 测试
+- 全量: 1887 passed (排除 6 缺失 prometheus_client + 1 pre-existing SWE-bench)
+
 ## [0.9.0] - 2026-07-31
 ### Added — GA 运维加固 (API 生产就绪 + 评分基础设施 + 发布门禁扩展)
 

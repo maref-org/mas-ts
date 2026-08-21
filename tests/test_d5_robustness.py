@@ -19,6 +19,7 @@ from mas_eval.domains.d5_robustness import (
     ConsistencyIndex,
     ConvergenceVerifier,
     DriftDetector,
+    FaultInjector,
     FederationCircuitBreaker,
     ReflectiveAgent,
     _cosine_sim,
@@ -164,6 +165,22 @@ class TestChaosEngine:
         result = ce.inject("unknown_fault")
         assert result["error"] == "unknown_fault_type"
         assert result["success"] is False
+
+    def test_fault_injector_routes_trust_breach(self):
+        fi = FaultInjector(mode="sim")
+        fi._injection_mode = "simulated"
+        result = fi.inject("trust_breach")
+        assert result["mode"] != "unknown"
+        assert result["fault"] == "trust_breach"
+        assert "signature" in result.get("breach_detail", {}).get("detection", "")
+
+    def test_fault_injector_routes_federation_split(self):
+        fi = FaultInjector(mode="sim")
+        fi._injection_mode = "simulated"
+        result = fi.inject("federation_split")
+        assert result["mode"] != "unknown"
+        assert result["fault"] == "federation_split"
+        assert "local subset" in result.get("detail", "")
 
     def test_record_healing(self):
         ce = ChaosEngine(seed=42)

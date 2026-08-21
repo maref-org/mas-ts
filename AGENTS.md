@@ -1,4 +1,4 @@
-# AGENTS.md — AI Agent Context for MAS-TS-001
+# AGENTS.md — AI Agent Context for MAS-TS-001 (v0.10.0)
 
 > **上位法**: 本文件受 [Athena 系统宪法 v1.5](../CONSTITUTION.md) 和 [MAS-TS 治理框架](GOVERNANCE.md) 共同约束。冲突时以宪法优先，其次以治理框架为准。
 > **同步方向**: A → B 单向（Athena 开发源 → GitHub 发布源）。所有变更必须在 Athena 开发源完成后再同步。

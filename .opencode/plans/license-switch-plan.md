@@ -7,7 +7,7 @@ Copy and paste the entire block into your terminal:
 ```bash
 #!/usr/bin/env bash
 set -euo pipefail
-cd /Volumes/1TB-M2/public/mas-ts
+cd "$(dirname "$0")/../.."
 
 echo "=== Step 1: Replace LICENSE ==="
 curl -sSL https://www.apache.org/licenses/LICENSE-2.0.txt > LICENSE

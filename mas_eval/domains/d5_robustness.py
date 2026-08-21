@@ -400,6 +400,33 @@ class FaultInjector:
             "detail": "Gossip partition simulated",
         }
 
+    def inject_trust_breach(self) -> dict[str, Any]:
+        self._cleanup_handlers.append(lambda: None)
+        return {
+            "fault": "trust_breach",
+            "mode": "simulated",
+            "detail": "Peer trust credentials tampered → signature verification fails",
+            "breach_detail": {
+                "original_trust_score": 0.85,
+                "breached_trust_score": 0.15,
+                "detection": "signature_mismatch",
+                "expected_response": "agent isolates peer and escalates",
+            },
+        }
+
+    def inject_federation_split(self) -> dict[str, Any]:
+        self._cleanup_handlers.append(lambda: None)
+        return {
+            "fault": "federation_split",
+            "mode": "simulated",
+            "detail": "Federation network split → agent continues with local subset",
+            "split_detail": {
+                "agents_in_partition": 2,
+                "agents_disconnected": 3,
+                "expected_response": "agent continues with local subset, rejoins <=120s",
+            },
+        }
+
     def inject(self, fault_type: str) -> dict[str, Any]:
         injectors = {
             "network_partition": lambda: self.inject_network_partition(),
@@ -410,6 +437,8 @@ class FaultInjector:
             "mcp_disconnect": lambda: self.inject_mcp_disconnect(),
             "a2a_timeout": lambda: self.inject_a2a_timeout(),
             "gossip_partition": lambda: self.inject_gossip_partition(),
+            "trust_breach": lambda: self.inject_trust_breach(),
+            "federation_split": lambda: self.inject_federation_split(),
         }
         injector = injectors.get(fault_type)
         if injector:
@@ -566,6 +595,8 @@ class ChaosEngine:
             "token_corruption": 10,
             "model_degradation": 20,
             "rate_limiting": 30,
+            "trust_breach": 30,
+            "federation_split": 120,
         }
         return recovery_map.get(fault_type, 15)
 

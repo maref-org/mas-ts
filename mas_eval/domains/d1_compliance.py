@@ -986,6 +986,42 @@ def check_trace_audit_chain(
     return findings
 
 
+def check_license_compatibility(card: dict[str, Any]) -> list[dict[str, Any]]:
+    findings = []
+    deps = card.get("dependencies", [])
+    if not deps:
+        findings.append({
+            "check": "1.15",
+            "severity": "INFO",
+            "detail": "No dependencies declared — no license scan needed",
+        })
+        return findings
+
+    restrictive_licenses = {"AGPL-3.0-only", "AGPL-3.0-or-later", "SSPL-1.0", "BUSL-1.0"}
+    restricted_deps = []
+    for dep in deps:
+        if isinstance(dep, dict):
+            dep_name = dep.get("name", dep.get("package", "unknown"))
+            dep_license = dep.get("license", "")
+            if dep_license in restrictive_licenses:
+                restricted_deps.append(f"{dep_name} ({dep_license})")
+
+    if restricted_deps:
+        findings.append({
+            "check": "1.15",
+            "severity": "WARNING",
+            "detail": f"Dependencies with restrictive licenses: {'; '.join(restricted_deps)}. "
+            f"Verify compatibility with project license (Apache-2.0).",
+        })
+    else:
+        findings.append({
+            "check": "1.15",
+            "severity": "INFO",
+            "detail": f"License check passed for {len(deps)} dependencies",
+        })
+    return findings
+
+
 def run_d1(
     card: dict[str, Any],
     schema_path: str | None = None,
@@ -1006,6 +1042,7 @@ def run_d1(
     findings.extend(check_federation_version_compat(card))
     findings.extend(check_trace_audit_chain(card, federation_cards))
     findings.extend(check_capability_declaration_completeness(card))
+    findings.extend(check_license_compatibility(card))
 
     # Gold Standard v3.0-GA §10 — augment findings with v2 attribution fields.
     from mas_eval.scoring.findings import upgrade_findings_to_v2
