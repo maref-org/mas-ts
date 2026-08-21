@@ -1,6 +1,20 @@
 # Changelog
 
-## [0.11.0] - 2026-08-21 (in progress — Governance & Security)
+## [1.0.0] - 2026-08-21 (Gold Standard GA)
+### Added — Gold Standard end-to-end + ADC integration + final certification
+
+First GA release of the MAS-TS-001 Evaluation Harness. All Gold Standard v3.0-GA
+domains (D1-D5), cross-cutting metrics (ConsistencyIndex / CostEfficiency),
+Findings v2 attribution, and the Gold verdict tiers (GOLD/SILVER/BRONZE/FAIL)
+are implemented, tested, and covered at 92% (gate 85%).
+
+- `tests/test_gold_standard_e2e.py` — 5 测试：D1-D5 全栈流水线 → `compute_gold_report` 生成一致 gold_verdict；GOLD 可达性、CRITICAL 阻断、CI 阈值阻断、ADC 接入
+- `mas_eval/scoring/adc.py::check_adc_alignment()` — Athena Digital Constitution 对齐检查（constitution 声明 / envelope / ADC 引用 / 版本钉定），Gold 形结果
+- `tests/test_adc.py` — 6 测试（完全对齐 / 缺 constitution / 缺 envelope / 缺引用 / 低版本 / 部分分）
+- 健壮性修复：`run_d1` 的 `check_dag_acyclicity` 现兼容 dict 与字符串依赖（避免 dict 依赖时 `set()` 崩溃）
+- 最终认证：覆盖率 92.17%、2094 测试全绿、Agent Card Schema v2.0 正式发布
+
+## [0.11.0] - 2026-08-21 — Governance & Security
 ### Added — Federation Cascade Tester + MCP core + Compliance Report Schema + CI template
 
 #### D5 FederationCascadeTester (v0.11.0 首项)

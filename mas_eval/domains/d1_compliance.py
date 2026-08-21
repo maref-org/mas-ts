@@ -596,7 +596,13 @@ def check_dag_acyclicity(card: dict[str, Any]) -> list[dict[str, Any]]:
     capabilities = card.get("capabilities", [])
     skill_ids = {cap["skill_id"] for cap in capabilities}
     dependencies = card.get("dependencies", [])
-    deps_set = set(dependencies)
+    # Dependencies may be declared as bare strings (DAG edges) or as dicts
+    # (with name/license metadata for the license-compatibility check); normalize
+    # to hashable names so set() never sees an unhashable dict.
+    deps_set = {
+        dep["name"] if isinstance(dep, dict) and "name" in dep else dep
+        for dep in dependencies
+    }
 
     graph: dict[str, set[str]] = {}
     for skill_id in skill_ids:
