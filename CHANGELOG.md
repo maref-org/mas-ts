@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.11.0] - 2026-08-21 (in progress — Governance & Security)
+### Added — Federation Cascade Tester + MCP core + Compliance Report Schema + CI template
+
+#### D5 FederationCascadeTester (v0.11.0 首项)
+- `mas_eval/domains/d5_robustness.py::FederationCascadeTester` (~260 行) — 场景化联邦级联韧性测试器，5 维评分（single_agent_isolation 0.30 / cascade_depth_control 0.25 / circuit_breaker_propagation 0.20 / recovery_propagation 0.15 / split_brain_detection 0.10），含确定性传播、断路器切换时序 SLA(≤5s)、恢复再同步时序 SLA(≤10s)、split-brain 检测
+- `run_federation_cascade_tester()` 封装，增量接入 `run_d5()`（追加 findings + summary，不改既有 5 权重公式）
+- `tests/test_d5_federation_cascade_tester.py` — 12 测试（隔离/深度 SLA/断路器/恢复时序/split-brain/确定性/越界/集成）
+
 ## [0.10.0] - 2026-07-31
 ### Added — Gold Foundation (D4 ActionSafety + D5 故障补丁 + D1 扩展 + 社区基础设施)
 

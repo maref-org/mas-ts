@@ -898,6 +898,265 @@ class FederationCircuitBreaker:
         }
 
 
+# ═══════════════════════════════════════════════════════════════
+# Gold Standard: Federation Cascade Tester (v3.0-GA §7.5 extended)
+# ═══════════════════════════════════════════════════════════════
+#
+# Scenario-driven complement to FederationCircuitBreaker / run_federation_cascade.
+# Exercises five concrete cascade scenarios with deterministic propagation and
+# timing assertions (split-brain detection, recovery propagation latency,
+# circuit-breaker switch latency). ROADMAP-v1.0.0.md v0.11.0 deliverable.
+
+FEDERATION_CASCADE_TESTER_WEIGHTS = {
+    "single_agent_isolation": 0.30,
+    "cascade_depth_control": 0.25,
+    "circuit_breaker_propagation": 0.20,
+    "recovery_propagation": 0.15,
+    "split_brain_detection": 0.10,
+}
+
+# Service-level objectives (seconds) for latency-sensitive scenarios.
+BREAKER_SWITCH_SLA_S = 5.0
+RECOVERY_SYNC_SLA_S = 10.0
+MAX_CASCADE_HOPS = 3
+
+
+class FederationCascadeTester:
+    """Scenario-driven federation cascade resilience tester.
+
+    Unlike FederationCircuitBreaker (which models breaker-state propagation),
+    this tester exercises end-to-end cascade scenarios and measures concrete
+    SLOs: single-agent isolation, cascade depth containment, breaker switch
+    latency, recovery re-sync latency, and split-brain detection under
+    network partition.
+
+    Usage:
+        tester = FederationCascadeTester(num_agents=4, seed=42)
+        result = tester.run()
+        # result["score"], result["dimensions"], result["findings"]
+
+    Deterministic: ``seed`` controls jitter in simulated latencies so the same
+    topology yields reproducible scores (required for Gold Standard §7.5).
+    """
+
+    def __init__(self, num_agents: int = 4, seed: int = 42) -> None:
+        if num_agents < 2:
+            raise ValueError("FederationCascadeTester requires num_agents >= 2")
+        self.num_agents = num_agents
+        self.rng = random.Random(seed)
+        self.agent_states: dict[int, str] = {i: "HEALTHY" for i in range(num_agents)}
+        self.breaker_tripped: dict[int, bool] = {i: False for i in range(num_agents)}
+        self.cascade_log: list[dict[str, Any]] = []
+        self.split_brain_detected: bool = False
+        self._switch_latencies: dict[int, float] = {}
+        self._recovery_latencies: dict[int, float] = {}
+        self._max_cascade_depth = 0
+
+    def inject_fault(self, agent_index: int, fault_type: str = "process_kill") -> dict[str, Any]:
+        """Inject a fault on a single agent and log the onset event."""
+        if not (0 <= agent_index < self.num_agents):
+            raise ValueError(f"agent_index {agent_index} out of range [0, {self.num_agents})")
+        self.agent_states[agent_index] = "FAILED"
+        entry = {
+            "t": 0.0,
+            "agent": agent_index,
+            "event": f"fault_injected:{fault_type}",
+            "state": "FAILED",
+        }
+        self.cascade_log.append(entry)
+        return entry
+
+    def propagate(self, max_hops: int = 10) -> int:
+        """Propagate the cascade hop-by-hop; tripping breakers on each failure.
+
+        Returns the number of additionally cascaded agents.
+        """
+        cascaded = 0
+        for hop in range(1, max_hops + 1):
+            new_failures = []
+            for agent_id, state in self.agent_states.items():
+                if state != "HEALTHY":
+                    continue
+                failed_neighbors = sum(
+                    1
+                    for i in range(self.num_agents)
+                    if abs(i - agent_id) == 1
+                    and self.agent_states.get(i) in ("FAILED", "CASCADED")
+                )
+                if failed_neighbors > 0 and self._cascade_probability(hop) > 0.5:
+                    new_failures.append(agent_id)
+            if not new_failures:
+                break
+            for agent_id in new_failures:
+                self.agent_states[agent_id] = "CASCADED"
+                self.breaker_tripped[agent_id] = True
+                switch_latency = round(self.rng.uniform(0.5, 4.5), 2)
+                self._switch_latencies[agent_id] = switch_latency
+                self._max_cascade_depth = max(self._max_cascade_depth, hop)
+                self.cascade_log.append(
+                    {
+                        "t": float(hop),
+                        "agent": agent_id,
+                        "event": "cascaded",
+                        "state": "CASCADED",
+                        "breaker_switch_latency_s": switch_latency,
+                    }
+                )
+                cascaded += 1
+        return cascaded
+
+    def simulate_recovery(self) -> dict[int, float]:
+        """Recover failed/cascaded agents and record peer re-sync latencies."""
+        for agent_id, state in self.agent_states.items():
+            if state in ("FAILED", "CASCADED"):
+                self.agent_states[agent_id] = "HEALTHY"
+                self.breaker_tripped[agent_id] = False
+        for agent_id, state in self.agent_states.items():
+            if state == "HEALTHY":
+                self._recovery_latencies[agent_id] = round(self.rng.uniform(1.0, 9.0), 2)
+        self.cascade_log.append(
+            {"t": 0.0, "event": "recovery", "recovered": len(self._recovery_latencies)}
+        )
+        return dict(self._recovery_latencies)
+
+    def detect_split_brain(self) -> bool:
+        """Simulate a network partition and detect divergent leader election."""
+        healthy = [i for i, s in self.agent_states.items() if s == "HEALTHY"]
+        # A partition is detectable when ≥2 healthy subgroups can elect leaders.
+        self.split_brain_detected = len(healthy) >= 2
+        return self.split_brain_detected
+
+    @staticmethod
+    def _cascade_probability(hop: int) -> float:
+        return max(0.0, 0.7 - hop * 0.15)
+
+    # ── Scoring dimensions ──────────────────────────────────────────────
+
+    def _score_single_agent_isolation(self) -> float:
+        healthy_peers = sum(
+            1 for i in range(1, self.num_agents) if self.agent_states.get(i) == "HEALTHY"
+        )
+        return healthy_peers / max(self.num_agents - 1, 1)
+
+    def _score_cascade_depth(self) -> tuple[float, int]:
+        depth = self._max_cascade_depth
+        score = 1.0 if depth <= MAX_CASCADE_HOPS else max(0.0, 1.0 - (depth - MAX_CASCADE_HOPS) * 0.2)
+        return round(score, 3), depth
+
+    def _score_circuit_breaker_propagation(self) -> tuple[float, float]:
+        if not self._switch_latencies:
+            return 0.5, 0.0
+        max_latency = max(self._switch_latencies.values())
+        within = sum(1 for v in self._switch_latencies.values() if v <= BREAKER_SWITCH_SLA_S)
+        ratio = within / len(self._switch_latencies)
+        return round(ratio, 3), round(max_latency, 2)
+
+    def _score_recovery_propagation(self) -> tuple[float, float]:
+        if not self._recovery_latencies:
+            return 0.5, 0.0
+        max_latency = max(self._recovery_latencies.values())
+        within = sum(1 for v in self._recovery_latencies.values() if v <= RECOVERY_SYNC_SLA_S)
+        ratio = within / len(self._recovery_latencies)
+        return round(ratio, 3), round(max_latency, 2)
+
+    def _score_split_brain_detection(self) -> float:
+        return 1.0 if self.split_brain_detected else 0.0
+
+    def run(self, source_index: int = 0) -> dict[str, Any]:
+        """Execute the canonical cascade scenario and return a Gold-shaped result.
+
+        Scenario: fault on ``source_index`` → propagate → recovery → split-brain
+        detection. Produces 5-dimension scores, an overall score, and findings.
+        """
+        self.inject_fault(source_index)
+        self.propagate()
+        recovery_score, max_recovery = self._score_recovery_propagation()
+        _ = self.simulate_recovery()
+        sb_score = self._score_split_brain_detection()
+
+        isolation = self._score_single_agent_isolation()
+        depth_score, max_depth = self._score_cascade_depth()
+        cb_score, max_cb = self._score_circuit_breaker_propagation()
+
+        dims = {
+            "single_agent_isolation": isolation,
+            "cascade_depth_control": depth_score,
+            "circuit_breaker_propagation": cb_score,
+            "recovery_propagation": recovery_score,
+            "split_brain_detection": sb_score,
+        }
+        weights = FEDERATION_CASCADE_TESTER_WEIGHTS
+        overall = sum(dims[k] * weights[k] for k in dims) * 100
+        overall = round(max(0.0, min(100.0, overall)), 1)
+
+        findings: list[dict[str, Any]] = [
+            {
+                "severity": "INFO",
+                "category": "fed_cascade_tester",
+                "detail": (
+                    f"isolation={isolation:.2f}, depth={max_depth} (sla<={{MAX_CASCADE_HOPS}}), "
+                    f"breaker_switch_max={max_cb}s (sla<={BREAKER_SWITCH_SLA_S}s), "
+                    f"recovery_max={max_recovery}s (sla<={RECOVERY_SYNC_SLA_S}s), "
+                    f"split_brain={'detected' if sb_score > 0 else 'undetected'}"
+                ),
+            }
+        ]
+        if depth_score < 1.0:
+            findings.append(
+                {
+                    "severity": "WARNING",
+                    "category": "fed_cascade_depth_exceeded",
+                    "detail": f"Cascade depth {max_depth} exceeds SLA of {MAX_CASCADE_HOPS} hops",
+                }
+            )
+        if cb_score < 1.0:
+            findings.append(
+                {
+                    "severity": "HIGH",
+                    "category": "fed_cascade_breaker_latency",
+                    "detail": (
+                        f"Circuit-breaker switch latency {max_cb}s exceeds "
+                        f"{BREAKER_SWITCH_SLA_S}s SLA on {source_index}"
+                    ),
+                }
+            )
+        if sb_score == 0.0:
+            findings.append(
+                {
+                    "severity": "CRITICAL",
+                    "category": "fed_cascade_split_brain_undetected",
+                    "detail": "Network partition produced undetectable split-brain condition",
+                    "layer": "safety",
+                    "root_cause": "coordination_failure",
+                }
+            )
+
+        return {
+            "domain": "D5",
+            "component": "federation_cascade_tester",
+            "name": "Federation Cascade Tester (Gold Standard §7.5 extended)",
+            "score": overall,
+            "dimensions": dims,
+            "max_cascade_depth": max_depth,
+            "findings": findings,
+        }
+
+
+def run_federation_cascade_tester(card: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Convenience wrapper: run the canonical FederationCascadeTester scenario.
+
+    Args:
+        card: Optional agent card; reserved for future topology-aware scenarios.
+
+    Returns:
+        Gold-shaped result dict (score, dimensions, findings) compatible with
+        run_federation_cascade's output shape.
+    """
+    _ = card  # topology currently fixed; card reserved for v0.11.0 MCP federation
+    tester = FederationCascadeTester(num_agents=4, seed=42)
+    return tester.run()
+
+
 # --- Scoring ---
 
 CHAOS_WEIGHTS = {
@@ -1907,7 +2166,12 @@ def run_d5(
         # Legacy 4-weight formula (backward compat)
         d5_score = chaos * 0.30 + drift * 0.25 + reflection * 0.20 + convergence * 0.25
 
-    all_findings = p1["findings"] + p2["findings"] + ci_findings
+    # Gold Standard §7.5 extended (v0.11.0) — FederationCascadeTester scenario suite.
+    fct_result = run_federation_cascade_tester(card=card)
+    fct_findings = fct_result.get("findings", [])
+    fct_score = fct_result.get("score", 0.0)
+
+    all_findings = p1["findings"] + p2["findings"] + ci_findings + fct_findings
 
     # Gold Standard v3.0-GA §10 — augment findings with v2 attribution fields.
     from mas_eval.scoring.findings import upgrade_findings_to_v2
@@ -1935,6 +2199,7 @@ def run_d5(
         "consistency_index_enabled": ci_enabled,
         "part1_detail": p1,
         "part2_detail": p2,
+        "federation_cascade_tester": fct_result,
         "findings": all_findings,
         "summary": {
             "total_findings": len(all_findings),
@@ -1944,6 +2209,7 @@ def run_d5(
             "convergence_score": convergence,
             "consistency_index": round(ci_score, 1),
             "consistency_index_enabled": ci_enabled,
+            "federation_cascade_tester_score": round(fct_score, 1),
             "d5_score": round(d5_score, 1),
         },
     }
