@@ -1,0 +1,96 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mas-ts.org/schemas/compliance_report_v1.0.json",
+  "title": "MAS-TS-001 Federation Compliance Report v1.0",
+  "description": "JSON Schema for the federation-wide compliance report produced by mas_eval.scoring.compliance_report.build_report.",
+  "type": "object",
+  "required": [
+    "report_type",
+    "report_version",
+    "generated_at",
+    "agents",
+    "federation",
+    "gaps",
+    "recommendations",
+    "summary"
+  ],
+  "properties": {
+    "report_type": {
+      "type": "string",
+      "const": "federation_compliance_report"
+    },
+    "report_version": {
+      "type": "string",
+      "pattern": "^1\\.0$"
+    },
+    "generated_at": {
+      "type": "string"
+    },
+    "agents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["agent_id", "name", "scores", "verdict"],
+        "additionalProperties": true,
+        "properties": {
+          "agent_id": {"type": "string"},
+          "name": {"type": "string"},
+          "scores": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "D1": {"type": "number"},
+              "D2": {"type": "number"},
+              "D3": {"type": "number"},
+              "D4": {"type": "number"},
+              "D5": {"type": "number"}
+            }
+          },
+          "verdict": {
+            "type": "string",
+            "enum": ["PASS", "NOTES", "REVIEW", "BLOCKED"]
+          }
+        }
+      }
+    },
+    "federation": {
+      "type": "object",
+      "required": ["agent_count", "compliance_rate", "overall_health", "domain_averages"],
+      "properties": {
+        "agent_count": {"type": "integer"},
+        "compliance_rate": {"type": "string"},
+        "overall_health": {"type": "number"},
+        "domain_averages": {
+          "type": "object",
+          "properties": {
+            "D1": {"type": "number"},
+            "D2": {"type": "number"},
+            "D3": {"type": "number"},
+            "D4": {"type": "number"},
+            "D5": {"type": "number"}
+          }
+        }
+      }
+    },
+    "gaps": {
+      "type": "array"
+    },
+    "recommendations": {
+      "type": "array"
+    },
+    "summary": {
+      "type": "object",
+      "required": ["total_agents", "agents_passing", "federation_health"],
+      "properties": {
+        "total_agents": {"type": "integer"},
+        "agents_passing": {"type": "integer"},
+        "agents_blocked": {"type": "integer"},
+        "agents_needing_review": {"type": "integer"},
+        "total_gaps": {"type": "integer"},
+        "total_recommendations": {"type": "integer"},
+        "federation_health": {"type": "number"}
+      }
+    }
+  },
+  "additionalProperties": true
+}

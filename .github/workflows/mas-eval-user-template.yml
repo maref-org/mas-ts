@@ -1,0 +1,103 @@
+name: MAS-TS Evaluation (Reusable Template)
+
+# Consumer-facing reusable workflow for running MAS-TS-001 evaluation as a CI
+# gate against your own agents. Call it from your repo's workflow:
+#
+#   jobs:
+#     mas-ts:
+#       uses: maref-org/mas-ts/.github/workflows/mas-eval-user-template.yml@v0.11.0
+#       with:
+#         agent-card-path: agent_cards/my_agent.json
+#         evaluation-level: l0          # l0 fast-screen, l1, l2, l3, l4
+#         mas-ts-ref: v0.11.0
+#         python-version: "3.11"
+
+on:
+  workflow_call:
+    inputs:
+      agent-card-path:
+        description: Path to the Agent Card (JSON) under evaluation.
+        required: true
+        type: string
+      evaluation-level:
+        description: Evaluation level to run (l0..l4).
+        required: false
+        default: l0
+        type: string
+      mas-ts-ref:
+        description: Git ref of mas-ts to use (tag, branch, or sha).
+        required: false
+        default: v0.11.0
+        type: string
+      python-version:
+        description: Python version for the evaluation runtime.
+        required: false
+        default: "3.11"
+        type: string
+      fail-on-verdict:
+        description: Block the job when verdict is below this (PASS/NOTES/REVIEW/BLOCKED).
+        required: false
+        default: REVIEW
+        type: string
+    secrets:
+      MAS_TS_TOKEN:
+        description: Optional token for private mas-ts registries.
+        required: false
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - name: Checkout consumer repo
+        uses: actions/checkout@v4
+
+      - name: Checkout mas-ts harness
+        uses: actions/checkout@v4
+        with:
+          repository: maref-org/mas-ts
+          ref: ${{ inputs.mas-ts-ref }}
+          path: mas-ts
+          token: ${{ secrets.MAS_TS_TOKEN }}
+
+      - name: Set up Python ${{ inputs.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - name: Install mas-ts
+        working-directory: mas-ts
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run MAS-TS evaluation
+        id: eval
+        working-directory: mas-ts
+        run: |
+          python mas_fast_screen.py \
+            --card "${{ github.workspace }}/${{ inputs.agent-card-path }}" \
+            --level "${{ inputs.evaluation-level }}" \
+            --json report.json
+          echo "verdict=$(python -c "import json;print(json.load(open('report.json')).get('verdict','UNKNOWN'))")" >> "$GITHUB_OUTPUT"
+
+      - name: Upload evaluation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mas-ts-report-${{ inputs.evaluation-level }}
+          path: mas-ts/report.json
+          retention-days: 30
+
+      - name: Enforce gate
+        if: ${{ inputs.fail-on-verdict != 'BLOCKED' }}
+        run: |
+          rank() { case "$1" in PASS) echo 3;; NOTES) echo 2;; REVIEW) echo 1;; *) echo 0;; esac; }
+          got=$(rank "${{ steps.eval.outputs.verdict }}")
+          min=$(rank "${{ inputs.fail-on-verdict }}")
+          if [ "$got" -lt "$min" ]; then
+            echo "::error::MAS-TS verdict ${{ steps.eval.outputs.verdict }} below gate ${{ inputs.fail-on-verdict }}"
+            exit 1
+          fi

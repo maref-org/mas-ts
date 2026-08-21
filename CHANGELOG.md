@@ -8,6 +8,19 @@
 - `run_federation_cascade_tester()` 封装，增量接入 `run_d5()`（追加 findings + summary，不改既有 5 权重公式）
 - `tests/test_d5_federation_cascade_tester.py` — 12 测试（隔离/深度 SLA/断路器/恢复时序/split-brain/确定性/越界/集成）
 
+#### MCP 核心实现（宪法第十五条 / 十五-A / 第七条）
+- `mas_eval/mcp/envelope.py` — `validate_mcp_envelope()`（JSON-RPC 2.0 基线 + api_version 必填 + 跨边界 trace_id/timestamp/source_agent + FAIL_MODE 降级校验），`check_mcp_compliance(card)` Agent Card MCP 治理合规检查
+- `mas_eval/mcp/__init__.py` — 包导出
+- `tests/test_mcp_envelope.py` — 11 测试（信封校验/跨边界字段/FAIL_MODE/版本兼容）
+
+#### 合规报告 Schema v1.0
+- `mas_eval/schemas/compliance_report_v1.0.json` — 联邦合规报告 JSON Schema（draft-07，强约束必需字段 + 允许扩展）
+- `mas_eval/scoring/compliance_report.py::validate_compliance_report()` — 基于 jsonschema 的报告校验函数
+- `tests/test_compliance_report.py` 新增 TestComplianceReportSchemaV1 — 5 测试（build_report 校验/空报告/缺字段/版本错/verdict 非法）
+
+#### CI/CD 用户模板
+- `.github/workflows/mas-eval-user-template.yml` — 可复用 `workflow_call` 工作流，消费者通过 `uses:` 对其自身 Agent 跑 MAS-TS 快筛门禁并上传报告、执行 verdict 关卡
+
 ## [0.10.0] - 2026-07-31
 ### Added — Gold Foundation (D4 ActionSafety + D5 故障补丁 + D1 扩展 + 社区基础设施)
 

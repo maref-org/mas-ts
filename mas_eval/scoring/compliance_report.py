@@ -13,11 +13,22 @@ Usage:
     print(json.dumps(report, indent=2))
 """
 
+import json
 import logging
 import statistics
 from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+from jsonschema import validate as _jsonschema_validate
+from jsonschema import ValidationError as _JsonschemaValidationError
 
 logger = logging.getLogger(__name__)
+
+# Schema for the v1.0 federation compliance report (Gold Standard §9).
+_COMPLIANCE_REPORT_SCHEMA_PATH = (
+    Path(__file__).parent.parent / "schemas" / "compliance_report_v1.0.json"
+)
 
 DOMAIN_NAMES = {
     "D1": "Static Compliance",
@@ -253,3 +264,30 @@ def build_report(agent_results, cards):
     }
 
     return report
+
+
+def validate_compliance_report(report: dict[str, Any]) -> dict[str, Any]:
+    """Validate a compliance report against the v1.0 JSON Schema.
+
+    Args:
+        report: Report dict produced by ``build_report``.
+
+    Returns:
+        Dict with ``valid`` (bool), ``errors`` (list[str]). Raises no exception;
+        schema-load or validation failures are reported via ``errors`` so callers
+        can surface them as findings.
+    """
+    errors: list[str] = []
+    try:
+        schema = json.loads(_COMPLIANCE_REPORT_SCHEMA_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        errors.append(f"schema load failed: {exc}")
+        return {"valid": False, "errors": errors}
+
+    try:
+        _jsonschema_validate(instance=report, schema=schema)
+    except _JsonschemaValidationError as exc:
+        errors.append(str(exc.message))
+        return {"valid": False, "errors": errors}
+
+    return {"valid": True, "errors": []}

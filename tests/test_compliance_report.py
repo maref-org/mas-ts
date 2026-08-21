@@ -12,6 +12,7 @@ from mas_eval.scoring.compliance_report import (
     _compute_federation_health,
     _extract_domain_scores,
     build_report,
+    validate_compliance_report,
 )
 
 SAMPLE_CARD = {
@@ -341,3 +342,43 @@ class TestEdgeCases:
         report = build_report({"urn:agent:test:test-01": result}, [SAMPLE_CARD])
         high_gaps = [g for g in report["gaps"] if g["severity"] == "HIGH"]
         assert len(high_gaps) == 0
+
+
+class TestComplianceReportSchemaV1:
+    def test_build_report_validates_against_schema(self):
+        report = build_report(
+            {"urn:agent:test:test-01": SAMPLE_RESULT}, [SAMPLE_CARD]
+        )
+        outcome = validate_compliance_report(report)
+        assert outcome["valid"] is True
+        assert outcome["errors"] == []
+
+    def test_empty_report_validates(self):
+        report = build_report({}, [])
+        outcome = validate_compliance_report(report)
+        assert outcome["valid"] is True
+
+    def test_missing_required_field_fails(self):
+        report = build_report(
+            {"urn:agent:test:test-01": SAMPLE_RESULT}, [SAMPLE_CARD]
+        )
+        del report["report_version"]
+        outcome = validate_compliance_report(report)
+        assert outcome["valid"] is False
+        assert outcome["errors"]
+
+    def test_wrong_report_version_fails(self):
+        report = build_report(
+            {"urn:agent:test:test-01": SAMPLE_RESULT}, [SAMPLE_CARD]
+        )
+        report["report_version"] = "2.0"
+        outcome = validate_compliance_report(report)
+        assert outcome["valid"] is False
+
+    def test_invalid_verdict_fails(self):
+        report = build_report(
+            {"urn:agent:test:test-01": SAMPLE_RESULT}, [SAMPLE_CARD]
+        )
+        report["agents"][0]["verdict"] = "BOGUS"
+        outcome = validate_compliance_report(report)
+        assert outcome["valid"] is False
