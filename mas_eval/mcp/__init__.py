@@ -3,11 +3,11 @@
 """MAS-TS-001 MCP core package."""
 
 from mas_eval.mcp.envelope import (
-    VALID_FAIL_MODES,
-    CROSS_BOUNDARY_FIELDS,
-    CROSS_BOUNDARY_FAIL_MODE,
     API_VERSION_FIELD,
+    CROSS_BOUNDARY_FAIL_MODE,
+    CROSS_BOUNDARY_FIELDS,
     JSONRPC_REQUIRED_FIELDS,
+    VALID_FAIL_MODES,
     check_mcp_compliance,
     validate_mcp_envelope,
 )

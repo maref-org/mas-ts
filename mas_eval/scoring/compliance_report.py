@@ -20,8 +20,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from jsonschema import validate as _jsonschema_validate
 from jsonschema import ValidationError as _JsonschemaValidationError
+from jsonschema import validate as _jsonschema_validate
 
 logger = logging.getLogger(__name__)
 

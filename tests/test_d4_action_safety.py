@@ -8,10 +8,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.resolve()))
 
 from mas_eval.domains.d4_action_safety import (
-    run_action_safety,
     integrate_action_safety,
+    run_action_safety,
 )
-
 
 FULLY_COMPLIANT_CARD = {
     "authentication": {

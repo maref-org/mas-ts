@@ -3,9 +3,10 @@
 """Shared utilities for MAS-TS-001 domain evaluators."""
 
 from collections.abc import Mapping
+from typing import Any
 
 
-def safe_get(card, key, default=None, of_type=None):
+def safe_get(card: Any, key: Any, default: Any = None, of_type: Any = None) -> Any:
     """Type-safe get from a card dict.
 
     Returns `default` if key is missing or value is not the expected type.
@@ -26,7 +27,7 @@ def safe_get(card, key, default=None, of_type=None):
     return val
 
 
-def safe_get_in(card, *keys, default=None, of_type=None):
+def safe_get_in(card: Any, *keys: Any, default: Any = None, of_type: Any = None) -> Any:
     """Type-safe chained get for nested dict access.
 
     Usage:
@@ -46,7 +47,7 @@ def safe_get_in(card, *keys, default=None, of_type=None):
     return current
 
 
-def safe_get_list(card, key, default=None, item_type=None):
+def safe_get_list(card: Any, key: Any, default: Any = None, item_type: Any = None) -> Any:
     """Type-safe get that ensures a list return value.
 
     If the value is a list, returns it.
