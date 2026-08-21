@@ -33,7 +33,7 @@ def _load_csv2():
         Path(__file__).parent.parent / "compliance_sidecar_v2.py",
     )
     mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)  # type: ignore[union-attr]
+    spec.loader.exec_module(mod)
     return mod
 
 
@@ -91,7 +91,7 @@ class TestIngestAuditChain:
     def test_non_dict_elements_skipped(self):
         """Non-dict elements and non-list input are handled gracefully."""
         assert ingest_audit_chain([{"url": "x"}, 42, "str", None]) == [{"url": "x"}]
-        assert ingest_audit_chain("not-a-list") == []  # type: ignore[arg-type]
+        assert ingest_audit_chain("not-a-list") == []
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -115,7 +115,7 @@ class TestVerifyChainIntegrity:
     def test_missing_secret_returns_false(self):
         chain = _make_chain([_decision("https://a.com/v1")])
         assert verify_chain_integrity(chain, "") is False
-        assert verify_chain_integrity(chain, None) is False  # type: ignore[arg-type]
+        assert verify_chain_integrity(chain, None) is False
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -130,7 +130,7 @@ class TestLoadSidecarLog:
 
     def test_unsupported_source_type_raises(self):
         with pytest.raises(TypeError, match="Unsupported sidecar log source type"):
-            load_sidecar_log(123)  # type: ignore[arg-type]
+            load_sidecar_log(123)
 
     def test_chain_with_secret_verifies_then_ingests(self, tmp_path):
         """Chain-shaped input + secret → verify then ingest; tamper raises."""

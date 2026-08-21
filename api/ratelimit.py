@@ -5,6 +5,7 @@ from typing import Awaitable, Callable
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
+from starlette.types import ASGIApp
 
 
 class TokenBucket:
@@ -28,7 +29,7 @@ class TokenBucket:
 class RateLimitMiddleware(BaseHTTPMiddleware):
     def __init__(
         self,
-        app,
+        app: ASGIApp,
         rate: float = 100.0,
         burst: int = 50,
         exclude_paths: set[str] | None = None,
@@ -39,7 +40,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         )
         self.exclude_paths = exclude_paths or {"/health", "/metrics", "/"}
 
-    async def dispatch(  # type: ignore[override]
+    async def dispatch(
         self,
         request: Request,
         call_next: Callable[[Request], Awaitable[Response]],

@@ -4,13 +4,13 @@
 
 import uuid
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 
 class LangChainAdapter:
     """Adapter for converting LangChain Agents to MAS-TS Agent Card format."""
 
-    def __init__(self, agent: Any, agent_config: Optional[Dict] = None):
+    def __init__(self, agent: Any, agent_config: Optional[dict[str, Any]] = None):
         """Initialize adapter with LangChain agent instance.
 
         Args:
@@ -20,7 +20,7 @@ class LangChainAdapter:
         self.agent = agent
         self.config = agent_config or {}
 
-    def to_agent_card(self) -> Dict:
+    def to_agent_card(self) -> dict[str, Any]:
         """Convert LangChain agent to MAS-TS Agent Card v2.0 format.
 
         Returns:
@@ -53,19 +53,19 @@ class LangChainAdapter:
         """Extract agent name."""
         if hasattr(self.agent, "name"):
             return str(self.agent.name)
-        return self.config.get("name", "langchain-agent")  # type: ignore
+        return str(self.config.get("name", "langchain-agent"))
 
     def _get_description(self) -> str:
         """Extract agent description."""
         if hasattr(self.agent, "description"):
             return str(self.agent.description)
-        return self.config.get("description", "LangChain Agent")
+        return str(self.config.get("description", "LangChain Agent"))
 
     def _get_version(self) -> str:
         """Extract agent version."""
-        return self.config.get("version", "0.1.0")
+        return str(self.config.get("version", "0.1.0"))
 
-    def _get_compliance(self) -> Dict:
+    def _get_compliance(self) -> dict[str, Any]:
         """Extract compliance configuration."""
         return {
             "data_residency": self.config.get("data_residency", "LOCAL"),
@@ -77,7 +77,7 @@ class LangChainAdapter:
             "audit_trail_required": self.config.get("audit_trail_required", True),
         }
 
-    def _get_constitution(self) -> Dict:
+    def _get_constitution(self) -> dict[str, Any]:
         """Extract constitution compliance fields."""
         return {
             "envelope": {
@@ -90,7 +90,7 @@ class LangChainAdapter:
             "heartbeat_interval_seconds": 60,
         }
 
-    def _get_model_backend(self) -> Dict:
+    def _get_model_backend(self) -> dict[str, Any]:
         """Extract model backend configuration."""
         provider = self.config.get("provider", "unknown")
         model = self.config.get("model", "unknown")
@@ -110,9 +110,9 @@ class LangChainAdapter:
             "endpoint": endpoint,
         }
 
-    def _get_capabilities(self) -> list:
+    def _get_capabilities(self) -> list[dict[str, Any]]:
         """Extract agent capabilities."""
-        capabilities = self.config.get("capabilities", [])
+        capabilities: list[dict[str, Any]] = self.config.get("capabilities", [])
 
         if not capabilities and hasattr(self.agent, "tools"):
             capabilities = [
@@ -139,14 +139,14 @@ class LangChainAdapter:
 
         return capabilities
 
-    def _get_authentication(self) -> Dict:
+    def _get_authentication(self) -> dict[str, Any]:
         """Extract authentication configuration."""
         return {
             "type": self.config.get("auth_type", "None"),
             "scopes": self.config.get("auth_scopes", []),
         }
 
-    def _get_federation(self) -> Dict:
+    def _get_federation(self) -> dict[str, Any]:
         """Extract federation configuration."""
         return {
             "role": self.config.get("federation_role", "primary"),
@@ -155,7 +155,7 @@ class LangChainAdapter:
             "permissions": self.config.get("permissions", {}),
         }
 
-    def _get_governance(self) -> Dict:
+    def _get_governance(self) -> dict[str, Any]:
         """Extract governance configuration."""
         return {
             "state_machine_version": self.config.get("state_machine_version", "1.0"),
@@ -170,7 +170,7 @@ class LangChainAdapter:
             },
         }
 
-    def _get_audit(self) -> Dict:
+    def _get_audit(self) -> dict[str, Any]:
         """Extract audit configuration."""
         return {
             "trace_id_required": True,

@@ -86,7 +86,7 @@ def test_invalid_fail_mode_value():
 
 
 def test_non_dict_message():
-    result = validate_mcp_envelope("not-a-dict")  # type: ignore[arg-type]
+    result = validate_mcp_envelope("not-a-dict")
     assert result["valid"] is False
 
 

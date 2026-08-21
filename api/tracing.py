@@ -1,6 +1,6 @@
 import logging
 import uuid
-from typing import Awaitable, Callable
+from typing import Any, Awaitable, Callable, Mapping, MutableMapping
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -27,15 +27,15 @@ def get_trace_id(request: Request) -> str:
     return getattr(request.state, "trace_id", "no-trace")
 
 
-def inject_trace_id(log_data: dict, trace_id: str) -> dict:
+def inject_trace_id(log_data: dict[str, object], trace_id: str) -> dict[str, object]:
     log_data["trace_id"] = trace_id
     return log_data
 
 
-class TraceAdapter(logging.LoggerAdapter[dict[str, object]]):
+class TraceAdapter(logging.LoggerAdapter[Any]):
     def process(
-        self, msg: object, kwargs: dict[str, object]
-    ) -> tuple[object, dict[str, object]]:
-        extra: dict[str, object] = self.extra if self.extra else {}
+        self, msg: object, kwargs: MutableMapping[str, Any]
+    ) -> tuple[object, MutableMapping[str, Any]]:
+        extra: Mapping[str, object] = self.extra if self.extra else {}
         trace_id = kwargs.pop("trace_id", extra.get("trace_id", "no-trace"))
         return f"[{trace_id}] {msg}", kwargs

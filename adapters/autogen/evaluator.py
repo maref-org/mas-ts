@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """AutoGen Agent evaluator wrapper."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional, cast
 
 from mas_eval.harness.l0_fast_screen import run_l0_fast_screen
 from mas_eval.harness.l1_standard import run_l1_standard
@@ -11,7 +11,7 @@ from mas_eval.harness.l1_standard import run_l1_standard
 class AutoGenEvaluator:
     """Evaluator for AutoGen agents using MAS-TS harness."""
 
-    def __init__(self, agent: Any, agent_config: Optional[Dict] = None):
+    def __init__(self, agent: Any, agent_config: Optional[dict[str, Any]] = None):
         """Initialize evaluator with AutoGen agent instance.
 
         Args:
@@ -23,7 +23,7 @@ class AutoGenEvaluator:
         self.adapter = AutoGenAdapter(agent, agent_config)
         self.card = self.adapter.to_agent_card()
 
-    def evaluate_l0(self, tasks: Optional[List[Dict]] = None) -> Dict:
+    def evaluate_l0(self, tasks: Optional[list[dict[str, Any]]] = None) -> dict[str, Any]:
         """Run L0 Fast-Screen evaluation.
 
         Args:
@@ -32,9 +32,13 @@ class AutoGenEvaluator:
         Returns:
             L0 evaluation result dict.
         """
-        return run_l0_fast_screen(self.card, tasks)
+        return cast(
+            dict[str, Any], run_l0_fast_screen(self.card, tasks)  # type: ignore[no-untyped-call]
+        )
 
-    def evaluate_l1(self, golden_trajectory: Optional[List[Dict]] = None) -> Dict:
+    def evaluate_l1(
+        self, golden_trajectory: Optional[list[dict[str, Any]]] = None
+    ) -> dict[str, Any]:
         """Run L1 Standard evaluation.
 
         Args:
@@ -43,9 +47,11 @@ class AutoGenEvaluator:
         Returns:
             L1 evaluation result dict.
         """
-        return run_l1_standard(self.card, golden_trajectory)
+        return cast(
+            dict[str, Any], run_l1_standard(self.card, golden_trajectory)  # type: ignore[no-untyped-call]
+        )
 
-    def evaluate(self, level: str = "L0", **kwargs) -> Dict:
+    def evaluate(self, level: str = "L0", **kwargs: Any) -> dict[str, Any]:
         """Run evaluation at specified level.
 
         Args:
@@ -65,7 +71,7 @@ class AutoGenEvaluator:
         else:
             raise ValueError(f"Unsupported evaluation level: {level}")
 
-    def get_agent_card(self) -> Dict:
+    def get_agent_card(self) -> dict[str, Any]:
         """Get the generated Agent Card.
 
         Returns:

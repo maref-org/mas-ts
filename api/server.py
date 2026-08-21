@@ -5,10 +5,11 @@
 import datetime
 import logging
 import os
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Dict
+from typing import Any, Dict, cast
 
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
@@ -35,7 +36,7 @@ logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Lifespan context manager for the FastAPI app."""
     logger.info("MAS-TS Evaluation API v1.0 starting...")
     yield
@@ -102,7 +103,7 @@ def _optional_metrics_auth(
 
 
 @app.get("/", tags=["Health"])
-async def root():
+async def root() -> dict[str, object]:
     """Root endpoint for health check."""
     return {
         "service": "MAS-TS Evaluation API",
@@ -112,13 +113,13 @@ async def root():
 
 
 @app.get("/health", tags=["Health"])
-async def health_check():
+async def health_check() -> dict[str, str]:
     """Health check endpoint."""
     return {"status": "healthy"}
 
 
 @app.get("/metrics", tags=["Observability"])
-async def metrics(_: None = Depends(_optional_metrics_auth)):
+async def metrics(_: None = Depends(_optional_metrics_auth)) -> Response:
     """Prometheus metrics endpoint (R5 OPS).
 
     Exposes RED metrics (request count/latency), evaluation count, and
@@ -131,7 +132,7 @@ async def metrics(_: None = Depends(_optional_metrics_auth)):
 
 
 @app.get("/slo-status", tags=["Observability"])
-async def slo_status():
+async def slo_status() -> dict[str, object]:
     """SLO error budget status across all levels.
     Returns current violation counts, budget remaining, and burn rates.
     """
@@ -142,7 +143,7 @@ async def slo_status():
 
 
 @app.post("/evaluate", response_model=EvaluationResponse, tags=["Evaluation"])
-async def evaluate_agent(request: EvaluationRequest):
+async def evaluate_agent(request: EvaluationRequest) -> EvaluationResponse:
     """Evaluate an agent at specified level.
 
     Args:
@@ -159,13 +160,13 @@ async def evaluate_agent(request: EvaluationRequest):
 
     try:
         if level == "L0":
-            result = run_l0_fast_screen(card, request.tasks)
+            result = run_l0_fast_screen(card, request.tasks)  # type: ignore[no-untyped-call]
         elif level == "L1":
-            result = run_l1_standard(card, request.golden_trajectory)
+            result = run_l1_standard(card, request.golden_trajectory)  # type: ignore[no-untyped-call]
         elif level == "L2":
-            result = run_l2_deep(card)
+            result = run_l2_deep(card)  # type: ignore[no-untyped-call]
         elif level == "L3":
-            result = run_l3_comprehensive(card)
+            result = run_l3_comprehensive(card)  # type: ignore[no-untyped-call]
         elif level == "L4":
             result = run_l4_evolution(card)
         else:
@@ -180,23 +181,23 @@ async def evaluate_agent(request: EvaluationRequest):
         raise _error("evaluation_failed", str(e))
 
 
-def _evaluate_common(level: str, request: EvaluationRequest) -> dict:
+def _evaluate_common(level: str, request: EvaluationRequest) -> dict[str, Any]:
     card = request.agent_card.model_dump()
     level_upper = level.upper()
     try:
         if level_upper == "L0":
-            result = run_l0_fast_screen(card, request.tasks)
+            result = run_l0_fast_screen(card, request.tasks)  # type: ignore[no-untyped-call]
         elif level_upper == "L1":
-            result = run_l1_standard(card, request.golden_trajectory)
+            result = run_l1_standard(card, request.golden_trajectory)  # type: ignore[no-untyped-call]
         elif level_upper == "L2":
-            result = run_l2_deep(card)
+            result = run_l2_deep(card)  # type: ignore[no-untyped-call]
         elif level_upper == "L3":
-            result = run_l3_comprehensive(card)
+            result = run_l3_comprehensive(card)  # type: ignore[no-untyped-call]
         elif level_upper == "L4":
             result = run_l4_evolution(card)
         else:
             raise _error("invalid_level", f"Invalid evaluation level: {level}. Must be L0-L4.")
-        return result
+        return cast(dict[str, Any], result)
     except HTTPException:
         raise
     except Exception as e:
@@ -206,31 +207,31 @@ def _evaluate_common(level: str, request: EvaluationRequest) -> dict:
 
 
 @app.post("/evaluate/l0", response_model=EvaluationResponse, tags=["Evaluation"])
-async def evaluate_l0(request: EvaluationRequest):
+async def evaluate_l0(request: EvaluationRequest) -> EvaluationResponse:
     result = _evaluate_common("L0", request)
     return _convert_to_response(result)
 
 
 @app.post("/evaluate/l1", response_model=EvaluationResponse, tags=["Evaluation"])
-async def evaluate_l1(request: EvaluationRequest):
+async def evaluate_l1(request: EvaluationRequest) -> EvaluationResponse:
     result = _evaluate_common("L1", request)
     return _convert_to_response(result)
 
 
 @app.post("/evaluate/l2", response_model=EvaluationResponse, tags=["Evaluation"])
-async def evaluate_l2(request: EvaluationRequest):
+async def evaluate_l2(request: EvaluationRequest) -> EvaluationResponse:
     result = _evaluate_common("L2", request)
     return _convert_to_response(result)
 
 
 @app.post("/evaluate/l3", response_model=EvaluationResponse, tags=["Evaluation"])
-async def evaluate_l3(request: EvaluationRequest):
+async def evaluate_l3(request: EvaluationRequest) -> EvaluationResponse:
     result = _evaluate_common("L3", request)
     return _convert_to_response(result)
 
 
 @app.post("/evaluate/l4", response_model=EvaluationResponse, tags=["Evaluation"])
-async def evaluate_l4(request: EvaluationRequest):
+async def evaluate_l4(request: EvaluationRequest) -> EvaluationResponse:
     result = _evaluate_common("L4", request)
     return _convert_to_response(result)
 
@@ -238,7 +239,7 @@ async def evaluate_l4(request: EvaluationRequest):
 # ── HITL (Human-in-the-Loop) interrupt endpoints (R3 P0 — Handbook §5.1.3) ──
 
 # In-memory HITL state store (per-process; production should use Redis)
-_hitl_states: Dict[str, dict] = {}
+_hitl_states: Dict[str, dict[str, object]] = {}
 
 
 def _hitl_timestamp() -> str:
@@ -247,7 +248,7 @@ def _hitl_timestamp() -> str:
 
 
 @app.post("/hitl/{task_id}/cancel", tags=["HITL"])
-async def hitl_cancel(task_id: str):
+async def hitl_cancel(task_id: str) -> dict[str, object]:
     """Cancel a task awaiting HITL approval.
 
     Args:
@@ -276,7 +277,7 @@ async def hitl_cancel(task_id: str):
 
 
 @app.post("/hitl/{task_id}/confirm", tags=["HITL"])
-async def hitl_confirm(task_id: str):
+async def hitl_confirm(task_id: str) -> dict[str, object]:
     """Confirm a task awaiting HITL approval.
 
     Args:
@@ -305,7 +306,7 @@ async def hitl_confirm(task_id: str):
 
 
 @app.post("/hitl/{task_id}/pause", tags=["HITL"])
-async def hitl_pause(task_id: str):
+async def hitl_pause(task_id: str) -> dict[str, object]:
     """Pause a task awaiting HITL approval.
 
     Args:
@@ -333,7 +334,7 @@ async def hitl_pause(task_id: str):
     }
 
 
-def _convert_to_response(result: Dict) -> EvaluationResponse:
+def _convert_to_response(result: Dict[str, Any]) -> EvaluationResponse:
     """Convert internal result dict to API response.
 
     Args:

@@ -69,13 +69,18 @@ disallow_untyped_defs = false
 disallow_untyped_calls = false
 
 [[tool.mypy.overrides]]
-module = [
-    'adapters.*',
-    'api.*',
-]
+module = ['mas_full_run']
 disallow_untyped_defs = false
 disallow_untyped_calls = false
-ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ['tests.*']
+disallow_untyped_defs = false
+disallow_untyped_calls = false
+disallow_incomplete_defs = false
+check_untyped_defs = false
+disallow_any_generics = false
+warn_return_any = false
 
 [tool.bandit]
 skips = ["B101", "B105", "B110", "B311", "B404", "B603", "B607"]

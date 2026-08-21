@@ -1186,7 +1186,7 @@ class TestSchemaV2MigratedCards:
 
     def _load_v2_card(self, relative_path: str) -> dict[str, Any]:
         path = Path(__file__).parent.parent / relative_path
-        return json.loads(path.read_text())  # type: ignore[no-any-return]
+        return json.loads(path.read_text())
 
     def test_multi_vendor_claude_code(self) -> None:
         card = self._load_v2_card(

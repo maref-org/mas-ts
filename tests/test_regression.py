@@ -85,7 +85,7 @@ class TestRegressionResult:
     def test_dataclass_immutable_via_init(self):
         """`passed` is a required field with no default."""
         with pytest.raises(TypeError):
-            RegressionResult()  # type: ignore[call-arg]
+            RegressionResult()
 
 
 # ═══════════════════════════════════════════════════════════════

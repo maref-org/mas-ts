@@ -22,6 +22,7 @@ import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 import argcomplete
 
@@ -259,10 +260,10 @@ def run_multi_vendor(card_paths, level, output_path, compliance_format="none"):
     for path_str in card_paths:
         p = Path(path_str)
         if p.is_dir():
-            for f in sorted(p.glob("*.json")):
-                if "agent_card" not in f.name:
+            for card_file in sorted(p.glob("*.json")):
+                if "agent_card" not in card_file.name:
                     continue
-                cards[f.stem] = load_card(str(f))
+                cards[card_file.stem] = load_card(str(card_file))
         else:
             cards[p.stem] = load_card(path_str)
 
@@ -275,7 +276,7 @@ def run_multi_vendor(card_paths, level, output_path, compliance_format="none"):
         )
 
     cards_list = list(cards.values())
-    results = {}
+    results: dict[str, dict[str, Any]] = {}
     agent_results = {}
     for name, card in cards.items():
         d1 = run_d1(card)

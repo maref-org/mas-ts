@@ -22,7 +22,7 @@ import time
 from difflib import SequenceMatcher
 from pathlib import Path
 
-from mas_eval.oracle.env import check_docker
+from mas_eval.oracle.env import check_docker as check_docker
 from mas_eval.oracle.oracle_base import Oracle, OracleTask
 
 logger = logging.getLogger(__name__)

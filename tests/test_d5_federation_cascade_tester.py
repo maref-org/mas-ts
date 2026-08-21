@@ -39,7 +39,7 @@ def test_single_agent_isolation_perfect_with_no_peers_failed():
     tester = FederationCascadeTester(num_agents=4, seed=7)
     tester.inject_fault(0)
     # Force no cascade by patching propagation probability to zero.
-    tester._cascade_probability = lambda hop: 0.0  # type: ignore[method-assign]
+    tester._cascade_probability = lambda hop: 0.0
     tester.propagate()
     assert tester._score_single_agent_isolation() == 1.0
 

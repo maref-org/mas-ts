@@ -85,7 +85,7 @@ def metrics_response() -> Response:
     return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
-def update_hitl_gauge(states: dict[str, dict]) -> None:
+def update_hitl_gauge(states: dict[str, dict[str, object]]) -> None:
     """Refresh HITL state gauge from in-memory _hitl_states.
 
     Sets all known states to current counts (zero when absent) so stale
@@ -97,7 +97,7 @@ def update_hitl_gauge(states: dict[str, dict]) -> None:
     # Snapshot iteration (list) to avoid RuntimeError if the dict is
     # modified by an async HITL endpoint between scheduling points.
     for v in list(states.values()):
-        s = v.get("state", "unknown") if isinstance(v, dict) else "unknown"
+        s = str(v.get("state", "unknown"))
         counts[s] = counts.get(s, 0) + 1
     for s in _KNOWN_HITL_STATES:
         HITL_STATE_GAUGE.labels(state=s).set(counts.get(s, 0))

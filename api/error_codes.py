@@ -41,9 +41,9 @@ HITL_STATE_TRANSITIONS: dict[str, list[str]] = {
 }
 
 
-def build_error_response(code: str, detail: str | None = None) -> dict:
+def build_error_response(code: str, detail: str | None = None) -> dict[str, object]:
     entry = ERR_MAP.get(code, ERR_MAP["internal_error"])
-    resp: dict = {
+    resp: dict[str, object] = {
         "error": code,
         "message": str(entry["message"]),
     }
