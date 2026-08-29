@@ -55,10 +55,11 @@ def run_l0_fast_screen(card, tasks=None):
     if card_validation["status"] == "FAIL":
         return _l0_result(stages, start)
 
+    golden, mock = _parse_trajectories(tasks)
     with ThreadPoolExecutor(max_workers=3) as executor:
         constitution_future = executor.submit(_stage_constitution_check, card)
-        mock_tasks_future = executor.submit(_stage_mock_tasks, card, tasks)
-        agent_spawn_future = executor.submit(_stage_agent_spawn, card)
+        mock_tasks_future = executor.submit(_stage_mock_tasks, card, golden, mock)
+        agent_spawn_future = executor.submit(_stage_agent_spawn, card, golden)
 
         t0 = time.time()
         constitution = constitution_future.result()
@@ -116,17 +117,39 @@ def _stage_constitution_check(card):
     }
 
 
-def _stage_mock_tasks(card, tasks=None):
-    traj = tasks or []
-    d2 = run_d2(card, traj)
+def _parse_trajectories(tasks):
+    """从 --tasks 数据中解析 golden/mock 轨迹。
+
+    新格式: {"golden_trajectory": [events...], "mock_trajectory": [events...]}
+    旧格式: {"tasks": [{"description": ...}]} → 无轨迹，返回 (None, None)。
+    列表直接视为 golden（兼容旧调用方）。
+    """
+    if isinstance(tasks, dict):
+        if "golden_trajectory" in tasks or "mock_trajectory" in tasks:
+            return tasks.get("golden_trajectory"), tasks.get("mock_trajectory")
+        return None, None
+    if isinstance(tasks, list):
+        return tasks, None
+    return None, None
+
+
+def _stage_mock_tasks(card, golden_trajectory=None, mock_trajectory=None):
+    d2 = run_d2(card, golden_trajectory, mock_trajectory)
     score = d2.get("subscores", {}).get("task_completion", 0)
+    traj_events = (
+        golden_trajectory
+        if isinstance(golden_trajectory, list)
+        else (golden_trajectory or {}).get("events", [])
+        if golden_trajectory
+        else []
+    )
     return {
         "stage": "mock_tasks",
         "status": "PASS" if score >= 70 else "WARNING",
         "score": score,
         "checks": ["d2.4"],
         "details": f"Mock task completion: {score:.1f}%",
-        "trajectory": traj if isinstance(traj, list) else list(traj) if traj else [],
+        "trajectory": traj_events,
     }
 
 
@@ -159,8 +182,8 @@ def _stage_step_efficiency(trajectory_data):
     }
 
 
-def _stage_agent_spawn(card):
-    d3 = run_d3(card)
+def _stage_agent_spawn(card, golden_trajectory=None):
+    d3 = run_d3(card, golden_trajectory=golden_trajectory)
     spawn_score = d3.get("subscores", {}).get("spawn", 0)
     return {
         "stage": "agent_spawn",
@@ -190,20 +213,34 @@ def _stage_traffic_light(stages):
 def _l0_result(stages, start_time):
     elapsed = time.time() - start_time
 
-    # 提取金标阈值检查所需的指标
+    # 提取金标阈值检查所需的指标，并把各 stage 分数映射到 D1/D2/D3 域
     metrics = {}
+    domain_scores = {}
+    all_findings = []
     for stage in stages:
         if stage["stage"] == "card_validation":
             metrics["d1_compliance"] = stage["score"]
+            domain_scores["d1"] = stage["score"]
         elif stage["stage"] == "step_efficiency" and stage["status"] != "SKIP":
             metrics["d2_step_efficiency"] = stage["score"] / 100.0
         elif stage["stage"] == "mock_tasks":
             metrics["d2_tool_coverage"] = stage["score"]
+            domain_scores["d2"] = stage["score"]
         elif stage["stage"] == "agent_spawn":
             metrics["d3_spawn_rate"] = stage["score"]
+            domain_scores["d3"] = stage["score"]
+        all_findings.extend(stage.get("findings", []))
 
     # 执行金标阈值检查
     threshold_check = check_level_thresholds(metrics, level="L0")
+
+    from mas_eval.scoring.absolute import (
+        compute_overall,
+        determine_verdict,
+        score_to_grade,
+    )
+
+    overall = compute_overall(**domain_scores)
 
     return {
         "level": "L0",
@@ -211,7 +248,12 @@ def _l0_result(stages, start_time):
         "elapsed_seconds": round(elapsed, 1),
         "timeout": L0_TIMEOUT_SECONDS,
         "status": stages[-1]["status"] if stages else "FAIL",
+        "score": overall,
+        "grade": score_to_grade(overall),
+        "verdict": determine_verdict(overall, findings=all_findings),
+        "domain_scores": domain_scores,
         "stages": stages,
         "summary": {s["stage"]: s["status"] for s in stages},
         "threshold_check": threshold_check,
+        "findings": all_findings,
     }
