@@ -7,9 +7,10 @@ Usage:
   python mas_full_run.py --card mas_eval/data/sample_cards/claude_code.json
   python mas_full_run.py --card claude_code.json --level L3 --output reports/full_eval.json
 
-  # Athena 系统级质量门（social_risk_gate.masts_quality 消费 reports/full_eval.json）。
-  # 必须带 --tasks 轨迹，否则 L0 mock_tasks=0 → weighted_score=None → 误判 BLOCKED：
-  python mas_full_run.py --card mas_eval/data/sample_cards/openclaw_athena_card.json \
+  # 系统级质量门（social_risk_gate.masts_quality 消费 reports/full_eval.json）。
+  # 必须带 --tasks 轨迹，否则 L0 mock_tasks=0 → weighted_score=None → 误判 BLOCKED。
+  # card 用 mas_eval/data/sample_cards/ 下被评估 agent 的 card：
+  python mas_full_run.py --card mas_eval/data/sample_cards/<agent-card>.json \
     --tasks mas_eval/data/athena_mock_tasks.json --level L0 --output reports/full_eval.json
 
 Implements the complete 5-level evaluation per MAS-TS-001 v3.0:
