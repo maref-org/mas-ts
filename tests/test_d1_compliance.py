@@ -9,6 +9,8 @@ import tempfile
 from datetime import date, timedelta
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).parent.parent.resolve()))
 
 from mas_eval.domains.d1_compliance import (
@@ -399,6 +401,38 @@ def test_d1_check_prompt_rot_missing_brv():
         }
     )
     assert any(f["severity"] == "WARNING" for f in findings)
+
+
+def test_d1_check_prompt_rot_invalid_as_of_date():
+    with pytest.raises(ValueError):
+        check_prompt_rot(
+            {
+                "capabilities": [
+                    {
+                        "skill_id": "bash",
+                        "description": "x",
+                        "business_rule_version": "2026-09-30",
+                    }
+                ]
+            },
+            as_of_date="not-a-date",
+        )
+
+
+def test_d1_check_prompt_rot_valid_as_of_date_no_rot():
+    findings = check_prompt_rot(
+        {
+            "capabilities": [
+                {
+                    "skill_id": "bash",
+                    "description": "x",
+                    "business_rule_version": "2026-09-30",
+                }
+            ]
+        },
+        as_of_date="2026-10-01",
+    )
+    assert len(findings) == 0
 
 
 def test_d1_check_capabilities_below_50():

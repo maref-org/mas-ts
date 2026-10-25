@@ -429,6 +429,13 @@ def check_prompt_rot(
     findings = []
     # as_of_date 注入评估时间锚点（YYYY-MM-DD），默认取当前日期。
     # 为测试可复现性提供确定性时钟，生产路径行为不变。
+    if as_of_date is not None:
+        try:
+            datetime.strptime(as_of_date, "%Y-%m-%d")
+        except ValueError:
+            raise ValueError(
+                f"Invalid as_of_date: {as_of_date!r} (expected YYYY-MM-DD)"
+            )
     today = as_of_date or time.strftime("%Y-%m-%d")
     for cap in card.get("capabilities", []):
         brv = cap.get("business_rule_version")

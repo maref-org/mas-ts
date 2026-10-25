@@ -174,6 +174,15 @@ def check_endpoint_location(endpoint, declared_residency):
 
 def check_prompt_rot(card, as_of_date=None):
     issues = []
+    if as_of_date is not None:
+        try:
+            from datetime import datetime
+
+            datetime.strptime(as_of_date, "%Y-%m-%d")
+        except ValueError:
+            raise ValueError(
+                f"Invalid as_of_date: {as_of_date!r} (expected YYYY-MM-DD)"
+            )
     today = as_of_date or time.strftime("%Y-%m-%d")
     for cap in card.get("capabilities", []):
         brv = cap.get("business_rule_version")
