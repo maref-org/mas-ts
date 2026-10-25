@@ -24,6 +24,7 @@ Implements the complete 5-level evaluation per MAS-TS-001 v3.0:
 import argparse
 import json
 import logging
+import subprocess
 import sys
 import time
 from datetime import datetime, timezone
@@ -133,6 +134,23 @@ def load_tasks(tasks_path):
         return None
 
 
+def _git_revision() -> str | None:
+    """返回当前工作树 git revision（HEAD 短 SHA），非 git 仓库或执行失败返回 None。"""
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            cwd=str(Path(__file__).resolve().parent),
+        )
+        if result.returncode != 0:
+            return None
+        return result.stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        return None
+
+
 def generate_report(card, level_results, source_dir=None):
     all_findings = []
     total_critical = 0
@@ -176,6 +194,7 @@ def generate_report(card, level_results, source_dir=None):
         "version": "v3.0",
         "mode": "full-run",
         "evaluated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+        "revision": _git_revision(),
         "target_agent": {
             "agent_id": card.get("agent_id", "unknown"),
             "name": card.get("name", "unknown"),

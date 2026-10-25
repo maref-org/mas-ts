@@ -91,7 +91,8 @@ class TestCheckPromptRot:
                 {"skill_id": "test_skill", "business_rule_version": "2026-07-15"}
             ]
         }
-        issues = cs.check_prompt_rot(card)
+        # 注入评估时间锚点，固化 31 天期限语义；避免随真实日期推移触发（日期炸弹）。
+        issues = cs.check_prompt_rot(card, as_of_date="2026-08-15")
         assert len(issues) == 0
 
     def test_expired_brv_warning(self, monkeypatch):

@@ -57,20 +57,20 @@ jobs:
         run: |
           echo "::group::Duplicate Code Check"
           pip install pydedup 2>/dev/null || true
-          python -c "
-import subprocess
-try:
-    result = subprocess.run(
-        ['python', '-m', 'pydedup', '--path', 'mas_eval/', '--min-lines', '20'],
-        capture_output=True, text=True
-    )
-    if result.returncode != 0:
-        print('pydedup unavailable — skipping')
-    else:
-        print(result.stdout or 'No duplicates found')
-except Exception:
-    print('Duplicate check skipped (pydedup not installed)')
-"
+          python - <<'PY'
+          import subprocess
+          try:
+              result = subprocess.run(
+                  ['python', '-m', 'pydedup', '--path', 'mas_eval/', '--min-lines', '20'],
+                  capture_output=True, text=True
+              )
+              if result.returncode != 0:
+                  print('pydedup unavailable — skipping')
+              else:
+                  print(result.stdout or 'No duplicates found')
+          except Exception:
+              print('Duplicate check skipped (pydedup not installed)')
+          PY
           echo "::endgroup::"
 
       - name: Check coverage
@@ -87,8 +87,12 @@ except Exception:
         if: matrix.python-version == '3.11'
         run: |
           echo "::group::Gold Standard L0 Gate"
+          # target: Athena OpenClaw 基准卡。必须带 --tasks（athena_mock_tasks.json），
+          # 否则 L0 mock_tasks=0 → d2_tool_coverage 恒 0 → 门禁恒红（G6 修复，
+          # 对应审计结论：原 --cards-dir 无 tasks 且含意图不符合的 negative 卡）。
           python scripts/gold_standard_gate.py \
-            --cards-dir mas_eval/data/sample_cards/ \
+            --card mas_eval/data/sample_cards/openclaw_athena_card.json \
+            --tasks mas_eval/data/athena_mock_tasks.json \
             --verbose
           echo "::endgroup::"
 

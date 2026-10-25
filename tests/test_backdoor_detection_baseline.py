@@ -151,7 +151,9 @@ class TestCleanCardRegression:
 
     def test_d1_score_compliant(self, card, expected):
         """D1 score must be >= 90 for clean card."""
-        result = run_d1(card)
+        # 注入评估时间锚点：clean card BRV=2026-07-15 距 8 月锚点 31 天，
+        # 固化 baseline 的 expected_d1_score，避免随真实日期推移触发 prompt rot。
+        result = run_d1(card, as_of_date="2026-08-15")
         assert abs(result["score"] - expected["expected_d1_score"]) <= TOLERANCE_SCORE
         assert "COMPLIANT" in result.get("conformance_verdict", "")
 
@@ -316,9 +318,7 @@ class TestProbe4AdversarialMutation:
 
     @pytest.fixture(scope="class")
     def card(self) -> dict:
-        return _load_card(
-            BASELINE["test_cards"]["claude_code_clean"]["card_path"]
-        )
+        return _load_card(BASELINE["test_cards"]["claude_code_clean"]["card_path"])
 
     def test_auto_red_team_probe4_always_runs(self, card):
         """Without sidecar_log, probe_count must be 3 (was 2 pre-Phase-3).

@@ -423,9 +423,13 @@ def check_authentication(card: dict[str, Any]) -> list[dict[str, Any]]:
     return findings
 
 
-def check_prompt_rot(card: dict[str, Any]) -> list[dict[str, Any]]:
+def check_prompt_rot(
+    card: dict[str, Any], as_of_date: str | None = None
+) -> list[dict[str, Any]]:
     findings = []
-    today = time.strftime("%Y-%m-%d")
+    # as_of_date 注入评估时间锚点（YYYY-MM-DD），默认取当前日期。
+    # 为测试可复现性提供确定性时钟，生产路径行为不变。
+    today = as_of_date or time.strftime("%Y-%m-%d")
     for cap in card.get("capabilities", []):
         brv = cap.get("business_rule_version")
         skill_id = cap.get("skill_id", "?")
@@ -996,14 +1000,21 @@ def check_license_compatibility(card: dict[str, Any]) -> list[dict[str, Any]]:
     findings = []
     deps = card.get("dependencies", [])
     if not deps:
-        findings.append({
-            "check": "1.15",
-            "severity": "INFO",
-            "detail": "No dependencies declared — no license scan needed",
-        })
+        findings.append(
+            {
+                "check": "1.15",
+                "severity": "INFO",
+                "detail": "No dependencies declared — no license scan needed",
+            }
+        )
         return findings
 
-    restrictive_licenses = {"AGPL-3.0-only", "AGPL-3.0-or-later", "SSPL-1.0", "BUSL-1.0"}
+    restrictive_licenses = {
+        "AGPL-3.0-only",
+        "AGPL-3.0-or-later",
+        "SSPL-1.0",
+        "BUSL-1.0",
+    }
     restricted_deps = []
     for dep in deps:
         if isinstance(dep, dict):
@@ -1013,18 +1024,22 @@ def check_license_compatibility(card: dict[str, Any]) -> list[dict[str, Any]]:
                 restricted_deps.append(f"{dep_name} ({dep_license})")
 
     if restricted_deps:
-        findings.append({
-            "check": "1.15",
-            "severity": "WARNING",
-            "detail": f"Dependencies with restrictive licenses: {'; '.join(restricted_deps)}. "
-            f"Verify compatibility with project license (Apache-2.0).",
-        })
+        findings.append(
+            {
+                "check": "1.15",
+                "severity": "WARNING",
+                "detail": f"Dependencies with restrictive licenses: {'; '.join(restricted_deps)}. "
+                f"Verify compatibility with project license (Apache-2.0).",
+            }
+        )
     else:
-        findings.append({
-            "check": "1.15",
-            "severity": "INFO",
-            "detail": f"License check passed for {len(deps)} dependencies",
-        })
+        findings.append(
+            {
+                "check": "1.15",
+                "severity": "INFO",
+                "detail": f"License check passed for {len(deps)} dependencies",
+            }
+        )
     return findings
 
 
@@ -1032,6 +1047,7 @@ def run_d1(
     card: dict[str, Any],
     schema_path: str | None = None,
     federation_cards: list[dict[str, Any]] | None = None,
+    as_of_date: str | None = None,
 ) -> dict[str, Any]:
     findings = []
     findings.extend(check_schema(card, schema_path))
@@ -1041,7 +1057,7 @@ def run_d1(
     findings.extend(check_health_state(card))
     findings.extend(check_heartbeat(card))
     findings.extend(check_authentication(card))
-    findings.extend(check_prompt_rot(card))
+    findings.extend(check_prompt_rot(card, as_of_date=as_of_date))
     findings.extend(check_capabilities_completeness(card))
     findings.extend(check_dag_acyclicity(card))
     findings.extend(check_data_cross_border_chain(card))

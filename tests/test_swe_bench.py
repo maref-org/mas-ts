@@ -289,9 +289,12 @@ class TestSWEBenchIntegration:
         assert result["summary"]["oracle_task"] == "swe-bench-flask-001"
 
     def test_oracle_score_in_result(self):
-        result = run_d2_with_oracle(
-            SAMPLE_CARD, "swe-bench", "swe-bench-flask-001", CORRECT_TRAJECTORY
-        )
+        with patch(
+            "mas_eval.oracle.swe_bench.check_docker", return_value=(False, "simulate")
+        ):
+            result = run_d2_with_oracle(
+                SAMPLE_CARD, "swe-bench", "swe-bench-flask-001", CORRECT_TRAJECTORY
+            )
         assert "oracle_score" in result["subscores"]
         assert result["subscores"]["oracle_score"] > 0
 
@@ -302,12 +305,15 @@ class TestSWEBenchIntegration:
         assert result["subscores"]["oracle_score"] == 0.0
 
     def test_wrong_fix_score_lower(self):
-        correct = run_d2_with_oracle(
-            SAMPLE_CARD, "swe-bench", "swe-bench-flask-001", CORRECT_TRAJECTORY
-        )
-        wrong = run_d2_with_oracle(
-            SAMPLE_CARD, "swe-bench", "swe-bench-flask-001", WRONG_TRAJECTORY
-        )
+        with patch(
+            "mas_eval.oracle.swe_bench.check_docker", return_value=(False, "simulate")
+        ):
+            correct = run_d2_with_oracle(
+                SAMPLE_CARD, "swe-bench", "swe-bench-flask-001", CORRECT_TRAJECTORY
+            )
+            wrong = run_d2_with_oracle(
+                SAMPLE_CARD, "swe-bench", "swe-bench-flask-001", WRONG_TRAJECTORY
+            )
         assert correct["subscores"]["oracle_score"] > wrong["subscores"]["oracle_score"]
 
 
@@ -543,13 +549,20 @@ class TestSWEBenchOracleEdgeCases:
             assert score == 0.0
 
     def test_real_score_falls_back_on_sandbox_failure(self):
+        # 隔离真实 docker：check_docker=True，但 docker run 失败 → sandbox.start 返回 False
+        # → fallback 到 _simulate_score（非依赖宿主 docker 运行态）。
         with (
             patch("mas_eval.oracle.swe_bench.check_docker", return_value=(True, "ok")),
             patch.object(self.oracle, "_simulate_score", return_value=30.0),
+            patch("mas_eval.oracle.swe_bench.DockerSandbox") as mock_sb_cls,
         ):
+            mock_sb = MagicMock()
+            mock_sb.start.return_value = False
+            mock_sb_cls.return_value = mock_sb
             task = self.oracle.list_tasks()[0]
             score = self.oracle._real_score(task, [("src/flask/app.py", "content")])
             assert score == 30.0
+            mock_sb.cleanup.assert_called_once()
 
     def test_real_score_exception_triggers_simulate(self):
         with (

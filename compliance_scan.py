@@ -172,9 +172,9 @@ def check_endpoint_location(endpoint, declared_residency):
     return True, "LOW", "Endpoint matches declared residency"
 
 
-def check_prompt_rot(card):
+def check_prompt_rot(card, as_of_date=None):
     issues = []
-    today = time.strftime("%Y-%m-%d")
+    today = as_of_date or time.strftime("%Y-%m-%d")
     for cap in card.get("capabilities", []):
         brv = cap.get("business_rule_version")
         if not brv:

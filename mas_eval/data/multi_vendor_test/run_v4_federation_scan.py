@@ -45,7 +45,7 @@ def load_cards() -> Dict[str, Any]:
     return loaded
 
 
-def print_header(s):
+def print_header(s: str) -> None:
     print(f"\n{'=' * 70}")
     print(f"  {s}")
     print(f"{'=' * 70}")

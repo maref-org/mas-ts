@@ -28,10 +28,18 @@ def load_card(path: Path) -> dict:
         return json.load(f)
 
 
-def check_card(card_path: Path, verbose: bool = False) -> bool:
+def load_tasks(tasks_path: Path | None):
+    """Load mock/golden tasks (dict with golden/mock_trajectory, or list)."""
+    if tasks_path is None or not tasks_path.exists():
+        return None
+    with open(tasks_path, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def check_card(card_path: Path, tasks=None, verbose: bool = False) -> bool:
     """Run L0 fast-screen on a single card and return True if thresholds pass."""
     card = load_card(card_path)
-    result = run_l0_fast_screen(card)
+    result = run_l0_fast_screen(card, tasks=tasks)
     threshold_check = result.get("threshold_check", {})
 
     passed = threshold_check.get("overall_pass", False)
@@ -55,6 +63,11 @@ def main():
     group.add_argument("--card", help="Path to a single agent card JSON")
     group.add_argument("--cards-dir", help="Directory of agent card JSONs")
     parser.add_argument(
+        "--tasks",
+        help="Path to mock/golden tasks JSON (supplies golden/mock trajectories "
+        "so L0 mock_tasks stage is non-zero; required for cards-dir gate)",
+    )
+    parser.add_argument(
         "--verbose", "-v", action="store_true", help="Print all results"
     )
     args = parser.parse_args()
@@ -68,9 +81,13 @@ def main():
         print("No card files found.")
         sys.exit(1)
 
+    tasks = load_tasks(Path(args.tasks) if args.tasks else None)
+    if args.tasks and tasks is None:
+        print(f"WARNING: --tasks file '{args.tasks}' not found; mock_tasks will be 0")
+
     passed_all = True
     for p in paths:
-        if not check_card(p, verbose=args.verbose):
+        if not check_card(p, tasks=tasks, verbose=args.verbose):
             passed_all = False
 
     if passed_all:

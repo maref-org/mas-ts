@@ -6,6 +6,7 @@ import json
 import os
 import sys
 import tempfile
+from datetime import date, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent.resolve()))
@@ -30,6 +31,10 @@ from mas_eval.domains.d1_compliance import (
     check_trace_audit_chain,
     run_d1,
 )
+
+# 固定 90 天 prompt-rot 阈值下保持"近期 BRV 不触发"语义：
+# 使用相对今天的动态日期，避免随真实日期推移而触发（日期炸弹）。
+SAMPLE_BRV = (date.today() - timedelta(days=30)).isoformat()
 
 SAMPLE_CARD = {
     "card_version": "1.2",
@@ -67,7 +72,7 @@ SAMPLE_CARD = {
             "input_schema": {},
             "output_schema": {},
             "examples": ["ls"],
-            "business_rule_version": "2026-07-15",
+            "business_rule_version": SAMPLE_BRV,
             # v0.8.0 D1.14: high-risk capabilities must declare sub_permissions
             "sub_permissions": {
                 "env_read": "bash can read environment variables (declared)",
@@ -81,7 +86,7 @@ SAMPLE_CARD = {
             "input_schema": {},
             "output_schema": {},
             "examples": ["read"],
-            "business_rule_version": "2026-07-15",
+            "business_rule_version": SAMPLE_BRV,
             "sub_permissions": {
                 "system_files": "file_read can access /etc, /proc, /sys (declared)",
                 "credential_files": "file_read can access ~/.ssh, ~/.aws (declared)",
@@ -93,7 +98,7 @@ SAMPLE_CARD = {
             "input_schema": {},
             "output_schema": {},
             "examples": ["edit"],
-            "business_rule_version": "2026-07-15",
+            "business_rule_version": SAMPLE_BRV,
             "sub_permissions": {
                 "system_files": "file_edit can modify /etc, /proc, /sys (declared)",
                 "credential_files": "file_edit can modify ~/.ssh, ~/.aws (declared)",
@@ -105,7 +110,7 @@ SAMPLE_CARD = {
             "input_schema": {},
             "output_schema": {},
             "examples": ["write"],
-            "business_rule_version": "2026-07-15",
+            "business_rule_version": SAMPLE_BRV,
         },
         {
             "skill_id": "glob",
@@ -113,7 +118,7 @@ SAMPLE_CARD = {
             "input_schema": {},
             "output_schema": {},
             "examples": ["glob"],
-            "business_rule_version": "2026-07-15",
+            "business_rule_version": SAMPLE_BRV,
         },
         {
             "skill_id": "grep",
@@ -121,7 +126,7 @@ SAMPLE_CARD = {
             "input_schema": {},
             "output_schema": {},
             "examples": ["grep"],
-            "business_rule_version": "2026-07-15",
+            "business_rule_version": SAMPLE_BRV,
         },
         {
             "skill_id": "web_search",
@@ -129,7 +134,7 @@ SAMPLE_CARD = {
             "input_schema": {},
             "output_schema": {},
             "examples": ["search"],
-            "business_rule_version": "2026-07-15",
+            "business_rule_version": SAMPLE_BRV,
         },
         {
             "skill_id": "web_fetch",
@@ -137,7 +142,7 @@ SAMPLE_CARD = {
             "input_schema": {},
             "output_schema": {},
             "examples": ["fetch"],
-            "business_rule_version": "2026-07-15",
+            "business_rule_version": SAMPLE_BRV,
         },
     ],
     "authentication": {"type": "APIKey", "scopes": ["test"]},

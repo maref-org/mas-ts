@@ -33,6 +33,12 @@ jobs:
           fi
           echo "✅ No absolute paths found"
       - name: Check for organizational name leaks
+        # 豁免声明（Track A 公开件，非内部泄密）：
+        #   README.md                — CI badge 指向公开仓库 maref-org/mas-ts（公开展示）
+        #   mas-eval-user-template.yml — workflow_call 复用模板 uses: maref-org/mas-ts（公开接口）
+        #   openclaw_athena_card.json — 公开样例 Agent Card（被测对象，non-T3 内容）
+        #   test.yml                 — Gold Standard L0 gate 命令引用上述公开样例卡路径
+        # 其余命中（如 adapters/`)均须为 SPDX 头或已在 CHANGELOG 中排除。
         run: |
           FOUND=$(grep -rnEi 'openclaw|maref-org' \
             --include="*.py" --include="*.md" --include="*.yaml" --include="*.yml" \
@@ -42,7 +48,11 @@ jobs:
             --exclude-dir=".git" --exclude-dir=".venv" --exclude-dir=".pytest_cache" \
             --exclude-dir=".mypy_cache" --exclude-dir=".ruff_cache" --exclude-dir="__pycache__" \
             --exclude-dir=".opencode" --exclude-dir=".trae" \
-            . 2>/dev/null | grep -v 'CHANGELOG.md' | grep -v 'SPDX-FileCopyrightText' || true)
+            . 2>/dev/null | grep -v 'CHANGELOG.md' | grep -v 'SPDX-FileCopyrightText' \
+            | grep -v -E 'README.md:' | grep -v -E 'mas-eval-user-template.yml:' \
+            | grep -v -E 'openclaw_athena_card\.json:' \
+            | grep -v -E '^\.github/workflows/test\.yml:.*openclaw' -i \
+            | grep -v -E '^\.github/workflows/test\.yml:.*OpenClaw' || true)
           if [ -n "$FOUND" ]; then
             echo "::error::Found potential organizational name references"
             echo "$FOUND"
