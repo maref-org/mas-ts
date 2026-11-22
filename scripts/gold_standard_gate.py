@@ -14,6 +14,7 @@ Designed to be run as a CI step after pytest.
 import argparse
 import json
 import sys
+from datetime import datetime
 from pathlib import Path
 
 # Ensure the project root is on sys.path so the harness is importable.
@@ -36,15 +37,21 @@ def load_tasks(tasks_path: Path | None):
         return json.load(f)
 
 
-def check_card(card_path: Path, tasks=None, verbose: bool = False) -> bool:
+def check_card(
+    card_path: Path,
+    tasks=None,
+    verbose: bool = False,
+    as_of_date: str | None = None,
+) -> bool:
     """Run L0 fast-screen on a single card and return True if thresholds pass."""
     card = load_card(card_path)
-    result = run_l0_fast_screen(card, tasks=tasks)
+    result = run_l0_fast_screen(card, tasks=tasks, as_of_date=as_of_date)
     threshold_check = result.get("threshold_check", {})
 
     passed = threshold_check.get("overall_pass", False)
     if verbose or not passed:
         print(f"  Card: {card_path.name}")
+        print(f"    Evaluated as of: {result.get('evaluated_as_of', '?')}")
         print(f"    L0 status: {result.get('status', '?')}")
         print(f"    Threshold overall_pass: {passed}")
         metrics = threshold_check.get("metrics", {})
@@ -70,7 +77,22 @@ def main():
     parser.add_argument(
         "--verbose", "-v", action="store_true", help="Print all results"
     )
+    parser.add_argument(
+        "--as-of-date",
+        default=None,
+        help="Evaluation date anchor (YYYY-MM-DD) for prompt-rot checks. "
+        "CI must pin this so the same commit always yields the same result. "
+        "Defaults to today (results drift over time).",
+    )
     args = parser.parse_args()
+
+    if args.as_of_date is not None:
+        try:
+            datetime.strptime(args.as_of_date, "%Y-%m-%d")
+        except ValueError:
+            parser.error(
+                f"--as-of-date must be YYYY-MM-DD, got {args.as_of_date!r}"
+            )
 
     if args.card:
         paths = [Path(args.card)]
@@ -84,10 +106,19 @@ def main():
     tasks = load_tasks(Path(args.tasks) if args.tasks else None)
     if args.tasks and tasks is None:
         print(f"WARNING: --tasks file '{args.tasks}' not found; mock_tasks will be 0")
+    elif args.cards_dir and tasks is None:
+        print(
+            "WARNING: --cards-dir without --tasks: mock_tasks/step_efficiency/"
+            "agent_spawn will be 0 and most cards will fail. "
+            "Use --card for the CI gate.",
+            file=sys.stderr,
+        )
 
     passed_all = True
     for p in paths:
-        if not check_card(p, tasks=tasks, verbose=args.verbose):
+        if not check_card(
+            p, tasks=tasks, verbose=args.verbose, as_of_date=args.as_of_date
+        ):
             passed_all = False
 
     if passed_all:

@@ -1,4 +1,8 @@
-# Requirements Traceability Matrix (RTM) — MAS-TS-001 v0.6.0
+# Requirements Traceability Matrix (RTM) — MAS-TS-001
+# STATUS: STALE — last full regeneration v0.6.0 (2026-07-03)
+# 2026-11-22 audit: all 44 mapped test_cases no longer resolve (tests renamed/
+# reorganized). Do NOT use this file as release evidence until remapped and
+# machine-verified. Tracked in the v1.0.1 audit report as P1.
 # 依据: 产品级发布全量验收标准与评审流程手册 §4.1.1
 # 生成日期: 2026-07-03
 # 审计风险项: R9 (RTM 矩阵缺失)

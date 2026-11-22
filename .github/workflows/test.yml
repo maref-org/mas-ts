@@ -29,6 +29,9 @@ jobs:
       - name: Lint with ruff
         run: ruff check mas_eval/ tests/ --statistics
 
+      - name: Version ledger consistency
+        run: python scripts/check_version_consistency.py
+
       - name: Type check with mypy
         run: mypy mas_eval/ tests/ --strict --ignore-missing-imports --no-incremental
 
@@ -85,14 +88,20 @@ jobs:
 
       - name: Gold Standard L0 gate
         if: matrix.python-version == '3.11'
+        env:
+          # 显式评估时间锚点：同一 commit 必须永远得到同一结果。
+          # prompt-rot 审计是另一条“用当天日期显式运行”的刻意动作，不靠 CI 隐式触发。
+          EVAL_AS_OF_DATE: '2026-11-22'
         run: |
           echo "::group::Gold Standard L0 Gate"
           # target: Athena OpenClaw 基准卡。必须带 --tasks（athena_mock_tasks.json），
           # 否则 L0 mock_tasks=0 → d2_tool_coverage 恒 0 → 门禁恒红（G6 修复，
           # 对应审计结论：原 --cards-dir 无 tasks 且含意图不符合的 negative 卡）。
+          # --as-of-date 固定评估时钟，拆除 2026-12-30 的时间炸弹。
           python scripts/gold_standard_gate.py \
             --card mas_eval/data/sample_cards/openclaw_athena_card.json \
             --tasks mas_eval/data/athena_mock_tasks.json \
+            --as-of-date "$EVAL_AS_OF_DATE" \
             --verbose
           echo "::endgroup::"
 

@@ -29,7 +29,7 @@ L0_STAGES = [
 ]
 
 
-def run_l0_fast_screen(card, tasks=None):
+def run_l0_fast_screen(card, tasks=None, as_of_date=None):
     """Run the L0 Fast-Screen CI gate (6 stages, <30s).
 
     Evaluates an agent card across 6 stages: card_validation, constitution_check,
@@ -40,24 +40,31 @@ def run_l0_fast_screen(card, tasks=None):
     Args:
     card: Agent card dict.
     tasks: Optional list of task dicts for mock task stage.
+    as_of_date: Optional evaluation date anchor (YYYY-MM-DD). Prompt-rot checks
+        are relative to this date. Defaults to today, which makes the score
+        drift over time; CI must pass a pinned date for reproducibility. The
+        effective date is always returned as ``evaluated_as_of``.
 
     Returns:
-    Dict with keys: level, name, elapsed_seconds, timeout, status, stages, summary.
+    Dict with keys: level, name, elapsed_seconds, timeout, status, stages,
+    summary, evaluated_as_of.
     """
     start = time.time()
     stages = []
 
     t0 = time.time()
-    card_validation = _stage_card_validation(card)
+    card_validation = _stage_card_validation(card, as_of_date)
     card_validation["duration_ms"] = int((time.time() - t0) * 1000)
     stages.append(card_validation)
 
     if card_validation["status"] == "FAIL":
-        return _l0_result(stages, start)
+        return _l0_result(stages, start, as_of_date)
 
     golden, mock = _parse_trajectories(tasks)
     with ThreadPoolExecutor(max_workers=3) as executor:
-        constitution_future = executor.submit(_stage_constitution_check, card)
+        constitution_future = executor.submit(
+            _stage_constitution_check, card, as_of_date
+        )
         mock_tasks_future = executor.submit(_stage_mock_tasks, card, golden, mock)
         agent_spawn_future = executor.submit(_stage_agent_spawn, card, golden)
 
@@ -86,11 +93,11 @@ def run_l0_fast_screen(card, tasks=None):
     traffic_light["duration_ms"] = int((time.time() - t0) * 1000)
     stages.append(traffic_light)
 
-    return _l0_result(stages, start)
+    return _l0_result(stages, start, as_of_date)
 
 
-def _stage_card_validation(card):
-    d1 = run_d1(card)
+def _stage_card_validation(card, as_of_date=None):
+    d1 = run_d1(card, as_of_date=as_of_date)
     score = d1["score"]
     errors = [f for f in d1.get("findings", []) if f.get("severity") == "CRITICAL"]
     return {
@@ -103,8 +110,8 @@ def _stage_card_validation(card):
     }
 
 
-def _stage_constitution_check(card):
-    d1_full = run_d1(card)
+def _stage_constitution_check(card, as_of_date=None):
+    d1_full = run_d1(card, as_of_date=as_of_date)
     findings = d1_full.get("findings", [])
     missing = [f for f in findings if "missing" in f.get("detail", "").lower()]
     return {
@@ -210,8 +217,9 @@ def _stage_traffic_light(stages):
     }
 
 
-def _l0_result(stages, start_time):
+def _l0_result(stages, start_time, as_of_date=None):
     elapsed = time.time() - start_time
+    evaluated_as_of = as_of_date or time.strftime("%Y-%m-%d")
 
     # 提取金标阈值检查所需的指标，并把各 stage 分数映射到 D1/D2/D3 域
     metrics = {}
@@ -256,4 +264,5 @@ def _l0_result(stages, start_time):
         "summary": {s["stage"]: s["status"] for s in stages},
         "threshold_check": threshold_check,
         "findings": all_findings,
+        "evaluated_as_of": evaluated_as_of,
     }

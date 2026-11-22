@@ -1,5 +1,37 @@
 # Changelog
 
+## [1.0.1] - 2026-11-22 (Reproducibility & Version Ledger)
+### Fixed — L0 gate time bomb (P0)
+
+The L0 Fast-Screen gate read the wall clock implicitly through D1 prompt-rot
+checks, so the same commit produced different scores on different days. The CI
+target card (`business_rule_version=2026-09-30`) scored 100 through 2026-12-29
+and 5.0 from 2026-12-30, turning CI red with no code change.
+
+- `run_l0_fast_screen(card, tasks=None, as_of_date=None)` now accepts an
+  explicit evaluation-date anchor and returns it as `evaluated_as_of`.
+- `scripts/gold_standard_gate.py --as-of-date YYYY-MM-DD` forwards the anchor;
+  CI pins it so a given commit always yields the same result.
+- Running without a pin keeps measuring real prompt rot (wall clock), which is
+  the intended behavior for deliberate rot audits.
+- `--cards-dir` without `--tasks` now prints an explicit warning instead of
+  silently producing an all-red run.
+
+### Fixed — Version ledger drift (P0)
+
+- `pyproject.toml`, `mas_eval/__init__.py` (was 0.1.0), `api/__init__.py`,
+  `AGENTS.md` and `CHANGELOG.md` aligned on **1.0.1**.
+- `scripts/check_version_consistency.py` — checks pyproject / CHANGELOG /
+  AGENTS / package `__version__` / API `__version__`, reports a missing UAT
+  signoff as WARNING (signature is human-required), and supports
+  `--require-tag` for release workflows.
+
+### Tests
+
+- `tests/test_l0_reproducibility.py` — 5 tests: pinned date applied and
+  recorded, pinned result independent of wall clock, unpinned drift documented,
+  invalid anchor rejected, gate forwards the anchor.
+
 ## [1.0.0] - 2026-08-21 (Gold Standard GA)
 ### Added — Gold Standard end-to-end + ADC integration + final certification
 
