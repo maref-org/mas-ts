@@ -15,6 +15,10 @@ from mas_eval.oracle.oracle_base import OracleTask
 from mas_eval.oracle.swe_bench import (
     DockerSandbox,
     SWEBenchOracle,
+    _count,
+    _parse_failed,
+    _parse_traceback,
+    compare_patches,
     load_lite_tasks,
     official_image_name,
 )
@@ -156,3 +160,94 @@ def test_verify_official_docker_unavailable_stays_declared():
     assert result["resolved"] is False
     assert result["evidence_mode"] == EVIDENCE_MODE_DECLARED
     assert "docker unavailable" in result["error"]
+
+
+def test_parse_failed_extracts_test_and_reason():
+    output = (
+        "FAILED tests/test_x.py::test_one - assert 1 == 2\n"
+        "FAILED tests/test_x.py::test_two\n"
+        "1 passed\n"
+    )
+    assert _parse_failed(output) == [
+        {"test": "tests/test_x.py::test_one", "reason": "assert 1 == 2"},
+        {"test": "tests/test_x.py::test_two", "reason": ""},
+    ]
+
+
+def test_parse_failed_ignores_ansi_colour_and_counts():
+    output = (
+        "\x1b[31m\x1b[1mFAILED\x1b[0m tests/test_y.py::test_z - \x1b[1massert\x1b[0m 0\n"
+        "\x1b[31m\x1b[1m1 failed\x1b[0m, \x1b[32m2 passed\x1b[0m\n"
+    )
+    assert _parse_failed(output) == [
+        {"test": "tests/test_y.py::test_z", "reason": "assert 0"}
+    ]
+    assert _count(output, "passed") == 2
+    assert _count(output, "failed") == 1
+
+
+def test_parse_traceback_finds_assertion_site():
+    output = (
+        "F                                                                        [100%]\n"
+        "=================================== FAILURES ===================================\n"
+        "/testbed/astropy/wcs/tests/test_wcs.py:1109: AssertionError:\n"
+        "1 failed, 1 warnings in 0.33 seconds\n"
+    )
+    assert _parse_traceback(output) == [
+        {
+            "location": "/testbed/astropy/wcs/tests/test_wcs.py:1109",
+            "reason": "AssertionError:",
+        }
+    ]
+
+
+def test_compare_patches_reports_overlap_and_gaps():
+    model = "diff --git a/pkg/a.py b/pkg/a.py\n--- a/pkg/a.py\n+++ b/pkg/a.py\n"
+    gold = (
+        "diff --git a/pkg/a.py b/pkg/a.py\n--- a/pkg/a.py\n+++ b/pkg/a.py\n"
+        "diff --git a/pkg/b.py b/pkg/b.py\n--- a/pkg/b.py\n+++ b/pkg/b.py\n"
+    )
+    diff = compare_patches(model, gold)
+    assert diff["overlap"] == ["pkg/a.py"]
+    assert diff["only_gold"] == ["pkg/b.py"]
+    assert diff["only_model"] == []
+
+
+def test_diagnose_instance_reports_failing_test_and_patch_gap():
+    oracle = SWEBenchOracle()
+    oracle._tasks_cache = [_task()]
+    pytest_output = "FAILED a::test_one - assert 0 == 1\n1 failed, 2 passed in 0.1s\n"
+    with (
+        patch("mas_eval.oracle.swe_bench.check_docker", return_value=(True, "ok")),
+        patch.object(DockerSandbox, "start", return_value=True),
+        patch.object(DockerSandbox, "apply_patch", return_value=(True, "ok")),
+        patch.object(
+            DockerSandbox, "run_pytest", return_value=(2, 1, 3, pytest_output)
+        ),
+        patch.object(DockerSandbox, "cleanup", return_value=None),
+    ):
+        result = oracle.diagnose_instance(INSTANCE, "diff --git a/other.py b/other.py\n")
+
+    assert result["failed"] == 1
+    assert result["failing"] == [{"test": "a::test_one", "reason": "assert 0 == 1"}]
+    assert result["patch_diff"]["only_model"] == ["other.py"]
+    assert result["error"] == ""
+    # Diagnosis must not move the evidence claim.
+    assert oracle.evidence_mode() == EVIDENCE_MODE_DECLARED
+
+
+def test_diagnose_instance_patch_failure_is_reported():
+    oracle = SWEBenchOracle()
+    oracle._tasks_cache = [_task()]
+    with (
+        patch("mas_eval.oracle.swe_bench.check_docker", return_value=(True, "ok")),
+        patch.object(DockerSandbox, "start", return_value=True),
+        patch.object(
+            DockerSandbox, "apply_patch", return_value=(False, "does not apply")
+        ),
+        patch.object(DockerSandbox, "cleanup", return_value=None),
+    ):
+        result = oracle.diagnose_instance(INSTANCE, "broken")
+
+    assert result["error"].startswith("model_patch_apply_failed")
+    assert result["failing"] == []

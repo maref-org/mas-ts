@@ -44,6 +44,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--agent-cmd", default=DEFAULT_AGENT)
     parser.add_argument("--timeout", type=int, default=600)
     parser.add_argument("--output", required=True)
+    parser.add_argument(
+        "--artifacts",
+        help="Directory to keep each instance's model patch (for later diagnosis)",
+    )
     parser.add_argument("--keep", action="store_true")
     args = parser.parse_args(argv)
 
@@ -75,6 +79,10 @@ def main(argv: list[str] | None = None) -> int:
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text("", encoding="utf-8")
+
+    artifacts = Path(args.artifacts) if args.artifacts else None
+    if artifacts:
+        artifacts.mkdir(parents=True, exist_ok=True)
 
     oracle = SWEBenchOracle()
     runner = LocalCLIRunner(
@@ -111,6 +119,10 @@ def main(argv: list[str] | None = None) -> int:
             )
 
             verification = oracle.verify_instance(instance_id, run_result.patch)
+            if artifacts:
+                (artifacts / f"{instance_id}.patch").write_text(
+                    run_result.patch, encoding="utf-8"
+                )
             evidence_mode = EVIDENCE_MODE_DECLARED
             if verification.get("evidence_mode") == EVIDENCE_MODE_VERIFIED_PATCH:
                 try:

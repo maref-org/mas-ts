@@ -64,9 +64,74 @@ def _as_list(value):
     return []
 
 
+def _strip_ansi(text):
+    """Remove ANSI colour codes; pytest in these images forces colour on."""
+    return re.sub(r"\x1b\[[0-9;]*m", "", text)
+
+
 def _count(output, word):
-    match = re.search(rf"(\d+)\s+{word}", output)
+    match = re.search(rf"(\d+)\s+{word}", _strip_ansi(output))
     return int(match.group(1)) if match else 0
+
+
+def _parse_failed(output):
+    """Extract ``FAILED <test> - <reason>`` lines from pytest ``-q`` output."""
+    failed = []
+    for line in _strip_ansi(output).splitlines():
+        match = re.match(r"^FAILED\s+(\S+)(?:\s+-\s+(.*))?$", line.strip())
+        if match:
+            failed.append(
+                {"test": match.group(1), "reason": (match.group(2) or "").strip()}
+            )
+    return failed
+
+
+def _parse_traceback(output):
+    """Extract ``/path/file.py:LINE: Error`` lines from ``--tb=line`` output.
+
+    Some pytest configurations omit the ``FAILED`` summary block, so the
+    traceback line is the only place naming the failing assertion site.
+    """
+    locations = []
+    for line in _strip_ansi(output).splitlines():
+        match = re.match(r"^(/\S+?):(\d+): (.+)$", line.strip())
+        if match:
+            locations.append(
+                {
+                    "location": f"{match.group(1)}:{match.group(2)}",
+                    "reason": match.group(3).strip(),
+                }
+            )
+    return locations
+
+
+def _patch_files(patch):
+    """File paths touched by a unified diff, in order of appearance."""
+    paths = []
+    for line in patch.splitlines():
+        match = re.match(r"^diff --git a/(.+?) b/(.+)$", line)
+        if match:
+            target = match.group(2)
+            if target not in paths:
+                paths.append(target)
+    return paths
+
+
+def compare_patches(model_patch, gold_patch):
+    """Compare the files a model patch and the reference patch touch.
+
+    This is a *location* signal only: it says whether the model edited the
+    same files as the reference fix, not whether the logic is correct.
+    """
+    model_files = _patch_files(model_patch or "")
+    gold_files = _patch_files(gold_patch or "")
+    return {
+        "model_files": model_files,
+        "gold_files": gold_files,
+        "overlap": [f for f in model_files if f in gold_files],
+        "only_model": [f for f in model_files if f not in gold_files],
+        "only_gold": [f for f in gold_files if f not in model_files],
+    }
 
 
 def load_lite_tasks(path, namespace="swebench"):
@@ -241,18 +306,28 @@ class DockerSandbox:
             last_err = err
         return False, last_err[-400:]
 
-    def run_pytest(self, test_ids, cwd="/testbed", timeout=DEFAULT_TEST_TIMEOUT):
+    def run_pytest(
+        self,
+        test_ids,
+        cwd="/testbed",
+        timeout=DEFAULT_TEST_TIMEOUT,
+        extra_args="",
+    ):
         """Run pytest on explicit test ids; return (passed, failed, total, output).
 
         Uses the image's conda env (``testbed``), matching the official harness.
+        ``extra_args`` lets a caller ask for tracebacks (diagnosis) without
+        changing the resolution verdict, which always uses the plain run.
         """
         if not test_ids:
             return 0, 0, 0, ""
         quoted = " ".join(shlex.quote(t) for t in test_ids)
+        pytest_call = " ".join(
+            part for part in ("python -m pytest -q", extra_args.strip(), quoted) if part
+        )
         command = (
             "source /opt/miniconda3/etc/profile.d/conda.sh && "
-            f"conda activate testbed && cd {shlex.quote(cwd)} && "
-            f"python -m pytest -q {quoted}"
+            f"conda activate testbed && cd {shlex.quote(cwd)} && {pytest_call}"
         )
         stdout, stderr, rc = self.exec_shell(command, timeout=timeout)
         output = (stdout or "") + (stderr or "")
@@ -438,6 +513,80 @@ class SWEBenchOracle(Oracle):
         if task_data.get("source") != "swe-bench-lite":
             raise ValueError(f"Instance {instance_id!r} is not an official Lite task")
         return self._verify_official(task_data, model_patch)
+
+    def diagnose_instance(self, instance_id, model_patch):
+        """Explain *why* an instance did not resolve.
+
+        Applies the same patches as :meth:`verify_instance`, then reruns the
+        FAIL_TO_PASS tests with short tracebacks so the failing assertion is
+        visible. The returned ``failing`` list names the tests that did not
+        pass; ``patch_diff`` reports whether the model edited the same files as
+        the reference patch. This is diagnosis only: it never upgrades the
+        evidence mode beyond what the plain verification run established.
+        """
+        task_data = self._find_task(instance_id)
+        if task_data is None:
+            raise ValueError(f"Instance {instance_id!r} not found in loaded tasks")
+        if task_data.get("source") != "swe-bench-lite":
+            raise ValueError(f"Instance {instance_id!r} is not an official Lite task")
+
+        fail_to_pass = list(task_data.get("FAIL_TO_PASS", []))
+        workdir = task_data.get("workdir", "/testbed")
+        result = {
+            "instance_id": instance_id,
+            "fail_to_pass": fail_to_pass,
+            "failing": [],
+            "failure_locations": [],
+            "passed": 0,
+            "failed": 0,
+            "total": len(fail_to_pass),
+            "patch_diff": compare_patches(model_patch, task_data.get("gold_patch", "")),
+            "error": "",
+        }
+
+        docker_ok, docker_msg = check_docker()
+        if not docker_ok:
+            result["error"] = f"docker unavailable: {docker_msg}"
+            return result
+
+        sandbox = DockerSandbox(
+            image=task_data.get("image", "python:3.11-slim"),
+            platform=task_data.get("platform"),
+        )
+        try:
+            if not sandbox.start(task_data, workdir=workdir):
+                result["error"] = "sandbox_start_failed"
+                return result
+            for label, patch in (
+                ("model_patch", model_patch),
+                ("test_patch", task_data.get("test_patch", "")),
+            ):
+                if not patch:
+                    continue
+                ok, detail = sandbox.apply_patch(patch, cwd=workdir)
+                if not ok:
+                    result["error"] = f"{label}_apply_failed: {detail}"
+                    return result
+
+            passed, failed, total, output = sandbox.run_pytest(
+                fail_to_pass, cwd=workdir, extra_args="--tb=line"
+            )
+            result.update(
+                {
+                    "passed": passed,
+                    "failed": failed,
+                    "total": total,
+                    "failing": _parse_failed(output),
+                    "failure_locations": _parse_traceback(output),
+                    "output_tail": output[-3000:],
+                }
+            )
+            return result
+        except Exception as e:  # pragma: no cover - defensive
+            result["error"] = f"exception: {e}"
+            return result
+        finally:
+            sandbox.cleanup()
 
     def _verify_official(self, task_data, model_patch):
         """Run the official image: model patch -> test patch -> pytest."""
