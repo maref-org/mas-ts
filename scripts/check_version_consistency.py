@@ -65,6 +65,27 @@ def find_uat_signoff(version: str) -> Path | None:
     return matches[0] if matches else None
 
 
+PLACEHOLDER = "_待填_"
+
+
+def uat_signoff_status(version: str) -> tuple[bool, str]:
+    """A UAT record only counts when it is both present and actually signed.
+
+    Presence alone is decorative compliance: a blank template would otherwise
+    satisfy the gate. Requirements: a checked Go / Conditional Go decision and
+    no unfilled ``_待填_`` placeholders.
+    """
+    path = find_uat_signoff(version)
+    if path is None:
+        return False, f"UAT signoff for v{version} not found in docs/uat/"
+    text = _read(path)
+    if not re.search(r"-\s*\[[xX]\]\s*\*\*(Go|Conditional Go)\*\*", text):
+        return False, f"{path.name} has no checked Go/Conditional Go decision"
+    if PLACEHOLDER in text:
+        return False, f"{path.name} still contains unfilled '{PLACEHOLDER}' signatures"
+    return True, str(path.relative_to(ROOT))
+
+
 def get_git_tag() -> str | None:
     try:
         out = subprocess.run(
@@ -88,6 +109,12 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Also require HEAD to carry an exact version tag (release workflow only)",
     )
+    parser.add_argument(
+        "--require-uat",
+        action="store_true",
+        help="Fail unless the current version has a signed UAT record "
+        "(checked Go/Conditional Go, no unfilled placeholders)",
+    )
     args = parser.parse_args(argv)
 
     entries = {
@@ -109,14 +136,14 @@ def main(argv: list[str] | None = None) -> int:
 
     version = entries["pyproject.toml"]
     if version:
-        signoff = find_uat_signoff(version)
-        if signoff:
-            print(f"OK  UAT signoff: {signoff.relative_to(ROOT)}")
+        signed, detail = uat_signoff_status(version)
+        if signed:
+            print(f"OK  UAT signoff: {detail}")
         else:
-            print(
-                f"WARN UAT signoff for v{version} not found in docs/uat/ "
-                "(human signature required; not auto-generated)"
-            )
+            print(f"WARN {detail}")
+            if args.require_uat:
+                print("ERROR: --require-uat is set but the UAT record is not signed")
+                failed = True
 
         if args.require_tag:
             tag = get_git_tag()

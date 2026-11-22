@@ -8,7 +8,7 @@
 
 ## 可执行清单
 
-运行 `python3 scripts/release_gate_check.py` 自动检查 G1-G3 自动项；G0/G3.4 项需人工审批。
+运行 `python3 scripts/release_gate_check.py` 自动检查 G1-G3 自动项；G0 项需人工审批，G3.4 自动校验当前版本 UAT 是否已签署（仅存在文件不算通过）。
 
 ```
 G0.1  manual  Requirements documented              — docs/plans/* 已明确验收标准
@@ -21,7 +21,7 @@ G2.2  auto    Integration tests pass               — `python3 -m pytest tests/
 G3.1  auto    bandit SAST: 0 issues                — `python3 -m bandit -r mas_eval -c pyproject.toml -q`
 G3.2  auto    pip-audit: 0 Critical/High CVE       — `python3 -m pip_audit --requirement requirements.txt --strict`
 G3.3  auto    Secret scan: 0 hardcoded credentials — 内置 regex (AKIA/ghp_/sk-), TruffleHog CI
-G3.4  manual  UAT signoff recorded                 — docs/uat/MAS-TS-001_UAT_Signoff_v0.8.0.md (R7 P0)
+G3.4  auto    UAT signoff recorded and signed       — `python3 scripts/check_version_consistency.py --require-uat` (current version, checked Go + no placeholders)
 G3.5  auto    Regression baseline pass             — `python3 -m pytest tests/test_regression.py -q` (R8 P0)
 G3.6  auto    SLO error budget check               — `python3 -c "from mas_eval.scoring.slo import check_slo, reset_slo_state; reset_slo_state(); r=check_slo({'d1_compliance':100}); assert r['overall_pass']"`
 G3.7  auto    Security headers present            — `python3 -c "from api.security_headers import SECURITY_HEADERS; assert len(SECURITY_HEADERS) >= 5"`
@@ -70,7 +70,7 @@ python3 -c "import re, pathlib; t=pathlib.Path('docs/release-gate.md').read_text
 - [ ] **G3.1** bandit SAST: 0 issues (configured skips: B101/B105/B110/B311/B404/B603/B607)
 - [ ] **G3.2** pip-audit: 0 Critical/High CVE
 - [ ] **G3.3** 密钥扫描: 0 硬编码凭证 (regex: AKIA / ghp_ / sk-)
-- [x] **G3.4** UAT 签署记录: `docs/uat/MAS-TS-001_UAT_Signoff_v0.8.0.md` 存在且为 Go (R7 P0)，v0.9.0 新增模块已验证通过 (确认人: 发布经理，2026-07-31)
+- [ ] **G3.4** UAT 签署记录: 当前版本 v1.0.1 尚未签署（`check_version_consistency.py --require-uat` 会失败）。v0.8.0 旧签字不覆盖 v1.0.1；需按 `docs/uat/MAS-TS-001_UAT_v1.0.1.md` 完成签署。
 - [ ] **G3.5** 回归基线对比: `tests/test_regression.py` 全部通过 (R8 P0)
 - [ ] **G3.6** SLO 错误预算检查: `check_slo` 全部 level 通过
 - [ ] **G3.7** 安全头: `api/security_headers.py` ≥ 5 项安全头

@@ -4,7 +4,8 @@
 
 Maps each of the 15 release-gate items in `docs/release-gate.md` to either an
 auto-check (command + expected exit code) or a documented manual approval.
-Items G0.1/G0.2/G3.4 are manual; G3.4 requires UAT signoff record (R7 P0).
+Items G0.1/G0.2 are manual; G3.4 now auto-checks that the current
+version has a *signed* UAT record (presence alone is not enough).
 Item G3.5 auto-runs the regression test suite (R8 P0).
 Run with: `python3 scripts/release_gate_check.py`
 """
@@ -141,9 +142,10 @@ GATE_ITEMS: list[dict[str, Any]] = [
     {
         "id": "G3.4",
         "gate": 3,
-        "name": "UAT signoff recorded",
-        "type": "manual",
-        "expected": "docs/uat/MAS-TS-001_UAT_Signoff_v0.8.0.md exists with Go/Conditional Go (R7 P0)",
+        "name": "UAT signoff recorded and signed (current version)",
+        "type": "auto",
+        "command": [_PY, "scripts/check_version_consistency.py", "--require-uat"],
+        "expected": "exit code 0 (docs/uat/*UAT_Signoff_v<version>.md with a checked Go/Conditional Go and no placeholders)",
     },
     {
         "id": "G3.5",
