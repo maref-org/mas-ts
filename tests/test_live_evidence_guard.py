@@ -74,6 +74,13 @@ def test_live_run_with_complete_record_is_allowed():
     )
 
 
+def test_live_run_rejects_non_agent_runner():
+    with pytest.raises(ValueError, match="runner_kind='agent'"):
+        resolve_evidence_mode(
+            EVIDENCE_MODE_LIVE, _record(runner_kind="scripted")
+        )
+
+
 def test_weaker_modes_pass_through_without_record():
     assert (
         resolve_evidence_mode(EVIDENCE_MODE_DECLARED)

@@ -72,6 +72,7 @@ class ExecutionRecord:
     finished_at: str
     exit_code: int
     trajectory_sha256: str
+    runner_kind: str = "agent"
 
     def is_complete(self) -> bool:
         digest = self.trajectory_sha256.lower()
@@ -93,7 +94,8 @@ def resolve_evidence_mode(
 
     ``live_run`` is fail-closed: without a complete ``ExecutionRecord`` this
     raises instead of downgrading silently, so a missing runner cannot be
-    papered over.
+    papered over. A record produced by a non-agent runner (e.g. a scripted test
+    double) is not allowed to claim ``live_run``.
     """
     if declared_mode not in VALID_EVIDENCE_MODES:
         raise ValueError(f"Unknown evidence mode: {declared_mode!r}")
@@ -102,6 +104,10 @@ def resolve_evidence_mode(
             raise ValueError(
                 "live_run requires a complete ExecutionRecord "
                 "(runner_id/task_id/started_at/finished_at/exit_code/sha256)"
+            )
+        if record.runner_kind != "agent":
+            raise ValueError(
+                f"live_run requires runner_kind='agent', got {record.runner_kind!r}"
             )
         return EVIDENCE_MODE_LIVE
     return declared_mode
