@@ -45,6 +45,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--timeout", type=int, default=600)
     parser.add_argument("--output", required=True)
     parser.add_argument(
+        "--repeat",
+        type=int,
+        default=1,
+        help="Independent agent runs per instance (repeated sampling)",
+    )
+    parser.add_argument(
         "--artifacts",
         help="Directory to keep each instance's model patch (for later diagnosis)",
     )
@@ -90,19 +96,23 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     results = []
-    for index, task in enumerate(tasks, 1):
+    plan = [(task, rep) for task in tasks for rep in range(1, args.repeat + 1)]
+    total = len(plan)
+    for index, (task, rep) in enumerate(plan, 1):
         instance_id = task["task_id"]
+        label = f"{instance_id}" + (f" r{rep}" if args.repeat > 1 else "")
         workdir = Path(tempfile.mkdtemp(prefix="swebench-batch-"))
         started = time.time()
         row = {
             "instance_id": instance_id,
+            "rep": rep,
             "repo": task["repo"],
             "resolved": False,
             "evidence_mode": EVIDENCE_MODE_DECLARED,
             "error": "",
         }
         try:
-            print(f"[{index}/{len(tasks)}] {instance_id}: preparing repo ...", flush=True)
+            print(f"[{index}/{total}] {label}: preparing repo ...", flush=True)
             prepare_repo(task["repo"], task["base_commit"], workdir)
 
             prompt = (
@@ -113,16 +123,19 @@ def main(argv: list[str] | None = None) -> int:
             )
             run_result = runner.run(prompt, workdir, instance_id)
             print(
-                f"[{index}/{len(tasks)}] {instance_id}: agent exit={run_result.record.exit_code} "
+                f"[{index}/{total}] {label}: agent exit={run_result.record.exit_code} "
                 f"{run_result.duration_s}s patch={len(run_result.patch)}B",
                 flush=True,
             )
 
             verification = oracle.verify_instance(instance_id, run_result.patch)
             if artifacts:
-                (artifacts / f"{instance_id}.patch").write_text(
-                    run_result.patch, encoding="utf-8"
+                name = (
+                    f"{instance_id}.patch"
+                    if args.repeat == 1
+                    else f"{instance_id}__r{rep}.patch"
                 )
+                (artifacts / name).write_text(run_result.patch, encoding="utf-8")
             evidence_mode = EVIDENCE_MODE_DECLARED
             if verification.get("evidence_mode") == EVIDENCE_MODE_VERIFIED_PATCH:
                 try:
@@ -151,7 +164,7 @@ def main(argv: list[str] | None = None) -> int:
             )
         except Exception as exc:  # keep the batch alive
             row["error"] = f"{type(exc).__name__}: {exc}"
-            print(f"[{index}/{len(tasks)}] {instance_id}: ERROR {row['error']}", flush=True)
+            print(f"[{index}/{total}] {label}: ERROR {row['error']}", flush=True)
         finally:
             if not args.keep:
                 shutil.rmtree(workdir, ignore_errors=True)
@@ -161,7 +174,7 @@ def main(argv: list[str] | None = None) -> int:
         with output.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(row, ensure_ascii=False) + "\n")
         print(
-            f"[{index}/{len(tasks)}] {instance_id}: resolved={row['resolved']} "
+            f"[{index}/{total}] {label}: resolved={row['resolved']} "
             f"evidence={row['evidence_mode']} {row['wall_seconds']}s",
             flush=True,
         )
@@ -169,9 +182,16 @@ def main(argv: list[str] | None = None) -> int:
     resolved = sum(1 for r in results if r["resolved"])
     live = sum(1 for r in results if r["evidence_mode"] == EVIDENCE_MODE_LIVE)
     print("\n=== summary ===")
-    print(f"instances: {len(results)}")
+    print(f"runs:      {len(results)}")
     print(f"resolved:  {resolved}/{len(results)}")
     print(f"live_run:  {live}/{len(results)}")
+    if args.repeat > 1:
+        print("\n=== per instance ===")
+        print("| instance | resolved | runs |")
+        for task in tasks:
+            runs = [r for r in results if r["instance_id"] == task["task_id"]]
+            hits = sum(1 for r in runs if r["resolved"])
+            print(f"| {task['task_id']} | {hits}/{len(runs)} | {len(runs)} |")
     print(f"results:   {output}")
     return 0 if resolved == len(results) else 1
 

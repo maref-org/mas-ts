@@ -62,44 +62,51 @@ def main(argv: list[str] | None = None) -> int:
 
     results = []
     for instance_id in instances:
-        patch_file = patch_dir / f"{instance_id}.patch"
-        if not patch_file.exists():
+        # Accept both single-run (<id>.patch) and repeated-sampling
+        # (<id>__r<N>.patch) artifact names.
+        candidates = sorted(patch_dir.glob(f"{instance_id}.patch")) + sorted(
+            patch_dir.glob(f"{instance_id}__r*.patch")
+        )
+        if not candidates:
             print(f"{instance_id}: patch not found, skipped", file=sys.stderr)
             results.append(
                 {"instance_id": instance_id, "error": "patch_missing"}
             )
             continue
 
-        model_patch = patch_file.read_text(encoding="utf-8")
-        print(f"{instance_id}: diagnosing ...", flush=True)
-        diagnosis = oracle.diagnose_instance(instance_id, model_patch)
-        results.append(diagnosis)
-        print(
-            f"{instance_id}: passed={diagnosis['passed']} failed={diagnosis['failed']}"
-            f" failing={[f['test'] for f in diagnosis['failing']]}"
-            f" only_gold={diagnosis['patch_diff']['only_gold']}",
-            flush=True,
-        )
-
-        if args.gold_control:
-            task = next(
-                (t for t in oracle._load_tasks() if t["task_id"] == instance_id),
-                None,
-            )
-            gold_patch = (task or {}).get("gold_patch", "")
-            control = oracle.diagnose_instance(instance_id, gold_patch)
-            diagnosis["gold_control"] = {
-                "passed": control["passed"],
-                "failed": control["failed"],
-                "total": control["total"],
-                "failing": [f["test"] for f in control["failing"]],
-                "error": control["error"],
-            }
+        for patch_file in candidates:
+            model_patch = patch_file.read_text(encoding="utf-8")
+            print(f"{instance_id}: diagnosing {patch_file.name} ...", flush=True)
+            diagnosis = oracle.diagnose_instance(instance_id, model_patch)
+            diagnosis["patch_file"] = patch_file.name
+            results.append(diagnosis)
             print(
-                f"{instance_id}: gold control passed={control['passed']}"
-                f" failed={control['failed']}",
+                f"{instance_id} [{patch_file.name}]: passed={diagnosis['passed']}"
+                f" failed={diagnosis['failed']}"
+                f" failing={[f['test'] for f in diagnosis['failing']]}"
+                f" only_gold={diagnosis['patch_diff']['only_gold']}",
                 flush=True,
             )
+
+            if args.gold_control:
+                task = next(
+                    (t for t in oracle._load_tasks() if t["task_id"] == instance_id),
+                    None,
+                )
+                gold_patch = (task or {}).get("gold_patch", "")
+                control = oracle.diagnose_instance(instance_id, gold_patch)
+                diagnosis["gold_control"] = {
+                    "passed": control["passed"],
+                    "failed": control["failed"],
+                    "total": control["total"],
+                    "failing": [f["test"] for f in control["failing"]],
+                    "error": control["error"],
+                }
+                print(
+                    f"{instance_id}: gold control passed={control['passed']}"
+                    f" failed={control['failed']}",
+                    flush=True,
+                )
 
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
