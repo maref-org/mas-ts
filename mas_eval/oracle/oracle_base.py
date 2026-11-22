@@ -25,6 +25,7 @@ import logging
 from abc import ABC, abstractmethod
 
 from mas_eval.domains.d2_single_agent import run_d2
+from mas_eval.evidence import EVIDENCE_MODE_DECLARED
 
 logger = logging.getLogger(__name__)
 
@@ -91,6 +92,15 @@ class Oracle(ABC):
         run_task_completion's generic trajectory comparison.
         """
         return None
+
+    def evidence_mode(self):
+        """How the last score was produced.
+
+        Default is ``declared_input``. Oracles that actually executed the
+        supplied patch in a real environment must override this to
+        ``verified_patch`` (or ``live_run`` if the agent itself was executed).
+        """
+        return EVIDENCE_MODE_DECLARED
 
 
 class OracleRegistry:
@@ -175,5 +185,8 @@ def run_d2_with_oracle(card, oracle_name, task_id=None, mock_trajectory=None):
     result["summary"]["oracle_name"] = oracle_name
     result["summary"]["oracle_task"] = task.task_id
     result["summary"]["oracle_env_ok"] = env_ok
+    evidence_mode = oracle.evidence_mode()
+    result["evidence_mode"] = evidence_mode
+    result["summary"]["oracle_evidence_mode"] = evidence_mode
 
     return result

@@ -1,7 +1,7 @@
 import time
 from typing import Any
 
-from mas_eval.evidence import CURRENT_EVIDENCE_MODE
+from mas_eval.evidence import strongest_evidence_mode
 from mas_eval.scoring.absolute import (
     compute_gold_overall,
     compute_overall,
@@ -159,6 +159,9 @@ def aggregate_level(
     for result in domain_results.values():
         all_findings.extend(result.get("findings", []))
     overall = compute_overall(**domain_scores)
+    evidence_mode = strongest_evidence_mode(
+        result.get("evidence_mode") for result in domain_results.values()
+    )
     return {
         "level": level,
         "name": name,
@@ -169,7 +172,7 @@ def aggregate_level(
         "domain_scores": domain_scores,
         "domains": {f"{key}_detail": result for key, result in domain_results.items()},
         "findings": all_findings,
-        "evidence_mode": CURRENT_EVIDENCE_MODE,
+        "evidence_mode": evidence_mode,
     }
 
 
@@ -202,6 +205,9 @@ def compute_gold_report(
         consistency_index=consistency_index,
         cost_efficiency=cost_efficiency,
     )
+    evidence_mode = strongest_evidence_mode(
+        result.get("evidence_mode") for result in domain_results.values()
+    )
     return {
         "gold_verdict": determine_gold_verdict(
             overall, all_findings, consistency_index
@@ -212,5 +218,5 @@ def compute_gold_report(
         "consistency_index": consistency_index,
         "cost_efficiency": cost_efficiency,
         "findings": all_findings,
-        "evidence_mode": CURRENT_EVIDENCE_MODE,
+        "evidence_mode": evidence_mode,
     }

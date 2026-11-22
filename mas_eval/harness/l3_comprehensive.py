@@ -16,7 +16,7 @@ from mas_eval.domains.d2_single_agent import run_d2
 from mas_eval.domains.d3_multi_agent import run_d3
 from mas_eval.domains.d4_governance_security import run_d4
 from mas_eval.domains.d5_robustness import run_d5
-from mas_eval.evidence import CURRENT_EVIDENCE_MODE
+from mas_eval.evidence import strongest_evidence_mode
 from mas_eval.harness.aggregation import compute_gold_report, extract_gold_metrics
 from mas_eval.harness.trajectory_builder import build_scenario_trajectories
 from mas_eval.scoring.attribution import generate_attribution_report
@@ -166,7 +166,9 @@ def run_l3_comprehensive(
     result = {
         "level": "L3",
         "name": "Comprehensive",
-        "evidence_mode": CURRENT_EVIDENCE_MODE,
+        "evidence_mode": strongest_evidence_mode(
+            result.get("evidence_mode") for result in domain_results.values()
+        ),
         "elapsed_seconds": round(time.time() - start, 1),
         "score": gold_report["overall"],
         "grade": gold_report["grade"],

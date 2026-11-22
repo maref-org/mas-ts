@@ -28,10 +28,14 @@ and 5.0 from 2026-12-30, turning CI red with no code change.
 
 ### Added — Evidence mode (P0-2 option A)
 
-- `mas_eval/evidence.py` — explicit `evidence_mode` contract.
+- `mas_eval/evidence.py` — explicit `evidence_mode` contract with ranking:
+  `live_run` > `verified_patch` > `declared_input`.
 - Every result (L0-L4, aggregate, Gold report, API schema) now carries
-  `evidence_mode`. Current value is `declared_input`: scores come from the
-  Agent Card plus caller-supplied trajectories, not from a live agent run.
+  `evidence_mode`. Default is `declared_input`: scores come from the Agent Card
+  plus caller-supplied trajectories, not from a live agent run.
+- SWE-bench oracle reports `verified_patch` **only** when Docker actually ran
+  the tests against the supplied patch; simulated fallback stays
+  `declared_input`. `run_d2_with_oracle` propagates the mode.
 - README / AGENTS.md / `docs/api-contracts.md` state this explicitly so a
   `declared_input` score is never cited as an agent capability benchmark.
 - `scripts/check_version_consistency.py` now also checks `README.md`.

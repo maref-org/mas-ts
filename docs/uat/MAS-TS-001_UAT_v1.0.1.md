@@ -37,6 +37,7 @@ v1.0.1 是**可信度修复版本**，不新增评估能力。UAT 聚焦两条�
 | UC-06 | P0 | CI 黄金门禁路径 | `gold_standard_gate.py --as-of-date 2026-11-22` → PASSED，exit 0 | ✅ |
 | UC-07 | P1 | 发布门禁真实性 | `release_gate_check.py`：G3.4 由 manual 改为自动校验；未签署时 FAIL | ✅（按预期失败） |
 | UC-08 | P1 | UAT 门禁不可被空文件绕过 | `check_version_consistency.py --require-uat` → exit 1（当前未签署） | ✅（按预期失败） |
+| UC-09 | P0 | SWE-bench 真实 Docker 验证 | 正确 patch → `100.0` + `verified_patch`；错误 patch → `0.0` + `verified_patch`；Docker 不可用 → `declared_input` | ✅ |
 
 ### 2.1 关键命令与输出
 
@@ -64,6 +65,9 @@ $ python scripts/gold_standard_gate.py \
     --as-of-date 2026-11-22
 ✅ Gold Standard L0 gate PASSED — all 1 card(s) meet thresholds.   (exit 0)
 
+$ python -m pytest tests/test_swe_bench_live.py -m slow -q
+3 passed   # 真实 Docker：正确 patch=100 verified_patch，错误 patch=0 verified_patch
+
 $ python - <<'PY'
 import json, pathlib
 from mas_eval.domains.d1_compliance import run_d1
@@ -82,7 +86,7 @@ PY
 
 | 项 | 原因 | 归属 |
 |---|---|---|
-| 真实 agent 执行（构念效度） | v1.0.1 不改变评估语义；当前仍为 declared-input 评估 | P0-2 单独一轮 |
+| 真实 agent 执行（构念效度） | 已实现 `verified_patch`（真实 Docker 测试自报 patch），但行为仍由调用方提供 | P0-2 B（agent runner） |
 | RTM 映射校验 | 44/44 条 test_cases 已失效，文件已标 STALE | P1 下一轮 |
 | 外部第三方复跑 | 需独立环境/人 | 发布前补 |
 

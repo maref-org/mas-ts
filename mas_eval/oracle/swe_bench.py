@@ -22,6 +22,10 @@ import time
 from difflib import SequenceMatcher
 from pathlib import Path
 
+from mas_eval.evidence import (
+    EVIDENCE_MODE_DECLARED,
+    EVIDENCE_MODE_VERIFIED_PATCH,
+)
 from mas_eval.oracle.env import check_docker as check_docker
 from mas_eval.oracle.oracle_base import Oracle, OracleTask
 
@@ -172,10 +176,15 @@ class SWEBenchOracle(Oracle):
 
     def __init__(self):
         self._tasks_cache = None
+        self._last_evidence_mode = EVIDENCE_MODE_DECLARED
 
     @property
     def name(self):
         return "swe-bench"
+
+    def evidence_mode(self):
+        """``verified_patch`` only when Docker actually ran the tests."""
+        return self._last_evidence_mode
 
     def list_tasks(self):
         return [
@@ -218,6 +227,10 @@ class SWEBenchOracle(Oracle):
         if not agent_trajectory:
             return 0.0
 
+        # Reset per call: a simulated fallback must not inherit a previous
+        # verified_patch claim.
+        self._last_evidence_mode = EVIDENCE_MODE_DECLARED
+
         edits = self._extract_edits(agent_trajectory)
         if not edits:
             return 0.0
@@ -242,7 +255,10 @@ class SWEBenchOracle(Oracle):
                 sandbox.write_file(path, new_content)
 
             passed, total = sandbox.run_tests(task_data.get("test_command", "pytest"))
-            return round(passed / total * 100, 1) if total > 0 else 0.0
+            if total > 0:
+                self._last_evidence_mode = EVIDENCE_MODE_VERIFIED_PATCH
+                return round(passed / total * 100, 1)
+            return self._simulate_score(task, edits)
         except Exception as e:
             logger.error("Real scoring failed: %s", e)
             return self._simulate_score(task, edits)
@@ -251,6 +267,7 @@ class SWEBenchOracle(Oracle):
 
     def _simulate_score(self, task, edits):
         """Score based on patch similarity when Docker is unavailable."""
+        self._last_evidence_mode = EVIDENCE_MODE_DECLARED
         task_data = self._find_task(task.task_id)
         if task_data is None:
             return 0.0

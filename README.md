@@ -45,8 +45,11 @@ Every result carries `evidence_mode`:
 - **`declared_input`** — current default. Scores are computed from the Agent Card
   and the golden/mock trajectories you pass in. This validates declarations and
   scoring consistency; it does **not** prove that the agent performed the task.
-- **`live_run`** — reserved for a real execution path (process/model invocation,
-  real oracle environment). Not implemented yet.
+- **`verified_patch`** — the caller supplied the patch, but it was actually
+  applied and its tests ran in a real isolated environment (Docker via the
+  SWE-bench oracle). The verification ran; the behaviour is still self-reported.
+- **`live_run`** — reserved for a real agent execution that produced the
+  trajectory. Not implemented yet.
 
 Do not cite a `declared_input` score as an agent capability benchmark. Adding a
 real runner is tracked separately.
