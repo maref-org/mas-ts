@@ -78,6 +78,13 @@ class EvaluationResponse(BaseModel):
     elapsed_seconds: float = Field(..., description="Total elapsed time in seconds")
     stages: Optional[List[StageResult]] = Field(None, description="Stage results")
     domain_scores: Optional[Dict[str, float]] = Field(None, description="Domain scores")
+    evidence_mode: Optional[str] = Field(
+        None,
+        description=(
+            "Where the scored behaviour came from: 'declared_input' "
+            "(caller-supplied card/trajectories) or 'live_run' (real execution)"
+        ),
+    )
     findings: Optional[List[Dict[str, Any]]] = Field(
         None, description="Evaluation findings"
     )

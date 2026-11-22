@@ -26,6 +26,16 @@ and 5.0 from 2026-12-30, turning CI red with no code change.
   signoff as WARNING (signature is human-required), and supports
   `--require-tag` for release workflows.
 
+### Added — Evidence mode (P0-2 option A)
+
+- `mas_eval/evidence.py` — explicit `evidence_mode` contract.
+- Every result (L0-L4, aggregate, Gold report, API schema) now carries
+  `evidence_mode`. Current value is `declared_input`: scores come from the
+  Agent Card plus caller-supplied trajectories, not from a live agent run.
+- README / AGENTS.md / `docs/api-contracts.md` state this explicitly so a
+  `declared_input` score is never cited as an agent capability benchmark.
+- `scripts/check_version_consistency.py` now also checks `README.md`.
+
 ### Tests
 
 - `tests/test_l0_reproducibility.py` — 5 tests: pinned date applied and

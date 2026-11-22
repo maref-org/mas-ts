@@ -1,6 +1,6 @@
 # MAS-TS-001 Evaluation Harness
 
-**Version**: v0.5.0 | **Standard**: MAS-TS-001 v3.0 | **License**: Apache-2.0
+**Version**: v1.0.1 | **Standard**: MAS-TS-001 v3.0 | **License**: Apache-2.0
 
 Fast-Screen and Full-Run evaluation pipeline for multi-agent systems.
 
@@ -37,6 +37,19 @@ python mock_calibrate.py --golden-dir ./mas_eval/data/golden_trajectories --mock
 # Hardware anchor
 python generate_anchor.py --output reports/anchor.json
 ```
+
+## What a score means (evidence mode)
+
+Every result carries `evidence_mode`:
+
+- **`declared_input`** — current default. Scores are computed from the Agent Card
+  and the golden/mock trajectories you pass in. This validates declarations and
+  scoring consistency; it does **not** prove that the agent performed the task.
+- **`live_run`** — reserved for a real execution path (process/model invocation,
+  real oracle environment). Not implemented yet.
+
+Do not cite a `declared_input` score as an agent capability benchmark. Adding a
+real runner is tracked separately.
 
 ## Architecture
 

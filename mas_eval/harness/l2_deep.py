@@ -14,6 +14,7 @@ from mas_eval.domains.d1_compliance import run_d1
 from mas_eval.domains.d2_single_agent import run_d2
 from mas_eval.domains.d3_multi_agent import run_d3
 from mas_eval.domains.d4_governance_security import run_d4
+from mas_eval.evidence import CURRENT_EVIDENCE_MODE
 from mas_eval.harness.aggregation import (
     compute_gold_report,
     extract_gold_metrics,
@@ -118,6 +119,7 @@ def run_l2_deep(
     result = {
         "level": "L2",
         "name": "Deep",
+        "evidence_mode": CURRENT_EVIDENCE_MODE,
         "elapsed_seconds": round(time.time() - start, 1),
         "score": gold_report["overall"],
         "grade": gold_report["grade"],
@@ -212,6 +214,7 @@ def run_l2_with_oracle(
     result = {
         "level": "L2",
         "name": "Deep (Oracle)",
+        "evidence_mode": CURRENT_EVIDENCE_MODE,
         "elapsed_seconds": round(time.time() - start, 1),
         "score": gold_report["overall"],
         "grade": gold_report["grade"],

@@ -154,7 +154,7 @@ Diversity = max(0, 100 × (1 - HHI / 10000))
 | `epoch_state` | `EpochState` class | L4 epoch score/findings history with trend and improvement metrics |
 | `resource_governor` | `TokenBudget` / `ResourceGovernor` classes | Resource limits and circuit-breaker guard for convergence loops |
 
-`HarnessResult` shape: `{"level": str, "score": float, "grade": str, "verdict": str, "domain_scores": dict, "findings": list}`.
+`HarnessResult` shape: `{"level": str, "score": float, "grade": str, "verdict": str, "domain_scores": dict, "findings": list, "evidence_mode": str}`. `evidence_mode` is `declared_input` (caller-supplied card/trajectories) or `live_run` (real execution); current paths emit `declared_input`.
 
 **`tasks` parameter semantics** (Phase 6.4 clarification):
 - `run_l0_fast_screen`: `tasks` is a MockLLM task list injected into stage 5

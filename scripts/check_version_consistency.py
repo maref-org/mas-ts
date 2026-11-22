@@ -29,6 +29,7 @@ ROOT = Path(__file__).resolve().parent.parent
 PYPROJECT = ROOT / "pyproject.toml"
 CHANGELOG = ROOT / "CHANGELOG.md"
 AGENTS = ROOT / "AGENTS.md"
+README = ROOT / "README.md"
 MAS_EVAL_INIT = ROOT / "mas_eval" / "__init__.py"
 API_INIT = ROOT / "api" / "__init__.py"
 UAT_DIR = ROOT / "docs" / "uat"
@@ -50,6 +51,11 @@ def get_changelog_version() -> str | None:
 
 def get_agents_version() -> str | None:
     match = re.search(r"\(v(\d+\.\d+\.\d+)\)", _read(AGENTS))
+    return match.group(1) if match else None
+
+
+def get_readme_version() -> str | None:
+    match = re.search(r"\*\*Version\*\*:\s*v?(\d+\.\d+\.\d+)", _read(README))
     return match.group(1) if match else None
 
 
@@ -121,6 +127,7 @@ def main(argv: list[str] | None = None) -> int:
         "pyproject.toml": get_pyproject_version(),
         "CHANGELOG.md (top)": get_changelog_version(),
         "AGENTS.md (header)": get_agents_version(),
+        "README.md": get_readme_version(),
         "mas_eval/__init__.py": get_init_version(MAS_EVAL_INIT),
         "api/__init__.py": get_init_version(API_INIT),
     }

@@ -1,6 +1,7 @@
 import time
 from typing import Any
 
+from mas_eval.evidence import CURRENT_EVIDENCE_MODE
 from mas_eval.scoring.absolute import (
     compute_gold_overall,
     compute_overall,
@@ -168,6 +169,7 @@ def aggregate_level(
         "domain_scores": domain_scores,
         "domains": {f"{key}_detail": result for key, result in domain_results.items()},
         "findings": all_findings,
+        "evidence_mode": CURRENT_EVIDENCE_MODE,
     }
 
 
@@ -210,4 +212,5 @@ def compute_gold_report(
         "consistency_index": consistency_index,
         "cost_efficiency": cost_efficiency,
         "findings": all_findings,
+        "evidence_mode": CURRENT_EVIDENCE_MODE,
     }

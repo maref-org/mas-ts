@@ -22,6 +22,7 @@ from typing import Any
 from mas_eval.cross_cutting.cost_efficiency import compute_cost_efficiency
 from mas_eval.domains.d4_governance_security import TrustScorer
 from mas_eval.domains.d5_robustness import run_d5
+from mas_eval.evidence import CURRENT_EVIDENCE_MODE
 from mas_eval.harness.epoch_state import EpochState
 from mas_eval.scoring.absolute import determine_verdict, score_to_grade
 from mas_eval.scoring.attribution import generate_attribution_report
@@ -298,6 +299,7 @@ def run_l4_evolution(
     return {
         "level": "L4",
         "name": "Evolution",
+        "evidence_mode": CURRENT_EVIDENCE_MODE,
         "elapsed_seconds": round(time.time() - start, 1),
         "score": d5_score,
         "grade": score_to_grade(d5_score),

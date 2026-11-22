@@ -13,6 +13,7 @@ from concurrent.futures import ThreadPoolExecutor
 from mas_eval.domains.d1_compliance import run_d1
 from mas_eval.domains.d2_single_agent import run_d2, run_step_efficiency
 from mas_eval.domains.d3_multi_agent import run_d3
+from mas_eval.evidence import CURRENT_EVIDENCE_MODE
 from mas_eval.scoring.absolute import score_to_grade
 from mas_eval.scoring.gold_thresholds import check_level_thresholds
 
@@ -265,4 +266,5 @@ def _l0_result(stages, start_time, as_of_date=None):
         "threshold_check": threshold_check,
         "findings": all_findings,
         "evaluated_as_of": evaluated_as_of,
+        "evidence_mode": CURRENT_EVIDENCE_MODE,
     }
