@@ -49,7 +49,8 @@ Every result carries `evidence_mode`:
   applied and its tests ran in a real isolated environment (Docker via the
   SWE-bench oracle). The verification ran; the behaviour is still self-reported.
 - **`live_run`** — reserved for a real agent execution that produced the
-  trajectory. Not implemented yet.
+  trajectory. Not implemented yet. Claiming it without a complete
+  `ExecutionRecord` raises (fail-closed).
 
 Do not cite a `declared_input` score as an agent capability benchmark. Adding a
 real runner is tracked separately.
