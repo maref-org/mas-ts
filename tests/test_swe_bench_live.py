@@ -12,6 +12,8 @@ Run explicitly:
 
 from __future__ import annotations
 
+import json
+import os
 import shutil
 import subprocess
 
@@ -19,7 +21,7 @@ import pytest
 
 from mas_eval.evidence import EVIDENCE_MODE_DECLARED, EVIDENCE_MODE_VERIFIED_PATCH
 from mas_eval.oracle.oracle_base import OracleTask
-from mas_eval.oracle.swe_bench import SWEBenchOracle
+from mas_eval.oracle.swe_bench import SWEBenchOracle, official_image_name
 
 IMAGE = "python:3.11-slim"
 
@@ -135,3 +137,44 @@ def test_declared_when_docker_unavailable(monkeypatch):
 
     assert score >= 0.0
     assert oracle.evidence_mode() == EVIDENCE_MODE_DECLARED
+
+
+@pytest.mark.slow
+def test_official_lite_gold_patch_resolves(monkeypatch):
+    """Real official image + official test_patch + gold patch -> resolved.
+
+    Requires SWE_BENCH_LITE_FIXTURE to point at an exported JSON list and the
+    official image to be present locally; otherwise the test skips (a skip is
+    not evidence).
+    """
+    fixture = os.environ.get("SWE_BENCH_LITE_FIXTURE")
+    if not fixture or not os.path.exists(fixture):
+        pytest.skip("SWE_BENCH_LITE_FIXTURE not set")
+
+    instance_id = "astropy__astropy-12907"
+    rows = json.loads(open(fixture, encoding="utf-8").read())
+    row = next((r for r in rows if r["instance_id"] == instance_id), None)
+    if row is None:
+        pytest.skip(f"{instance_id} not in fixture")
+
+    ready, reason = _docker_ready()
+    if not ready:
+        pytest.skip(reason)
+
+    image = official_image_name(instance_id)
+    inspect = subprocess.run(
+        ["docker", "image", "inspect", image],
+        capture_output=True,
+        text=True,
+        timeout=20,
+    )
+    if inspect.returncode != 0:
+        pytest.skip(f"official image not present locally: {image}")
+
+    monkeypatch.setenv("SWE_BENCH_LITE_PATH", fixture)
+    oracle = SWEBenchOracle()
+    result = oracle.verify_instance(instance_id, row["patch"])
+
+    assert result["resolved"] is True
+    assert result["evidence_mode"] == EVIDENCE_MODE_VERIFIED_PATCH
+    assert oracle.evidence_mode() == EVIDENCE_MODE_VERIFIED_PATCH
