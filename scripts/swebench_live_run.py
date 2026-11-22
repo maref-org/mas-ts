@@ -38,28 +38,6 @@ DEFAULT_AGENT = (
 )
 
 
-def prepare_repo(repo: str, base_commit: str, workdir: Path) -> None:
-    """Fetch exactly the base commit into ``workdir`` (shallow)."""
-    workdir.mkdir(parents=True, exist_ok=True)
-    run = lambda cmd: subprocess.run(  # noqa: E731
-        cmd, cwd=workdir, capture_output=True, text=True, timeout=600
-    )
-
-    run(["git", "init", "-q"])
-    run(["git", "remote", "add", "origin", f"https://github.com/{repo}.git"])
-    fetched = run(["git", "fetch", "--depth", "1", "origin", base_commit])
-    if fetched.returncode != 0:
-        # Fallback: full clone then checkout (slower, but robust)
-        fetched = run(["git", "fetch", "--depth", "50", "origin"])
-        if fetched.returncode != 0:
-            raise RuntimeError(f"git fetch failed: {fetched.stderr[-400:]}")
-        fetched = run(["git", "checkout", "-q", base_commit])
-    else:
-        fetched = run(["git", "checkout", "-q", "FETCH_HEAD"])
-    if fetched.returncode != 0:
-        raise RuntimeError(f"git checkout failed: {fetched.stderr[-400:]}")
-
-
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Local CLI agent on SWE-bench Lite")
     parser.add_argument("--dataset", required=True, help="Local JSON list of instances")
@@ -84,6 +62,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     from mas_eval.oracle.swe_bench import SWEBenchOracle, load_lite_tasks
     from mas_eval.runner.local_cli import LocalCLIRunner
+    from mas_eval.runner.repo import prepare_repo
 
     tasks = load_lite_tasks(args.dataset)
     task = next((t for t in tasks if t["task_id"] == args.instance), None)

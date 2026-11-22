@@ -3,5 +3,6 @@
 """Agent runner package."""
 
 from mas_eval.runner.local_cli import LocalCLIRunner, RunnerResult
+from mas_eval.runner.repo import prepare_repo
 
-__all__ = ["LocalCLIRunner", "RunnerResult"]
+__all__ = ["LocalCLIRunner", "RunnerResult", "prepare_repo"]

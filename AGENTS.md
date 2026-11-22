@@ -125,6 +125,7 @@ Extends v1.1 with optional fields:
 | `mas_eval/data/baselines/v0.6.0_baseline.json` | v0.6.0 regression baseline snapshot |
 | `mas_eval/evidence.py` | Evidence-mode contract (`declared_input` / `verified_patch` / `live_run`) emitted in every result |
 | `mas_eval/runner/local_cli.py` | Local CLI agent runner: executes an agent, captures a filtered diff, emits `ExecutionRecord` |
+| `mas_eval/runner/repo.py` | Shallow fetch of an exact base commit for agent runs |
 | `tests/` | 91 test files, 2144 tests (with regression + HITL + latency + agentic-security + runtime-bridge + standards-mapping + API-hardening + L0-reproducibility + evidence-mode + Docker-live + live-guard + swebench-lite + local-cli-runner suites) |
 | `.github/workflows/test.yml` | pytest + ruff + coverage gate 85% + Gold L0 gate + federation scan |
 | `.github/workflows/security-scan.yml` | TruffleHog + bandit SAST + pip-audit + SBOM CycloneDX (daily cron) |
@@ -142,6 +143,7 @@ Extends v1.1 with optional fields:
 | `scripts/gold_standard_gate.py` | Gold Standard L0 threshold gate |
 | `scripts/swebench_lite_verify.py` | Verify one official SWE-bench Lite instance against a unified diff (external dataset path) |
 | `scripts/swebench_live_run.py` | Run a local CLI agent on one SWE-bench Lite instance, then verify in the official image |
+| `scripts/swebench_batch.py` | Batch-run a local CLI agent over Lite instances, write JSONL with records and evidence |
 | `scripts/federation_threshold.py` | Multi-vendor federation scan threshold policy |
 | `scripts/emergency-rollback.sh` | Emergency rollback script (git revert + verify) |
 | `scripts/sanitize-for-push.sh` | Track B pre-push content safety check |
