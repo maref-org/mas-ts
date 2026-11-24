@@ -9,12 +9,27 @@ exits with ``subtype: "success"`` while emitting ``is_error: true``,
 ``result`` string starting with ``API Error: ...``.
 
 A reported ``total_cost_usd`` of ``0`` therefore must never be read as "free".
-A usage record is only trusted when **all three** hold::
 
-    is_error is False and duration_api_ms > 0 and usage.output_tokens > 0
+Two questions must be kept apart, because they have different answers for the
+same run:
 
-Otherwise the cost is unknown (``None``), not zero, and the caller is told why
-through ``untrusted_reason``.
+1. **Is the cost measurable?** — did the run actually consume model work we can
+   price? That is only about evidence of usage::
+
+       duration_api_ms > 0 and usage.output_tokens > 0
+
+2. **What was the outcome?** — did the run succeed, hit a cap, or fail? This is
+   what ``is_error`` / ``subtype`` describe.
+
+``is_error`` must **not** be used as a measurability criterion. A run truncated
+by ``--max-turns`` reports ``subtype: "error_max_turns"`` with ``is_error: true``
+and yet really burned tokens (observed: ``duration_api_ms=98779``,
+``output_tokens=13471``, reported cost ``1.031376``). Treating such a run as
+"no cost" would understate real spend — the exact failure this module exists to
+prevent. So ``cost_measurable`` ignores ``is_error``; ``outcome`` carries it.
+
+When the cost is not measurable it is unknown (``None``), not zero, and the
+caller is told why through ``untrusted_reason``.
 """
 
 from __future__ import annotations
@@ -104,14 +119,37 @@ def _models(payload: dict[str, Any]) -> list[str]:
     return [fallback] if fallback else []
 
 
-def _untrusted_reason(is_error: bool, duration_api_ms: int, output_tokens: int) -> str:
-    if is_error:
-        return "api_error"
+def _untrusted_reason(duration_api_ms: int, output_tokens: int) -> str:
+    """Why the cost cannot be measured ("" when it can)."""
     if duration_api_ms <= 0:
         return "no_api_time"
     if output_tokens <= 0:
         return "no_output_tokens"
     return ""
+
+
+def _subtype(payload: dict[str, Any]) -> str:
+    """The raw CLI ``subtype`` string ("" when absent)."""
+    raw = payload.get("subtype")
+    return "" if raw is None else str(raw)
+
+
+def _outcome(is_error: bool, subtype: str, cost_measurable: bool) -> str:
+    """Classify the run's result state (orthogonal to cost measurability).
+
+    Priority: success first, then the two caps the CLI names in ``subtype``,
+    then an error that left no usage evidence at all (an API failure), then
+    any other error.
+    """
+    if not is_error:
+        return "ok"
+    if "max_turns" in subtype:
+        return "max_turns"
+    if "max_budget" in subtype:
+        return "max_budget"
+    if not cost_measurable:
+        return "api_error"
+    return "error"
 
 
 def parse_claude_usage(log: str) -> dict[str, Any] | None:
@@ -120,10 +158,12 @@ def parse_claude_usage(log: str) -> dict[str, Any] | None:
     Returns None when no JSON payload can be found. The returned dict always
     has the same keys.
 
-    ``total_cost_usd`` is fail-closed: it is a float only when the record is
-    trusted, and None otherwise (an unverifiable run has an *unknown* cost, not
-    a free one). The value the CLI reported is always preserved in
-    ``total_cost_usd_reported`` for diagnosis.
+    ``total_cost_usd`` is fail-closed on *measurability* only: it is a float
+    when ``duration_api_ms > 0`` and ``output_tokens > 0``, and None otherwise
+    (an unmeasurable run has an *unknown* cost, not a free one). ``is_error``
+    deliberately does not take part — a capped run still spent tokens. The
+    value the CLI reported is always preserved in ``total_cost_usd_reported``
+    for diagnosis, and ``outcome`` records what actually happened.
     """
     payload = _load_payload(log)
     if payload is None:
@@ -133,27 +173,32 @@ def parse_claude_usage(log: str) -> dict[str, Any] | None:
     usage = raw_usage if isinstance(raw_usage, dict) else {}
 
     is_error = bool(payload.get("is_error") or False)
+    subtype = _subtype(payload)
     duration_api_ms = _as_int(payload.get("duration_api_ms"))
     output_tokens = _as_int(usage.get("output_tokens"))
-    reason = _untrusted_reason(is_error, duration_api_ms, output_tokens)
+    reason = _untrusted_reason(duration_api_ms, output_tokens)
+    cost_measurable = reason == ""
 
     result = payload.get("result")
     result_text = "" if result is None else str(result)
 
-    trusted = reason == ""
     reported_cost = _as_float(payload.get("total_cost_usd"))
 
     parsed: dict[str, Any] = {
         "model": _models(payload),
-        # Fail-closed: an untrusted run has an unknown cost, never 0.
-        "total_cost_usd": reported_cost if trusted else None,
+        # Fail-closed: an unmeasurable run has an unknown cost, never 0.
+        "total_cost_usd": reported_cost if cost_measurable else None,
         "total_cost_usd_reported": reported_cost,
         "is_error": is_error,
+        "subtype": subtype,
+        "outcome": _outcome(is_error, subtype, cost_measurable),
+        "cost_measurable": cost_measurable,
         "result_head": result_text[:_RESULT_HEAD_CHARS],
         "duration_api_ms": duration_api_ms,
         "duration_ms": _as_int(payload.get("duration_ms")),
         "num_turns": _as_int(payload.get("num_turns")),
-        "trusted": trusted,
+        # Kept for old callers; it now means "cost measurable", not "ok".
+        "trusted": cost_measurable,
         "untrusted_reason": reason,
     }
     for name in _TOKENS:
@@ -162,13 +207,20 @@ def parse_claude_usage(log: str) -> dict[str, Any] | None:
 
 
 def usage_is_trusted(usage: dict[str, Any] | None) -> bool:
-    """Whether a usage record may be used as cost evidence."""
+    """Whether a usage record may be used as cost evidence.
+
+    Reads ``cost_measurable`` when present. Hand-written dicts predating that
+    key fall back to the same token-based derivation, so an ``is_error`` flag
+    is never mistaken for "no cost".
+    """
     if not usage:
         return False
+    if "cost_measurable" in usage:
+        return bool(usage["cost_measurable"])
     if "trusted" in usage:
         return bool(usage["trusted"])
     return (
-        not bool(usage.get("is_error", False))
-        and _as_int(usage.get("duration_api_ms")) > 0
+        _as_int(usage.get("duration_api_ms")) > 0
         and _as_int(usage.get("output_tokens")) > 0
     )
+

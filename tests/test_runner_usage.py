@@ -55,11 +55,32 @@ def _dead_api_payload() -> dict[str, Any]:
     )
 
 
+def _max_turns_payload(after_tokens: int = 13471) -> dict[str, Any]:
+    """A run cut off by ``--max-turns``: error state, but real spend."""
+    return _payload(
+        subtype="error_max_turns",
+        is_error=True,
+        duration_api_ms=98779,
+        num_turns=40,
+        result="Reached max turns before finishing",
+        total_cost_usd=1.031376,
+        usage={
+            "input_tokens": 21000,
+            "output_tokens": after_tokens,
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 0,
+        },
+    )
+
+
 def test_successful_run_is_trusted_with_real_cost():
     usage = parse_claude_usage(json.dumps(_payload()))
 
     assert usage is not None
     assert usage["trusted"] is True
+    assert usage["cost_measurable"] is True
+    assert usage["outcome"] == "ok"
+    assert usage["subtype"] == "success"
     assert usage["untrusted_reason"] == ""
     assert usage["total_cost_usd"] == 0.0421
     assert usage["total_cost_usd_reported"] == 0.0421
@@ -76,16 +97,86 @@ def test_successful_run_is_trusted_with_real_cost():
     assert usage_is_trusted(usage) is True
 
 
-def test_api_error_with_zero_cost_is_not_trusted():
+def test_unmeasurable_run_keeps_reported_cost_but_zeroes_trusted_cost():
+    """No API time and no output tokens: cost unknown, reported value kept."""
     usage = parse_claude_usage(json.dumps(_dead_api_payload()))
 
     assert usage is not None
     assert usage["trusted"] is False
-    assert usage["untrusted_reason"] == "api_error"
+    assert usage["cost_measurable"] is False
+    assert usage["untrusted_reason"] == "no_api_time"
+    assert usage["outcome"] == "api_error"
     assert usage["total_cost_usd"] is None
     assert usage["total_cost_usd_reported"] == 0
     assert usage["result_head"].startswith("API Error:")
     assert usage_is_trusted(usage) is False
+
+
+def test_max_turns_truncation_is_measurable_not_ok():
+    """--max-turns burns tokens: cost must be counted, outcome is "max_turns"."""
+    usage = parse_claude_usage(json.dumps(_max_turns_payload()))
+
+    assert usage is not None
+    assert usage["is_error"] is True
+    assert usage["subtype"] == "error_max_turns"
+    assert usage["cost_measurable"] is True
+    assert usage["trusted"] is True
+    assert usage["untrusted_reason"] == ""
+    assert usage["total_cost_usd"] == 1.031376
+    assert usage["total_cost_usd_reported"] == 1.031376
+    assert usage["output_tokens"] == 13471
+    assert usage["outcome"] == "max_turns"
+    assert usage_is_trusted(usage) is True
+
+
+def test_max_budget_stop_is_measurable_with_max_budget_outcome():
+    usage = parse_claude_usage(
+        json.dumps(_max_turns_payload().copy() | {"subtype": "error_max_budget_usd"})
+    )
+
+    assert usage is not None
+    assert usage["subtype"] == "error_max_budget_usd"
+    assert usage["cost_measurable"] is True
+    assert usage["total_cost_usd"] == 1.031376
+    assert usage["outcome"] == "max_budget"
+
+
+def test_error_without_usage_evidence_is_api_error():
+    usage = parse_claude_usage(
+        json.dumps(
+            _payload(
+                is_error=True,
+                subtype="error_during_execution",
+                duration_api_ms=0,
+                total_cost_usd=0,
+                usage={
+                    "input_tokens": 0,
+                    "output_tokens": 0,
+                    "cache_read_input_tokens": 0,
+                    "cache_creation_input_tokens": 0,
+                },
+            )
+        )
+    )
+
+    assert usage is not None
+    assert usage["cost_measurable"] is False
+    assert usage["outcome"] == "api_error"
+    assert usage["total_cost_usd"] is None
+    assert usage["total_cost_usd_reported"] == 0
+    assert usage["untrusted_reason"] == "no_api_time"
+
+
+def test_plain_error_with_usage_is_error_but_cost_is_counted():
+    usage = parse_claude_usage(
+        json.dumps(_payload(is_error=True, subtype="error_during_execution"))
+    )
+
+    assert usage is not None
+    assert usage["outcome"] == "error"
+    assert usage["cost_measurable"] is True
+    assert usage["total_cost_usd"] == 0.0421
+    assert usage["untrusted_reason"] == ""
 
 
 def test_zero_api_time_is_not_trusted():
@@ -93,7 +184,9 @@ def test_zero_api_time_is_not_trusted():
 
     assert usage is not None
     assert usage["trusted"] is False
+    assert usage["cost_measurable"] is False
     assert usage["untrusted_reason"] == "no_api_time"
+    assert usage["outcome"] == "ok"
     assert usage["total_cost_usd"] is None
     assert usage["total_cost_usd_reported"] == 0.0421
 
@@ -112,9 +205,21 @@ def test_zero_output_tokens_is_not_trusted():
 
     assert usage is not None
     assert usage["trusted"] is False
+    assert usage["cost_measurable"] is False
     assert usage["untrusted_reason"] == "no_output_tokens"
     assert usage["total_cost_usd"] is None
     assert usage["total_cost_usd_reported"] == 0
+
+
+def test_missing_subtype_defaults_to_empty_string():
+    payload = _payload()
+    payload.pop("subtype")
+
+    usage = parse_claude_usage(json.dumps(payload))
+
+    assert usage is not None
+    assert usage["subtype"] == ""
+    assert usage["outcome"] == "ok"
 
 
 def test_result_head_is_truncated_to_120_chars():
@@ -236,11 +341,31 @@ def test_usage_is_trusted_none_is_false():
     assert usage_is_trusted({}) is False
 
 
+def test_usage_is_trusted_prefers_cost_measurable():
+    measurable = {
+        "cost_measurable": True,
+        "is_error": True,
+        "duration_api_ms": 100,
+        "output_tokens": 5,
+    }
+    assert usage_is_trusted(measurable) is True
+    assert usage_is_trusted({**measurable, "cost_measurable": False}) is False
+
+
 def test_usage_is_trusted_recomputes_for_bare_records():
     bare_ok = {"is_error": False, "duration_api_ms": 10, "output_tokens": 3}
     assert usage_is_trusted(bare_ok) is True
     assert usage_is_trusted({**bare_ok, "duration_api_ms": 0}) is False
     assert usage_is_trusted({**bare_ok, "trusted": False}) is False
+
+
+def test_usage_is_trusted_legacy_dict_ignores_is_error():
+    """A pre-``cost_measurable`` dict with spend is measurable, error or not."""
+    legacy = {"is_error": True, "duration_api_ms": 100, "output_tokens": 5}
+
+    assert usage_is_trusted(legacy) is True
+    assert usage_is_trusted({**legacy, "duration_api_ms": 0}) is False
+    assert usage_is_trusted({**legacy, "output_tokens": 0}) is False
 
 
 def test_unserialisable_cost_field_falls_back_to_none():
@@ -262,6 +387,7 @@ def test_runner_attaches_parsed_usage(tmp_path):
 
     assert result.usage is not None
     assert result.usage["trusted"] is True
+    assert result.usage["outcome"] == "ok"
     assert result.usage["total_cost_usd"] == 0.0421
 
 

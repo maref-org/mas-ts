@@ -37,6 +37,13 @@ DEFAULT_AGENT = (
 PREFLIGHT_PROMPT = "Reply OK"
 PREFLIGHT_TIMEOUT_SECONDS = 90
 
+# Outcomes that mean "the run was stopped by a cap" — reported per row so a
+# silent cap is visible, and still counted as spend because tokens were burned.
+_ABORT_OUTCOMES = ("max_turns", "max_budget")
+
+# Fixed order for the summary line.
+_OUTCOMES = ("ok", "max_turns", "max_budget", "api_error", "error", "unknown")
+
 
 def _parse_env(pairs: list[str] | None) -> dict[str, str]:
     """Turn repeated ``KEY=VALUE`` flags into a dict for the child process."""
@@ -66,7 +73,7 @@ def main(argv: list[str] | None = None) -> int:
         "--preflight",
         action=argparse.BooleanOptionalAction,
         default=True,
-        help="Probe the agent once and abort unless its cost is trusted",
+        help="Probe the agent once and abort unless its cost is measurable",
     )
     parser.add_argument("--timeout", type=int, default=600)
     parser.add_argument("--output", required=True)
@@ -130,7 +137,9 @@ def main(argv: list[str] | None = None) -> int:
             usage = probe.usage or {}
             reason = usage.get("untrusted_reason") or "unparsed_usage"
             head = usage.get("result_head", "")
-            print(f"preflight FAILED: untrusted usage ({reason})", file=sys.stderr)
+            print(
+                f"preflight FAILED: cost not measurable ({reason})", file=sys.stderr
+            )
             if head:
                 print(f"preflight result_head: {head}", file=sys.stderr)
             print(
@@ -177,6 +186,8 @@ def main(argv: list[str] | None = None) -> int:
             "resolved": False,
             "evidence_mode": EVIDENCE_MODE_DECLARED,
             "error": "",
+            "outcome": "unknown",
+            "abort_reason": "",
             "usage": None,
         }
         try:
@@ -239,31 +250,49 @@ def main(argv: list[str] | None = None) -> int:
                 shutil.rmtree(workdir, ignore_errors=True)
 
         row["wall_seconds"] = round(time.time() - started, 1)
+        # Outcome is a result state, separate from whether the cost is
+        # measurable: a run capped by --max-turns is an "abort" but still spent
+        # tokens, so its cost stays in the ledger.
+        usage = row.get("usage") or {}
+        outcome = usage.get("outcome") or "unknown"
+        row["outcome"] = outcome
+        row["abort_reason"] = outcome if outcome in _ABORT_OUTCOMES else ""
         results.append(row)
         with output.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(row, ensure_ascii=False) + "\n")
+        abort_note = f" abort={row['abort_reason']}" if row["abort_reason"] else ""
         print(
             f"[{index}/{total}] {label}: resolved={row['resolved']} "
-            f"evidence={row['evidence_mode']} {row['wall_seconds']}s",
+            f"evidence={row['evidence_mode']} {row['wall_seconds']}s{abort_note}",
             flush=True,
         )
 
     resolved = sum(1 for r in results if r["resolved"])
     live = sum(1 for r in results if r["evidence_mode"] == EVIDENCE_MODE_LIVE)
-    trusted = [r["usage"] for r in results if usage_is_trusted(r["usage"])]
-    untrusted_runs = len(results) - len(trusted)
-    # Fail-closed: only trusted runs carry a cost, and a trusted run whose
+    measurable = [r["usage"] for r in results if usage_is_trusted(r["usage"])]
+    unmeasurable_runs = len(results) - len(measurable)
+    # Fail-closed: only measurable runs carry a cost, and a measurable run whose
     # cost is missing contributes nothing rather than a fake zero.
     total_cost = sum(
-        u["total_cost_usd"] for u in trusted if u["total_cost_usd"] is not None
+        u["total_cost_usd"] for u in measurable if u["total_cost_usd"] is not None
     )
+    outcome_counts = {name: 0 for name in _OUTCOMES}
+    for row in results:
+        name = row.get("outcome") or "unknown"
+        outcome_counts[name] = outcome_counts.get(name, 0) + 1
     print("\n=== summary ===")
     print(f"runs:      {len(results)}")
     print(f"resolved:  {resolved}/{len(results)}")
     print(f"live_run:  {live}/{len(results)}")
-    print(f"cost:      {total_cost:.4f} (trusted runs: {len(trusted)}/{len(results)})")
-    if untrusted_runs:
-        print(f"untrusted: {untrusted_runs} (cost unknown, NOT zero)")
+    print(
+        "outcomes:  "
+        + " ".join(f"{name}={outcome_counts.get(name, 0)}" for name in _OUTCOMES)
+    )
+    print(
+        f"cost:      {total_cost:.4f} (trusted runs: {len(measurable)}/{len(results)})"
+    )
+    if unmeasurable_runs:
+        print(f"unmeasurable: {unmeasurable_runs} (cost unknown, NOT zero)")
     if args.repeat > 1:
         print("\n=== per instance ===")
         print("| instance | resolved | runs |")
