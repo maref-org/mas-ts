@@ -601,7 +601,8 @@ class SWEBenchOracle(Oracle):
         docker_ok, docker_msg = check_docker()
         if not docker_ok:
             return self._official_result(
-                instance_id, False, 0, 0, len(tests), f"docker unavailable: {docker_msg}"
+                instance_id, False, 0, 0, len(tests), f"docker unavailable: {docker_msg}",
+                self._last_evidence_mode
             )
 
         sandbox = DockerSandbox(
@@ -611,7 +612,8 @@ class SWEBenchOracle(Oracle):
         try:
             if not sandbox.start(task_data, workdir=workdir):
                 return self._official_result(
-                    instance_id, False, 0, 0, len(tests), "sandbox_start_failed"
+                    instance_id, False, 0, 0, len(tests), "sandbox_start_failed",
+                    self._last_evidence_mode
                 )
 
             if model_patch:
@@ -624,6 +626,7 @@ class SWEBenchOracle(Oracle):
                         0,
                         len(tests),
                         f"model_patch_apply_failed: {detail}",
+                        self._last_evidence_mode
                     )
 
             if task_data.get("test_patch"):
@@ -636,13 +639,15 @@ class SWEBenchOracle(Oracle):
                         0,
                         len(tests),
                         f"test_patch_apply_failed: {detail}",
+                        self._last_evidence_mode
                     )
 
             passed, failed, total, output = sandbox.run_pytest(tests, cwd=workdir)
             self._last_evidence_mode = EVIDENCE_MODE_VERIFIED_PATCH
             resolved = failed == 0 and total > 0 and passed >= total
             result = self._official_result(
-                instance_id, resolved, passed, failed, total, ""
+                instance_id, resolved, passed, failed, total, "",
+                self._last_evidence_mode
             )
             result["duration_s"] = round(time.time() - start, 1)
             result["output_tail"] = output[-2000:]
@@ -650,24 +655,27 @@ class SWEBenchOracle(Oracle):
         except Exception as e:  # pragma: no cover - defensive
             logger.error("Official verification failed: %s", e)
             return self._official_result(
-                instance_id, False, 0, 0, len(tests), f"exception: {e}"
+                instance_id, False, 0, 0, len(tests), f"exception: {e}",
+                self._last_evidence_mode
             )
         finally:
             sandbox.cleanup()
 
     @staticmethod
-    def _official_result(instance_id, resolved, passed, failed, total, error):
+    def _official_result(instance_id, resolved, passed, failed, total, error, evidence_mode=None):
+        if evidence_mode is None:
+            evidence_mode = (
+                EVIDENCE_MODE_VERIFIED_PATCH
+                if passed + failed > 0
+                else EVIDENCE_MODE_DECLARED
+            )
         return {
             "instance_id": instance_id,
             "resolved": resolved,
             "passed": passed,
             "failed": failed,
             "total": total,
-            "evidence_mode": (
-                EVIDENCE_MODE_VERIFIED_PATCH
-                if passed + failed > 0
-                else EVIDENCE_MODE_DECLARED
-            ),
+            "evidence_mode": evidence_mode,
             "error": error,
         }
 

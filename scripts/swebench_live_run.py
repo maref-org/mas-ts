@@ -50,18 +50,19 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--timeout", type=int, default=600, help="Agent timeout (s)")
     parser.add_argument("--workdir", help="Keep the repo clone here")
     parser.add_argument("--keep", action="store_true", help="Do not delete the temp clone")
+    parser.add_argument(
+        "--prompt-append-file",
+        help="File with extra instructions appended to the baseline solver prompt",
+    )
     args = parser.parse_args(argv)
 
     os.environ["SWE_BENCH_LITE_PATH"] = args.dataset
 
-    from mas_eval.evidence import (
-        EVIDENCE_MODE_DECLARED,
-        EVIDENCE_MODE_LIVE,
-        EVIDENCE_MODE_VERIFIED_PATCH,
-        resolve_evidence_mode,
-    )
     from mas_eval.oracle.swe_bench import SWEBenchOracle, load_lite_tasks
+    from mas_eval.runner.evidence_upgrade import upgrade_evidence_mode
     from mas_eval.runner.local_cli import LocalCLIRunner
+    from mas_eval.runner.prompt import build_prompt, prompt_sha256
+    from mas_eval.runner.provenance import runner_metadata
     from mas_eval.runner.repo import prepare_repo
 
     tasks = load_lite_tasks(args.dataset)
@@ -79,12 +80,13 @@ def main(argv: list[str] | None = None) -> int:
         print(f"workdir:  {workdir}")
         prepare_repo(task["repo"], task["base_commit"], workdir)
 
-        prompt = (
-            "You are solving a GitHub issue in the current repository.\n"
-            f"Issue:\n{task['problem_statement']}\n\n"
-            "Edit the repository to fix the issue. Do not modify tests. "
-            "Keep the change minimal. Do not commit."
-        )
+        prompt_append = ""
+        if args.prompt_append_file:
+            prompt_append = Path(args.prompt_append_file).read_text(encoding="utf-8")
+        prompt = build_prompt(task["problem_statement"], append=prompt_append)
+        prompt_sha = prompt_sha256(prompt)
+        runner_meta = runner_metadata(args.agent_cmd, args.timeout, "default")
+
         runner = LocalCLIRunner(
             "local-cli-agent",
             shlex.split(args.agent_cmd),
@@ -99,14 +101,10 @@ def main(argv: list[str] | None = None) -> int:
 
         verification = SWEBenchOracle().verify_instance(args.instance, run_result.patch)
 
-        evidence_mode = EVIDENCE_MODE_DECLARED
-        if verification.get("evidence_mode") == EVIDENCE_MODE_VERIFIED_PATCH:
-            try:
-                evidence_mode = resolve_evidence_mode(
-                    EVIDENCE_MODE_LIVE, run_result.record
-                )
-            except ValueError:
-                evidence_mode = EVIDENCE_MODE_VERIFIED_PATCH
+        evidence_mode, downgrade_reason = upgrade_evidence_mode(verification, run_result.record)
+
+        if downgrade_reason:
+            print(f"WARNING: evidence downgraded: {downgrade_reason}", file=sys.stderr)
 
         output = {
             "instance_id": args.instance,
@@ -115,7 +113,13 @@ def main(argv: list[str] | None = None) -> int:
             "execution_record": run_result.record.__dict__,
             "verification": verification,
             "agent_log_tail": run_result.log[-1500:],
+            "prompt_sha256": prompt_sha,
+            "prompt_label": "default",
+            "runner": runner_meta,
         }
+        if downgrade_reason:
+            output["evidence_downgrade_reason"] = downgrade_reason
+
         print(json.dumps(output, indent=2, ensure_ascii=False))
         return 0 if verification.get("resolved") else 1
     finally:

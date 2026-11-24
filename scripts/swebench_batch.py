@@ -124,8 +124,6 @@ def main(argv: list[str] | None = None) -> int:
     from mas_eval.evidence import (
         EVIDENCE_MODE_DECLARED,
         EVIDENCE_MODE_LIVE,
-        EVIDENCE_MODE_VERIFIED_PATCH,
-        resolve_evidence_mode,
     )
     from mas_eval.oracle.swe_bench import SWEBenchOracle, load_lite_tasks
     from mas_eval.runner.local_cli import LocalCLIRunner
@@ -254,19 +252,24 @@ def main(argv: list[str] | None = None) -> int:
                     else f"{instance_id}__r{rep}.patch"
                 )
                 (artifacts / name).write_text(run_result.patch, encoding="utf-8")
-            evidence_mode = EVIDENCE_MODE_DECLARED
-            if verification.get("evidence_mode") == EVIDENCE_MODE_VERIFIED_PATCH:
-                try:
-                    evidence_mode = resolve_evidence_mode(
-                        EVIDENCE_MODE_LIVE, run_result.record
-                    )
-                except ValueError:
-                    evidence_mode = EVIDENCE_MODE_VERIFIED_PATCH
+
+            from mas_eval.runner.evidence_upgrade import upgrade_evidence_mode
+
+            evidence_mode, downgrade_reason = upgrade_evidence_mode(
+                verification, run_result.record
+            )
+
+            if downgrade_reason:
+                print(
+                    f"[{index}/{total}] {label}: evidence downgraded: {downgrade_reason}",
+                    file=sys.stderr,
+                )
 
             row.update(
                 {
                     "resolved": bool(verification.get("resolved")),
                     "evidence_mode": evidence_mode,
+                    "evidence_downgrade_reason": downgrade_reason,
                     "execution_record": run_result.record.__dict__,
                     "verification": {
                         "passed": verification.get("passed"),

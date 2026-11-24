@@ -209,16 +209,21 @@ def parse_claude_usage(log: str) -> dict[str, Any] | None:
 def usage_is_trusted(usage: dict[str, Any] | None) -> bool:
     """Whether a usage record may be used as cost evidence.
 
-    Reads ``cost_measurable`` when present. Hand-written dicts predating that
-    key fall back to the same token-based derivation, so an ``is_error`` flag
-    is never mistaken for "no cost".
+    Reads ``cost_measurable`` when present (authoritative). Hand-written dicts
+    predating that key fall back to token-based derivation. An explicit
+    ``trusted: False`` is respected as a negative signal; ``trusted: True`` or
+    missing requires token evidence (duration_api_ms > 0 and output_tokens > 0).
+    An ``is_error`` flag is never mistaken for "no cost".
     """
     if not usage:
         return False
     if "cost_measurable" in usage:
         return bool(usage["cost_measurable"])
     if "trusted" in usage:
-        return bool(usage["trusted"])
+        # Explicit False means "not trusted" regardless of token counts.
+        if usage["trusted"] is False:
+            return False
+        # True or missing -> fall through to token-based derivation.
     return (
         _as_int(usage.get("duration_api_ms")) > 0
         and _as_int(usage.get("output_tokens")) > 0

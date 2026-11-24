@@ -368,6 +368,24 @@ def test_usage_is_trusted_legacy_dict_ignores_is_error():
     assert usage_is_trusted({**legacy, "output_tokens": 0}) is False
 
 
+def test_usage_is_trusted_explicit_trusted_false_overrides_tokens():
+    """Explicit trusted: False means not trusted even with positive tokens."""
+    assert usage_is_trusted({"trusted": False, "duration_api_ms": 5, "output_tokens": 3}) is False
+
+
+def test_usage_is_trusted_explicit_trusted_true_requires_tokens():
+    """trusted: True (or missing) falls back to token derivation."""
+    assert usage_is_trusted({"trusted": True, "duration_api_ms": 5, "output_tokens": 3}) is True
+    assert usage_is_trusted({"trusted": True, "duration_api_ms": 0, "output_tokens": 0}) is False
+
+
+def test_usage_is_trusted_missing_trusted_derives_from_tokens():
+    """Missing trusted key derives from tokens (same as before)."""
+    assert usage_is_trusted({"duration_api_ms": 5, "output_tokens": 3}) is True
+    assert usage_is_trusted({"duration_api_ms": 0, "output_tokens": 3}) is False
+    assert usage_is_trusted({"duration_api_ms": 5, "output_tokens": 0}) is False
+
+
 def test_unserialisable_cost_field_falls_back_to_none():
     usage = parse_claude_usage(json.dumps(_payload(total_cost_usd=[1])))
 

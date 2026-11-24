@@ -503,6 +503,12 @@ def main(argv: list[str] | None = None) -> int:
     if not test_ids:
         raise SystemExit(f"instance {args.instance!r} has no FAIL_TO_PASS tests")
     test_prefix = derive_test_prefix(test_ids, DEFAULT_TEST_PREFIX)
+    if not test_prefix:
+        print(
+            f"WARNING: could not derive test prefix from FAIL_TO_PASS={test_ids}; "
+            f"tampering detection will be disabled",
+            file=sys.stderr,
+        )
 
     setup_dir = Path(args.setup_dir).expanduser().resolve()
     setup_dir.mkdir(parents=True, exist_ok=True)

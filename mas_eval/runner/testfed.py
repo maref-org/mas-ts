@@ -37,7 +37,10 @@ __all__ = [
 
 # Test directory of the instance family this loop was verified on. Callers
 # normally derive the prefix from FAIL_TO_PASS instead of using this default.
-DEFAULT_TEST_PREFIX = "astropy/io/ascii/tests/"
+# Empty string means "no default" — callers MUST pass an explicit prefix.
+# When test_prefix is empty/whitespace, detect_test_tampering returns False
+# (cannot judge tampering without a prefix).
+DEFAULT_TEST_PREFIX = ""
 
 _FEEDBACK_TEMPLATE = (
     "你上一次的修复没有通过测试，测试输出如下：\n"
@@ -82,7 +85,15 @@ def detect_test_tampering(
     ``changed_files`` is ``git diff --name-only`` output: repo-relative paths
     with no ``a/``/``b/`` prefix. Passing tests by editing them is not a fix,
     so a hit invalidates the rep before its tests are even run.
+
+    If ``test_prefix`` is empty or whitespace, tampering detection is skipped
+    (returns False). Callers should derive the prefix from FAIL_TO_PASS via
+    :func:`derive_test_prefix`; an empty prefix means "cannot judge, so don't
+    judge" rather than "no tests exist".
     """
+    if not test_prefix or not test_prefix.strip():
+        return False
+
     for raw in changed_files:
         path = raw.strip().lstrip("/")
         if path.startswith("./"):

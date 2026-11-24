@@ -71,7 +71,7 @@ class TestDetectTestTampering:
     def test_detects_edit_under_test_prefix(self):
         changed = ["astropy/io/ascii/qdp.py", "astropy/io/ascii/tests/test_qdp.py"]
 
-        assert detect_test_tampering(changed) is True
+        assert detect_test_tampering(changed, test_prefix="astropy/io/ascii/tests/") is True
 
     def test_non_test_edits_are_clean(self):
         changed = ["astropy/io/ascii/qdp.py", "astropy/io/ascii/core.py"]
@@ -90,6 +90,14 @@ class TestDetectTestTampering:
     def test_similarly_named_directory_is_not_a_hit(self):
         # A prefix match must be a directory boundary, not a string prefix.
         assert detect_test_tampering(["astropy/io/ascii/tests_extra/x.py"]) is False
+
+    def test_empty_prefix_returns_false_no_judgement(self):
+        """Empty/whitespace prefix means 'cannot judge' -> returns False."""
+        changed = ["tests/test_something.py", "src/main.py"]
+        assert detect_test_tampering(changed, test_prefix="") is False
+        assert detect_test_tampering(changed, test_prefix="   ") is False
+        # With explicit prefix it still works
+        assert detect_test_tampering(changed, test_prefix="tests/") is True
 
 
 class TestSummarizeRounds:
