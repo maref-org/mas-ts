@@ -87,8 +87,24 @@ def main(argv: list[str] | None = None) -> int:
         "--artifacts",
         help="Directory to keep each instance's model patch (for later diagnosis)",
     )
+    parser.add_argument(
+        "--prompt-append-file",
+        help=(
+            "File with extra instructions appended to the baseline solver prompt "
+            "(prompt experiments; the baseline text itself is unchanged)"
+        ),
+    )
+    parser.add_argument(
+        "--prompt-label",
+        default="default",
+        help="Label recorded on every row to identify the prompt variant",
+    )
     parser.add_argument("--keep", action="store_true")
     args = parser.parse_args(argv)
+
+    prompt_append = ""
+    if args.prompt_append_file:
+        prompt_append = Path(args.prompt_append_file).read_text(encoding="utf-8")
 
     os.environ["SWE_BENCH_LITE_PATH"] = args.dataset
 
@@ -100,6 +116,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     from mas_eval.oracle.swe_bench import SWEBenchOracle, load_lite_tasks
     from mas_eval.runner.local_cli import LocalCLIRunner
+    from mas_eval.runner.prompt import build_prompt, prompt_sha256
     from mas_eval.runner.repo import prepare_repo
     from mas_eval.runner.usage import parse_claude_usage, usage_is_trusted
 
@@ -158,6 +175,17 @@ def main(argv: list[str] | None = None) -> int:
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text("", encoding="utf-8")
 
+    # Variant fingerprint: the prompt *spec* (frozen template + this run's
+    # append) built with an empty problem statement, so the id is identical
+    # across instances and comparable between experiment runs. Per-row
+    # prompt_sha256 below fingerprints the real, instance-specific prompt.
+    prompt_spec_sha = prompt_sha256(build_prompt("", append=prompt_append))
+    print(
+        f"prompt: label={args.prompt_label} sha={prompt_spec_sha[:12]} "
+        f"append_bytes={len(prompt_append.encode('utf-8'))}",
+        flush=True,
+    )
+
     artifacts = Path(args.artifacts) if args.artifacts else None
     if artifacts:
         artifacts.mkdir(parents=True, exist_ok=True)
@@ -179,6 +207,7 @@ def main(argv: list[str] | None = None) -> int:
         label = f"{instance_id}" + (f" r{rep}" if args.repeat > 1 else "")
         workdir = Path(tempfile.mkdtemp(prefix="swebench-batch-"))
         started = time.time()
+        prompt = build_prompt(task["problem_statement"], append=prompt_append)
         row = {
             "instance_id": instance_id,
             "rep": rep,
@@ -189,17 +218,13 @@ def main(argv: list[str] | None = None) -> int:
             "outcome": "unknown",
             "abort_reason": "",
             "usage": None,
+            "prompt_label": args.prompt_label,
+            "prompt_sha256": prompt_sha256(prompt),
         }
         try:
             print(f"[{index}/{total}] {label}: preparing repo ...", flush=True)
             prepare_repo(task["repo"], task["base_commit"], workdir)
 
-            prompt = (
-                "You are solving a GitHub issue in the current repository.\n"
-                f"Issue:\n{task['problem_statement']}\n\n"
-                "Edit the repository to fix the issue. Do not modify tests. "
-                "Keep the change minimal. Do not commit."
-            )
             run_result = runner.run(prompt, workdir, instance_id)
             print(
                 f"[{index}/{total}] {label}: agent exit={run_result.record.exit_code} "
