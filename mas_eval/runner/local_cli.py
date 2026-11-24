@@ -10,16 +10,21 @@ produced, and returns an :class:`ExecutionRecord`. Only a runner with
 from __future__ import annotations
 
 import hashlib
+import os
 import re
 import subprocess
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 from mas_eval.evidence import ExecutionRecord
 
 __all__ = ["LocalCLIRunner", "RunnerResult"]
+
+UsageParser = Callable[[str], dict[str, Any] | None]
 
 
 @dataclass(frozen=True)
@@ -31,6 +36,7 @@ class RunnerResult:
     record: ExecutionRecord
     duration_s: float
     timed_out: bool = False
+    usage: dict[str, Any] | None = None
 
 
 class LocalCLIRunner:
@@ -51,6 +57,8 @@ class LocalCLIRunner:
         command: list[str],
         timeout_seconds: int = 600,
         runner_kind: str = "agent",
+        usage_parser: UsageParser | None = None,
+        env: dict[str, str] | None = None,
     ) -> None:
         if not command:
             raise ValueError("command must not be empty")
@@ -58,6 +66,14 @@ class LocalCLIRunner:
         self.command = list(command)
         self.timeout_seconds = timeout_seconds
         self.runner_kind = runner_kind
+        self.usage_parser = usage_parser
+        self.env = dict(env) if env else None
+
+    def _subprocess_env(self) -> dict[str, str] | None:
+        """Child environment: inherited plus any explicitly injected vars."""
+        if not self.env:
+            return None
+        return {**os.environ, **self.env}
 
     def run(self, prompt: str, repo_dir: str | Path, task_id: str) -> RunnerResult:
         """Execute the agent and return the produced patch plus its record."""
@@ -72,6 +88,7 @@ class LocalCLIRunner:
                 capture_output=True,
                 text=True,
                 timeout=self.timeout_seconds,
+                env=self._subprocess_env(),
             )
             exit_code = proc.returncode
             log = (proc.stdout or "") + (proc.stderr or "")
@@ -87,6 +104,7 @@ class LocalCLIRunner:
         duration = round(time.monotonic() - started_monotonic, 2)
         patch = self._collect_patch(Path(repo_dir))
         digest = hashlib.sha256(patch.encode("utf-8")).hexdigest()
+        usage = self.usage_parser(log) if self.usage_parser else None
 
         record = ExecutionRecord(
             runner_id=self.runner_id,
@@ -103,6 +121,7 @@ class LocalCLIRunner:
             record=record,
             duration_s=duration,
             timed_out=timed_out,
+            usage=usage,
         )
 
     @staticmethod

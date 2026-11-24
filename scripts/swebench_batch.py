@@ -34,6 +34,20 @@ DEFAULT_AGENT = (
     "--max-budget-usd 1.00 --output-format json"
 )
 
+PREFLIGHT_PROMPT = "Reply OK"
+PREFLIGHT_TIMEOUT_SECONDS = 90
+
+
+def _parse_env(pairs: list[str] | None) -> dict[str, str]:
+    """Turn repeated ``KEY=VALUE`` flags into a dict for the child process."""
+    env: dict[str, str] = {}
+    for raw in pairs or []:
+        key, sep, value = raw.partition("=")
+        if not sep or not key:
+            raise SystemExit(f"--env expects KEY=VALUE, got {raw!r}")
+        env[key] = value
+    return env
+
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Batch SWE-bench Lite agent runs")
@@ -42,6 +56,18 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--instances", help="Comma-separated instance ids")
     parser.add_argument("--limit", type=int)
     parser.add_argument("--agent-cmd", default=DEFAULT_AGENT)
+    parser.add_argument(
+        "--env",
+        action="append",
+        metavar="KEY=VALUE",
+        help="Environment variable for the agent process (repeatable)",
+    )
+    parser.add_argument(
+        "--preflight",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Probe the agent once and abort unless its cost is trusted",
+    )
     parser.add_argument("--timeout", type=int, default=600)
     parser.add_argument("--output", required=True)
     parser.add_argument(
@@ -68,6 +94,10 @@ def main(argv: list[str] | None = None) -> int:
     from mas_eval.oracle.swe_bench import SWEBenchOracle, load_lite_tasks
     from mas_eval.runner.local_cli import LocalCLIRunner
     from mas_eval.runner.repo import prepare_repo
+    from mas_eval.runner.usage import parse_claude_usage, usage_is_trusted
+
+    child_env = _parse_env(args.env)
+    usage_parser = parse_claude_usage if "claude" in args.agent_cmd else None
 
     tasks = load_lite_tasks(args.dataset)
     if args.instances:
@@ -82,6 +112,39 @@ def main(argv: list[str] | None = None) -> int:
         print("no instances selected", file=sys.stderr)
         return 1
 
+    if args.preflight:
+        # A dead API still reports subtype="success" with cost 0, so an
+        # unverified batch yields N fake zeros. Probe once, abort cheaply.
+        probe_dir = Path(tempfile.mkdtemp(prefix="swebench-preflight-"))
+        try:
+            probe = LocalCLIRunner(
+                "preflight",
+                shlex.split(args.agent_cmd),
+                timeout_seconds=PREFLIGHT_TIMEOUT_SECONDS,
+                usage_parser=usage_parser,
+                env=child_env or None,
+            ).run(PREFLIGHT_PROMPT, probe_dir, "preflight")
+        finally:
+            shutil.rmtree(probe_dir, ignore_errors=True)
+        if not usage_is_trusted(probe.usage):
+            usage = probe.usage or {}
+            reason = usage.get("untrusted_reason") or "unparsed_usage"
+            head = usage.get("result_head", "")
+            print(f"preflight FAILED: untrusted usage ({reason})", file=sys.stderr)
+            if head:
+                print(f"preflight result_head: {head}", file=sys.stderr)
+            print(
+                "refusing to run instances: cost would be unknown, not zero",
+                file=sys.stderr,
+            )
+            return 2
+        assert probe.usage is not None
+        print(
+            f"preflight ok cost=${probe.usage['total_cost_usd']} "
+            f"tokens={probe.usage['input_tokens']}+{probe.usage['output_tokens']}",
+            flush=True,
+        )
+
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text("", encoding="utf-8")
@@ -92,7 +155,11 @@ def main(argv: list[str] | None = None) -> int:
 
     oracle = SWEBenchOracle()
     runner = LocalCLIRunner(
-        "local-cli-agent", shlex.split(args.agent_cmd), timeout_seconds=args.timeout
+        "local-cli-agent",
+        shlex.split(args.agent_cmd),
+        timeout_seconds=args.timeout,
+        usage_parser=usage_parser,
+        env=child_env or None,
     )
 
     results = []
@@ -110,6 +177,7 @@ def main(argv: list[str] | None = None) -> int:
             "resolved": False,
             "evidence_mode": EVIDENCE_MODE_DECLARED,
             "error": "",
+            "usage": None,
         }
         try:
             print(f"[{index}/{total}] {label}: preparing repo ...", flush=True)
@@ -160,6 +228,7 @@ def main(argv: list[str] | None = None) -> int:
                     "agent_duration_s": run_result.duration_s,
                     "patch_bytes": len(run_result.patch),
                     "output_tail": (verification.get("output_tail") or "")[-500:],
+                    "usage": run_result.usage,
                 }
             )
         except Exception as exc:  # keep the batch alive
@@ -181,10 +250,20 @@ def main(argv: list[str] | None = None) -> int:
 
     resolved = sum(1 for r in results if r["resolved"])
     live = sum(1 for r in results if r["evidence_mode"] == EVIDENCE_MODE_LIVE)
+    trusted = [r["usage"] for r in results if usage_is_trusted(r["usage"])]
+    untrusted_runs = len(results) - len(trusted)
+    # Fail-closed: only trusted runs carry a cost, and a trusted run whose
+    # cost is missing contributes nothing rather than a fake zero.
+    total_cost = sum(
+        u["total_cost_usd"] for u in trusted if u["total_cost_usd"] is not None
+    )
     print("\n=== summary ===")
     print(f"runs:      {len(results)}")
     print(f"resolved:  {resolved}/{len(results)}")
     print(f"live_run:  {live}/{len(results)}")
+    print(f"cost:      {total_cost:.4f} (trusted runs: {len(trusted)}/{len(results)})")
+    if untrusted_runs:
+        print(f"untrusted: {untrusted_runs} (cost unknown, NOT zero)")
     if args.repeat > 1:
         print("\n=== per instance ===")
         print("| instance | resolved | runs |")
