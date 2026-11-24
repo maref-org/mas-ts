@@ -128,7 +128,8 @@ Extends v1.1 with optional fields:
 | `mas_eval/runner/repo.py` | Shallow fetch of an exact base commit for agent runs |
 | `mas_eval/runner/usage.py` | Cost/token accounting for CLI agents; fail-closed trust rule (is_error/duration_api_ms/output_tokens) |
 | `mas_eval/runner/prompt.py` | Solver prompt construction; frozen baseline template + prompt fingerprint |
-| `tests/` | 93 test files, 2184 tests (with regression + HITL + latency + agentic-security + runtime-bridge + standards-mapping + API-hardening + L0-reproducibility + evidence-mode + Docker-live + live-guard + swebench-lite + local-cli-runner + cost-accounting + prompt-injection suites) |
+| `mas_eval/runner/provenance.py` | Per-row runner provenance (agent_cmd / timeout_s / max_budget_usd) so gate drift cannot go unnoticed |
+| `tests/` | 94 test files, 2193 tests (with regression + HITL + latency + agentic-security + runtime-bridge + standards-mapping + API-hardening + L0-reproducibility + evidence-mode + Docker-live + live-guard + swebench-lite + local-cli-runner + cost-accounting + prompt-injection + provenance suites) |
 | `.github/workflows/test.yml` | pytest + ruff + coverage gate 85% + Gold L0 gate + federation scan |
 | `.github/workflows/security-scan.yml` | TruffleHog + bandit SAST + pip-audit + SBOM CycloneDX (daily cron) |
 | `.github/workflows/type-check.yml` | mypy strict type checking |
@@ -170,7 +171,7 @@ Extends v1.1 with optional fields:
 
 ```bash
 # Run all tests
-pytest tests/ -v           # 2184 tests (93 files)
+pytest tests/ -v           # 2193 tests (94 files)
 
 # Run specific domain
 pytest tests/test_d5_robustness.py -v
@@ -214,7 +215,7 @@ Score: C1×0.35 + C2×0.35 + C3×0.30
 - [x] 无 T3/T2 级内容（路径/Key/IP/时间戳）— rg 扫描零命中
 - [x] `git remote -v` 为授权远程 — origin 已在白名单内（`scripts/check-remote-whitelist.sh` 通过）
 - [x] pre-push hook 已就位
-- [x] CI: pytest 通过 — 2183 passed, 1 skipped, 0 failed
+- [x] CI: pytest 通过 — 2192 passed, 1 skipped, 0 failed
 - [ ] MCP 工具含 `api_version`（第十五条）— 不适用
 - [ ] 跨边界 MCP 消息含 `trace_id`/`timestamp`/`source_agent`（第十五-A条）— 不适用
 - [ ] 跨边界 MCP 调用有 `FAIL_MODE` 降级（第七条）— 不适用

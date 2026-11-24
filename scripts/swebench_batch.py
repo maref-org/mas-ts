@@ -102,6 +102,19 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--keep", action="store_true")
     args = parser.parse_args(argv)
 
+    from mas_eval.runner.provenance import runner_metadata
+
+    # Printed before anything runs: a batch is only comparable to another batch
+    # if the gates match, so the gates are stated up front instead of living
+    # unrecorded in shell history.
+    runner_meta = runner_metadata(args.agent_cmd, args.timeout, args.prompt_label)
+    budget = runner_meta["max_budget_usd"]
+    budget_note = f"${budget}" if budget is not None else "unset"
+    print(
+        f"runner: timeout={args.timeout}s budget={budget_note} cmd={args.agent_cmd}",
+        flush=True,
+    )
+
     prompt_append = ""
     if args.prompt_append_file:
         prompt_append = Path(args.prompt_append_file).read_text(encoding="utf-8")
@@ -220,6 +233,7 @@ def main(argv: list[str] | None = None) -> int:
             "usage": None,
             "prompt_label": args.prompt_label,
             "prompt_sha256": prompt_sha256(prompt),
+            "runner": runner_meta,
         }
         try:
             print(f"[{index}/{total}] {label}: preparing repo ...", flush=True)
